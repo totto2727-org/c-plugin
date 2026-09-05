@@ -5,11 +5,11 @@ export default defineConfig({
     tasks: {
       build: {
         command: '',
-        dependsOn: ['mbt:build'],
+        dependsOn: ['mbt:build', '@go/c-plugin-e2e#build'],
       },
       check: {
         command: '',
-        dependsOn: ['mbt:check'],
+        dependsOn: ['mbt:check', '@go/c-plugin-e2e#check'],
       },
       ci: {
         command: '',
@@ -17,7 +17,7 @@ export default defineConfig({
       },
       fix: {
         command: '',
-        dependsOn: ['mbt:fix'],
+        dependsOn: ['mbt:fix', '@go/c-plugin-e2e#fix'],
       },
       'mbt:build': {
         command: 'moon build --target native',
@@ -38,7 +38,7 @@ export default defineConfig({
       },
       test: {
         command: '',
-        dependsOn: ['mbt:test'],
+        dependsOn: ['mbt:test', '@go/c-plugin-e2e#test'],
       },
     },
   },

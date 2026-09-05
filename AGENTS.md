@@ -2,10 +2,10 @@
 
 <!-- Temporary: this feature PR intentionally precedes complete command integration.
 Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S6.**
-Available CLI entrypoints: help/version.
+**Current feature stage: S7.**
+Available CLI entrypoints: help/version, init.
 Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-Registered Go/Testcontainers cases in this checkout: 0.
+Registered Go/Testcontainers cases in this checkout: 2.
 
 ## Repository structure
 
@@ -39,15 +39,15 @@ flake.nix, package.nix  Independent environment and CLI packaging definitions
 ### Standard tasks
 
 ```bash
-vp run check       # Native checks
-vp run build       # Native CLI build
+vp run check       # Native checks and Go formatting/lint checks
+vp run build       # Native CLI and Go package build
 vp run mbt:test    # Native product tests without Docker
 moon fmt --check   # Strict MoonBit formatting check
-vp run test        # Native tests
-vp run fix         # MoonBit formatting/lint fixes
+vp run test        # Native tests and real Go/Testcontainers E2E
+vp run fix         # MoonBit and Go formatting/lint fixes
 ```
 
-Go sources, Go formatting/lint tasks, the image recipe, and E2E execution enter together in S7. Do not invoke these absent tasks in this checkout.
+The E2E task builds the caller-owned image through `just c-plugin-e2e-image` and requires a working Docker daemon.
 Keep native validation, Go/Testcontainers E2E, and Nix package builds as separately reported checks.
 For package validation, run `nix build .#c-plugin` independently of development-shell checks.
 Inspect the root and Go `vite.config.ts`, `package.json`, `Justfile`, and Nix outputs before changing task contracts.

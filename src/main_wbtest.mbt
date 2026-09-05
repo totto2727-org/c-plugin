@@ -1,7 +1,12 @@
 ///|
 test "CliApp app - exposes implemented stage commands" {
-  let cli = app()
+  let paths = RuntimePaths::RuntimePaths(
+    "/tmp/c-plugin-main-home", "/tmp/c-plugin-main-cwd", "/tmp/c-plugin-main-cache",
+  )
+  let runtime = runtime_for_init(paths)
+  let cli = app(runtime)
   inspect(cli.name, content="c-plugin")
   inspect(cli.version, content="0.1.0")
-  inspect(cli.commands.length(), content="0")
+  inspect(cli.commands.length(), content="1")
+  inspect(cli.commands[0].name, content="init")
 }
