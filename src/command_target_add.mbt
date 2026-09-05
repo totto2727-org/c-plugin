@@ -142,10 +142,14 @@ fn target_add_command_def(
 ///|
 fn target_command_def(
   run_add : async (@admiral.Context) -> Unit,
+  run_remove : async (@admiral.Context) -> Unit,
 ) -> @admiral.CommandDef {
   @admiral.CommandDef::CommandDef(
     name="target",
     description="Manage additional skill-link roots",
-    subcommands=[target_add_command_def(run_add)],
+    subcommands=[
+      target_add_command_def(run_add),
+      target_remove_command_def(run_remove),
+    ],
   )
 }

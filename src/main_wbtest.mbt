@@ -1,5 +1,5 @@
 ///|
-test "CliApp app - exposes implemented stage commands" {
+test "CliApp app - exposes init and skill leaf commands" {
   let paths = RuntimePaths::RuntimePaths(
     "/tmp/c-plugin-main-home", "/tmp/c-plugin-main-cwd", "/tmp/c-plugin-main-cache",
   )
@@ -15,6 +15,7 @@ test "CliApp app - exposes implemented stage commands" {
   inspect(cli.commands[1].subcommands[1].name, content="remove")
   inspect(cli.commands[1].subcommands[2].name, content="sync")
   inspect(cli.commands[1].subcommands[3].name, content="target")
-  inspect(cli.commands[1].subcommands[3].subcommands.length(), content="1")
+  inspect(cli.commands[1].subcommands[3].subcommands.length(), content="2")
   inspect(cli.commands[1].subcommands[3].subcommands[0].name, content="add")
+  inspect(cli.commands[1].subcommands[3].subcommands[1].name, content="remove")
 }

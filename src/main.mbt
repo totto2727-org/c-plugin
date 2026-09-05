@@ -28,9 +28,10 @@ fn app(runtime : Runtime) -> @admiral.CliApp {
           }),
           remove_command_def(async fn(context) { run_remove(runtime, context) }),
           sync_command_def(async fn(context) { run_sync(runtime, context) }),
-          target_command_def(async fn(context) {
-            run_target_add(runtime, context)
-          }),
+          target_command_def(
+            async fn(context) { run_target_add(runtime, context) },
+            async fn(context) { run_target_remove(runtime, context) },
+          ),
         ],
       ),
     ],

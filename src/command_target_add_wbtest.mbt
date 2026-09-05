@@ -26,7 +26,10 @@ async test "Target add command 3 - parses typed path and global scope" {
   let mut captured : TargetAddOptions? = None
   let cli = @admiral.CliApp::CliApp(name="c-plugin", commands=[
     @admiral.CommandDef::CommandDef(name="skill", subcommands=[
-      target_command_def(context => captured = Some(target_add_options(context))),
+      target_command_def(
+        context => captured = Some(target_add_options(context)),
+        _ => (),
+      ),
     ]),
   ])
   cli.run(

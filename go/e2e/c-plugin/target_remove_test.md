@@ -1,8 +1,8 @@
 # Remove project and global target roots
 
-Source: [target_remove_test.go](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/go/e2e/c-plugin/target_remove_test.go)
+Source: [target_remove_test.go](./target_remove_test.go)
 
-The Source link identifies the implementation described below. Until the owning feature layer introduces Go source, it points to the immutable saved snapshot.
+The relative Source link identifies the sibling Go implementation described below.
 
 ## `targetRemoveScenario`
 
@@ -59,4 +59,4 @@ The Source link identifies the implementation described below. Until the owning 
 - Removing an additional target never removes the default `.agents/skills` target or foreign files that are not owned links.
 
 - Output expectations refer to the helper's captured `cli.Result.Stdout`; these tests do not assert a separate stderr stream.
-- These are assertions in the pinned source, not execution results from this documentation-only layer.
+- These are assertions in the sibling Go source, not evidence that this workflow has been executed successfully.
