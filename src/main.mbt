@@ -19,6 +19,13 @@ fn app(runtime : Runtime) -> @admiral.CliApp {
     description="Native MoonBit CLI for c-plugin",
     commands=[
       init_command_def(async fn(context) { run_init(runtime, context) }),
+      @admiral.CommandDef::CommandDef(
+        name="skill",
+        description="Manage skills from plugin repositories",
+        subcommands=[
+          sync_command_def(async fn(context) { run_sync(runtime, context) }),
+        ],
+      ),
     ],
   )
 }

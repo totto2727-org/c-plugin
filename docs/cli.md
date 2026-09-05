@@ -2,10 +2,10 @@
 
 <!-- Temporary: this feature PR intentionally precedes complete command integration.
 Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S10.**
-Available CLI entrypoints: help/version, init.
+**Current feature stage: S11.**
+Available CLI entrypoints: help/version, init, skill sync, recursive sync.
 Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-Registered Go/Testcontainers cases in this checkout: 2.
+Registered Go/Testcontainers cases in this checkout: 4.
 
 This reference describes the complete feature-stack contract. The [current CLI entrypoint](../src/main.mbt) exposes only the commands listed in the stage note above.
 It is not an installation guide.
@@ -25,7 +25,7 @@ No supported standalone release is asserted here.
 | Developer marketplace conversion | Not implemented |
 | Automatic v1 lock conversion | Not provided |
 
-This stage registers 2 Go cases. The complete S17 suite registers eight cases in seven files.
+This stage registers 4 Go cases. The complete S17 suite registers eight cases in seven files.
 That is not complete coverage of every leaf in the broader design, and source presence is not test-pass evidence.
 
 ## Representative workflow
