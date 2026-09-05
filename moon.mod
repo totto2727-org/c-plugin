@@ -20,5 +20,6 @@ import {
   "moonbitlang/async@0.20.3",
   "moonbitlang/x@0.4.50",
   "totto2727/admiral@0.6.2",
+  "totto2727/lens@0.4.2",
   "totto2727/x@0.3.0",
 }
