@@ -2,8 +2,8 @@
 
 <!-- Temporary: this feature PR intentionally precedes complete command integration.
 Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S13.**
-Available CLI entrypoints: help/version, init, skill sync, recursive sync, skill add --local.
+**Current feature stage: S14.**
+Available CLI entrypoints: help/version, init, skill sync, recursive sync, skill add --local, skill target add.
 Later-stage commands and their examples below are specifications, not executable claims for this checkout.
 
 c-plugin is a native MoonBit command-line project for managing agent skills across project and global scopes.
