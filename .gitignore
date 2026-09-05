@@ -7,3 +7,6 @@ src/**/pkg.generated.mbti
 trace.json
 .DS_Store
 result
+node_modules/
+.vite/
+tmp/

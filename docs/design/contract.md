@@ -2,7 +2,7 @@
 
 This document preserves the intended design of the v2 rewrite as the standalone `c-plugin` project.
 It is not a statement that every planned command is implemented or released.
-The documentation-first baseline adds no product source; see the [saved capability status](../cli.md#capability-status) and [migration stage map](../migration.md#feature-stage-map).
+See the [capability status](../cli.md#capability-status) for implemented and planned features.
 
 [Japanese translation](./contract.ja.md).
 Source: [raw migration snapshot `5d6f66a8`](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/docs/design/contract.md).
@@ -36,16 +36,19 @@ Functional equivalence includes preserving the public `c-plugin skill` namespace
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Language and target | MoonBit, native target only                                                                                                                    |
 | CLI parsing         | `totto2727/admiral`                                                                                                                            |
-| Interactive input   | `mizchi/tui`                                                                                                                                   |
+| Interactive input   | `mizchi/tui` is a candidate for planned TTY workflows, not a direct c-plugin dependency; Admiral still depends on it transitively                                                                                                                                   |
 | Git                 | The `mizchi/bit` module used as a library, primarily through its library packages such as `mizchi/bit_lib`; never spawn `git` or the `bit` CLI |
 | Paths               | `moonbitlang/x/path.Path` at filesystem boundaries, with `totto2727/x@0.3.0/path.AbsolutePath` and `RelativePath` for validated domain values  |
-| Lock discovery      | `totto2727/target-file-discovery`                                                                                                              |
+| Lock discovery      | `totto2727/admiral/util/target-file-discovery`                                                                                                              |
 | JSON                | `totto2727/lens` plus the standard `FromJson` and `ToJson` traits                                                                              |
 | Async I/O           | `moonbitlang/async`                                                                                                                            |
 | Unit tests          | MoonBit black-box and white-box tests using per-test temporary roots                                                                           |
 | E2E tests           | Go/Testcontainers orchestration, fixtures, assertions, and one isolated container per scenario                                                 |
 
-All dependencies must be pinned to exact compatible versions. The first implementation gate is a minimal native build importing Admiral, TUI, bit, Lens, target-file-discovery, async, `moonbitlang/x/path`, and `totto2727/x@0.3.0/path` together. Implementation must not proceed on an unverified dependency combination.
+All adopted dependencies must be pinned to exact compatible versions.
+Use Admiral's built-in discovery package rather than adding the standalone discovery module.
+Verify compatibility through the native product build and behavioral tests, not a permanent dependency-only probe.
+Add and validate a TTY dependency with the interactive feature that actually consumes it.
 
 `mizchi/bit` currently describes itself as experimental and warns about possible repository corruption. c-plugin therefore treats cached clones as disposable data, pins the dependency, and tests the exact clone, fetch, checkout, and HEAD-resolution APIs it uses.
 
@@ -110,7 +113,7 @@ The rewrite is complete only when it preserves these capabilities:
 - Update to the remote default branch followed by lock and link refresh.
 - Primary links under `.agents/skills` plus zero or more additional link targets.
 - Nearest-parent project lock discovery, exact home-level global lock discovery, and recursive descendant lock discovery.
-- `.gitignore`-aware recursive traversal through `totto2727/target-file-discovery`.
+- `.gitignore`-aware recursive traversal through `totto2727/admiral/util/target-file-discovery`.
 - Tolerant multi-repository synchronization: one unavailable repository is reported and skipped without preventing independent repositories from being synchronized.
 - Deterministic duplicate skill-name resolution using the last repository in canonical repository order at reconciliation time, independent of JSON input order and internal collection iteration order.
 - Marketplace conversion among Claude, Cursor, and Codex formats.
@@ -134,7 +137,7 @@ The lock filename remains `c-plugin-lock.json`.
 
 The global lock file is deliberately not stored under `~/.agents/`.
 
-`init` uses the current working directory as the project root or the injected home directory for `-g`. Every other scoped command locates an existing lock with `totto2727/target-file-discovery`; it does not guess a different root.
+`init` uses the current working directory as the project root or the injected home directory for `-g`. Every other scoped command locates an existing lock with `totto2727/admiral/util/target-file-discovery`; it does not guess a different root.
 
 Recursive discovery starts at the directory containing the nearest project lock and includes that lock plus descendant locks. Global mode never performs recursive discovery.
 
@@ -174,7 +177,7 @@ The consequences are:
 - Store relative local marketplace paths and target paths as typed domain values whose constructors enforce their constraints.
 - Normalize before comparing paths. Do not compare user-provided path spellings directly.
 
-`totto2727/target-file-discovery` currently exposes string-based public functions. Its conversion is confined to one discovery adapter so untyped paths do not leak into the rest of c-plugin. A Path-based API may be added to that library later, but it is not required to create a second discovery implementation.
+`totto2727/admiral/util/target-file-discovery` currently exposes string-based public functions. Its conversion is confined to one discovery adapter so untyped paths do not leak into the rest of c-plugin. A Path-based API may be added to that library later, but it is not required to create a second discovery implementation.
 
 ## Git policy
 
@@ -367,7 +370,9 @@ Each leaf-command Go scenario covers at least one successful flow and asserts fi
 
 ## Historical implementation milestones
 
-The following original milestone IDs preserve design provenance. They are not the current migration stack, completion status, or instructions to restore v1 coexistence. The current independent migration uses [S0 through S18](../migration.md#feature-stage-map). All subsections below this historical milestone heading retain original planning context and are not execution instructions for the current stack.
+The following original milestone IDs preserve design provenance.
+They are not completion status or instructions to restore v1 coexistence.
+All subsections below this historical milestone heading retain original planning context, not current execution instructions.
 
 Historical Milestone 0 recorded the design contract, not product completion. Historical Milestones 1 through 7 used the following stable atomic-unit IDs. Commas in one wave are the only planned overlap; arrows are hard ordering constraints. The atomic unit `M1` belongs to Milestone 3 and is distinct from the Milestone 1 parent issue.
 
@@ -383,7 +388,7 @@ Historical Milestone 0 recorded the design contract, not product completion. His
 
 ### Per-unit verification contract
 
-Each atomic unit includes its behavior and tests in the same change. `B0` verifies the documented v1/v2 paths and identities, that v1 remains untouched, and that the two versions never share a lock scope. `B1` proves one native build with all exact pinned dependencies and the exact `mizchi/bit` APIs, then runs targeted check, format, parser tests, and native build and observes real `--help`/`--version`, including the Admiral name `c-plugin`. `B2` builds and evaluates the `c-plugin-v2` Nix package and verifies that its executable runs while the v1 package remains unchanged. `F0` and `F1` test constructors, normalization, rejection, and synthetic homes; `F2` tests canonical round trip, JSON paths, strict failures, unsupported-version byte preservation, and top-level dispatch; `F3` tests strict ownership-state round trip; `F4` tests exclusive create, temporary-sibling rename, and failures before and after persistence; `F5` tests full SHA-256 vectors, validated metadata construction and round trip, canonicalization, moved locks, and two-lock cache isolation; metadata mismatch rejection belongs to future cache storage adapter tests at the persisted-metadata consumption boundary. `F6` tests nearest project, exact global, ignored/recursive descendants, the home boundary, and `-g`/`-r`; `F7` proves all runtime boundaries are injected and no real user path is touched; `C-init` tests project/global success, existing-file byte preservation, invalid scope, and repetition; `E0` builds the image/executable once and asserts isolated project/global init status, output, lock JSON, and host state.
+Each atomic unit includes its behavior and tests in the same change. `B0` verifies the documented v1/v2 paths and identities, that v1 remains untouched, and that the two versions never share a lock scope. `B1` proves one native build with all exact pinned dependencies and the exact `mizchi/bit` APIs, then runs targeted check, format, parser tests, and native build and observes real `--help`/`--version`, including the Admiral name `c-plugin`. `B2` builds and evaluates the `c-plugin-v2` Nix package and verifies that its executable runs while the v1 package remains unchanged. `F0` and `F1` test constructors, normalization, rejection, and synthetic homes; `F2` tests canonical round trip, JSON paths, strict failures, unsupported-version byte preservation, and top-level dispatch; `F3` tests strict ownership-state round trip; `F4` tests exclusive create, temporary-sibling rename, and failures before and after persistence; `F5` tests the exact SHA-256-derived CacheScope scope key, validated metadata construction and round trip, canonicalization, moved locks, and two-lock cache isolation; metadata mismatch rejection belongs to future cache storage adapter tests at the persisted-metadata consumption boundary. `F6` tests nearest project, exact global, ignored/recursive descendants, the home boundary, and `-g`/`-r`; `F7` proves all runtime boundaries are injected and no real user path is touched; `C-init` tests project/global success, existing-file byte preservation, invalid scope, and repetition; `E0` builds the image/executable once and asserts isolated project/global init status, output, lock JSON, and host state.
 
 `M0` and `M1` use Claude/Cursor/Codex and local fixtures to test explicit kind/skill selection, duplicate identity, ordering, malformed manifests, and normalized paths. `R1-P` covers enabled-skill filtering, immutable desired ownership, canonical repository precedence, provenance, unavailable repositories, and normalized link paths without filesystem mutation. `R1-FS` covers missing, stale, foreign, replaced, and broken links; missing/corrupt ownership state; removed targets; partial failure; idempotence; and cross-lock isolation. `C-sync` and `C-sync-r` add unit flows and clean-container E2E, including an externally edited lock and ignored recursive descendants. `A1` proves every successful mutation synchronizes the exact persisted candidate while cancel/no-op neither writes nor syncs, and that post-write sync failure is recoverable. `C-add-local`, `C-remove`, `C-target-add`, and `C-target-remove` each add unit and separate clean-container E2E asserting relevant status/output, canonical lock, links/state, repetition or selection, cleanup, and foreign-path preservation.
 

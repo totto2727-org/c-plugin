@@ -1,29 +1,36 @@
-# Saved CLI reference
+# CLI reference
 
-This reference describes the implementation preserved at [snapshot `5d6f66a8`](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/src/main.mbt).
-It is not an installation guide or a claim that the documentation-first baseline contains that implementation.
+<!-- Temporary: this feature PR intentionally precedes complete command integration.
+Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
+**Current feature stage: S1.**
+Available CLI entrypoints: help/version.
+Later-stage commands and their examples below are specifications, not executable claims for this checkout.
+Registered Go/Testcontainers cases in this checkout: 0.
+
+This reference describes the complete feature-stack contract. The [current CLI entrypoint](../src/main.mbt) exposes only the commands listed in the stage note above.
+It is not an installation guide.
 The public executable name is `c-plugin`.
 No supported standalone release is asserted here.
 
 ## Capability status
 
-| Capability | Saved implementation | Documentation-first baseline |
-| --- | --- | --- |
-| Help/version, project/global init | Command wiring and tests exist | Template sample only |
-| Local add, remove, sync, recursive sync | Explicit non-interactive commands exist | Product source not introduced |
-| Additional target add/remove | Commands and isolated tests exist | Product source not introduced |
-| Bit repository adapter | Typed adapter exists | Product source not introduced |
-| GitHub add/update and cache lifecycle | Not implemented as leaf workflows; GitHub sync resolution reports unavailable | Planned |
-| TTY selection and cancellation UI | Not implemented | Planned |
-| Developer marketplace conversion | Not implemented | Planned |
-| Automatic v1 lock conversion | Not provided | Not provided |
+| Capability | Complete feature-stack contract |
+| --- | --- |
+| Help/version, project/global init | Command wiring and tests exist |
+| Local add, remove, sync, recursive sync | Explicit non-interactive commands exist |
+| Additional target add/remove | Commands and isolated tests exist |
+| Bit repository adapter | Typed adapter exists |
+| GitHub add/update and cache lifecycle | Not implemented as leaf workflows; GitHub sync resolution reports unavailable |
+| TTY selection and cancellation UI | Not implemented |
+| Developer marketplace conversion | Not implemented |
+| Automatic v1 lock conversion | Not provided |
 
-The saved Go suite registers eight cases in seven files.
+This stage registers 0 Go cases. The complete S17 suite registers eight cases in seven files.
 That is not complete coverage of every leaf in the broader design, and source presence is not test-pass evidence.
 
-## Representative saved workflow
+## Representative workflow
 
-With the actual implementation and a fixture marketplace already available, a project can initialize a lock and select one local skill:
+With the CLI and a local marketplace already available, a project can initialize a lock and select one local skill:
 
 ```bash
 c-plugin init
@@ -35,13 +42,12 @@ c-plugin skill sync
 A successful first local add persists the selected skill and synchronizes its link under `.agents/skills` when no collision prevents it.
 Sync reconciles links without rewriting the lock.
 See the [add scenario](../go/e2e/c-plugin/add_test.md) for exact fixture-dependent output, partial results, and force behavior.
-This is a saved-source example, not a runnable claim for the documentation-only baseline.
 
 ## Command reference
 
-| Command | Saved behavior |
+| Command | Behavior |
 | --- | --- |
-| `c-plugin --help` / `c-plugin --version` | Discover the available parser tree and version after the CLI layer is installed |
+| `c-plugin --help` / `c-plugin --version` | Discover the available parser tree and version in the installed CLI |
 | `c-plugin init [-g]` | Create only a new project or exact-home lock; an existing lock is rejected without overwrite |
 | `c-plugin skill add --local <./path> --kind <kind> --skill <plugin/skill>... [-g] [-f \| --force]` | Resolve the explicit local marketplace relative to the discovered lock scope, validate selections, persist once, and synchronize |
 | `c-plugin skill remove [-g] [--skill <repository/plugin/skill>...]` | Remove explicit installed selections; empty, unknown, or repeated removals can be successful no-ops |
@@ -49,7 +55,7 @@ This is a saved-source example, not a runnable claim for the documentation-only 
 | `c-plugin skill target add <path> [-g]` | Register and synchronize a normalized additional target; an already registered target is a no-op |
 | `c-plugin skill target remove [-g] [--target <path>...]` | Remove additional target registrations and only safely owned links; never remove the primary target |
 
-After the corresponding feature layer exists, use `c-plugin skill --help` and the relevant nested command's `--help` to inspect that installed parser rather than assuming the planned command tree is available.
+Use `c-plugin skill --help` and the relevant nested command's `--help` to inspect that installed parser rather than assuming the planned command tree is available.
 Global and recursive flags are mutually exclusive.
 The current local add workflow is explicit and non-interactive, not an automatic selection UI.
 
@@ -58,7 +64,7 @@ The current local add workflow is explicit and non-interactive, not an automatic
 A local add containing a duplicate repository, plugin, or skill identity is rejected at the domain boundary.
 Repeating the same add is not an implicit no-op, union merge, or force-triggered sync-only operation.
 The [accepted local-add contract](https://linear.app/totto2727/issue/TOT-121) requires duplicate rejection, and the [force contract](https://linear.app/totto2727/issue/TOT-157) changes eligible filesystem collision handling rather than that identity rule.
-A rejected duplicate preserves the lock and existing managed state, as asserted by the saved tests.
+A rejected duplicate preserves the lock and existing managed state, as asserted by the product tests.
 A broader idempotence goal is not an implemented guarantee and is tracked separately in [TOT-224](https://linear.app/totto2727/issue/TOT-224).
 
 Errors before lock persistence preserve previous state.

@@ -1,34 +1,63 @@
 {
   "nodes": {
+    "bun2nix": {
+      "inputs": {
+        "flake-parts": "flake-parts",
+        "nixpkgs": [
+          "vite-plus-overlay",
+          "nixpkgs"
+        ],
+        "systems": "systems",
+        "treefmt-nix": "treefmt-nix_2"
+      },
+      "locked": {
+        "lastModified": 1784665499,
+        "narHash": "sha256-9BMxlTxCCDAeoNLtb1a/st7udtTIJep+wpUzquA29VU=",
+        "owner": "nix-community",
+        "repo": "bun2nix",
+        "rev": "0f2a1f0b6f42cebe3b149bf62d38754c5e0e9729",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "bun2nix",
+        "type": "github"
+      }
+    },
+    "flake-parts": {
+      "inputs": {
+        "nixpkgs-lib": [
+          "vite-plus-overlay",
+          "bun2nix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1782949081,
+        "narHash": "sha256-vp6Y/Grm98ESt6ceOkWiHWyZRDV3J1RID4w+6NWK9yA=",
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "rev": "17c9d6cdfc60c64f4ee8d306f9bc0b4ccb51481e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hercules-ci",
+        "repo": "flake-parts",
+        "type": "github"
+      }
+    },
     "moon-registry": {
       "flake": false,
       "locked": {
-        "lastModified": 1787349202,
-        "narHash": "sha256-yGLMEeR1ofiyfhdNFK8SopjodYIGyLu2ZT4X1F/cIvM=",
+        "lastModified": 1787489193,
+        "narHash": "sha256-OZcDjTkavjDLCrvTkrw4PfP6Uz1CwPAXESQjYzs95b8=",
         "ref": "refs/heads/main",
-        "rev": "be1f10130a8ac0011c04f7e11216c3c58c2fc888",
-        "revCount": 13318,
+        "rev": "256d48baa8b2a9f770ac9fd4608e3d9655c5370d",
+        "revCount": 13463,
         "type": "git",
         "url": "https://mooncakes.io/git/index"
       },
       "original": {
-        "type": "git",
-        "url": "https://mooncakes.io/git/index"
-      }
-    },
-    "moon-registry_2": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1787107903,
-        "narHash": "sha256-/t89hdhfhBEgPsbDbGap0kZpEoab0nZbBGEPrKWou24=",
-        "ref": "refs/heads/main",
-        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
-        "revCount": 13008,
-        "type": "git",
-        "url": "https://mooncakes.io/git/index"
-      },
-      "original": {
-        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
         "type": "git",
         "url": "https://mooncakes.io/git/index"
       }
@@ -57,12 +86,12 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1786106723,
-        "narHash": "sha256-zDSUbpoeo/9ZmD2+wXnzxoo1+uhL8vxc0b8yuYMKYq0=",
-        "rev": "f13ff45afd1bb73e640eaa08a7066dbed07e3238",
-        "revCount": 1049422,
+        "lastModified": 1787360063,
+        "narHash": "sha256-dt4WdcvsA8/RCe+VZZwqU0X+XMM3wBbGCWA0/sFWzGo=",
+        "rev": "2c423e03bbafcff28bfadc6781a4a8257f205cb5",
+        "revCount": 1059570,
         "type": "tarball",
-        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.1.1049422%2Brev-f13ff45afd1bb73e640eaa08a7066dbed07e3238/019fe37d-02f5-75c1-a6ac-d62d08878e10/source.tar.gz"
+        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.1.1059570%2Brev-2c423e03bbafcff28bfadc6781a4a8257f205cb5/01a02a8f-3451-79e3-b07d-567cd000a289/source.tar.gz"
       },
       "original": {
         "type": "tarball",
@@ -71,9 +100,25 @@
     },
     "root": {
       "inputs": {
-        "moon-registry": "moon-registry",
         "moonbit-overlay": "moonbit-overlay",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "vite-plus-overlay": "vite-plus-overlay",
+        "moon-registry": "moon-registry"
+      }
+    },
+    "systems": {
+      "locked": {
+        "lastModified": 1776166891,
+        "narHash": "sha256-bI8yrEGjrohR5hkQox7UrxDH7XqrYMwI8SL/LrJ1+S8=",
+        "owner": "nix-systems",
+        "repo": "triplet",
+        "rev": "6de7bc09397911ce03636afbcf6118745ab2cda0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "triplet",
+        "type": "github"
       }
     },
     "treefmt-nix": {
@@ -95,6 +140,66 @@
         "owner": "numtide",
         "repo": "treefmt-nix",
         "type": "github"
+      }
+    },
+    "treefmt-nix_2": {
+      "inputs": {
+        "nixpkgs": [
+          "vite-plus-overlay",
+          "bun2nix",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1784369104,
+        "narHash": "sha256-47cxbcZODibHv3rELFQ9vZly0vUNkND/atn/U7HLeb0=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "df3c0640565d04a0261253cdd89fce78ec50168a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "type": "github"
+      }
+    },
+    "vite-plus-overlay": {
+      "inputs": {
+        "bun2nix": "bun2nix",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786516249,
+        "narHash": "sha256-twFkEmzNkHuNH1VTucx6yd0DdFbOzxutxSlYwGVICxs=",
+        "owner": "ryoppippi",
+        "repo": "nix-vite-plus",
+        "rev": "b26a41f6f9406dc490c8b5b6bf1f17668befe011",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ryoppippi",
+        "repo": "nix-vite-plus",
+        "type": "github"
+      }
+    },
+    "moon-registry_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787107903,
+        "narHash": "sha256-/t89hdhfhBEgPsbDbGap0kZpEoab0nZbBGEPrKWou24=",
+        "ref": "refs/heads/main",
+        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
+        "revCount": 13008,
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      },
+      "original": {
+        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
       }
     }
   },
