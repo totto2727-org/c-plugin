@@ -1,21 +1,32 @@
 # c-plugin 設計契約
 
-この文書は、c-pluginをゼロから再実装するための設計契約を保存します。設計文書は`docs/design/`に配置し、独立リポジトリの段階的な実装は`src/`以下に配置します。
+この文書はv2再実装の設計契約を独立製品`c-plugin`へ保存するものです。
+すべての計画コマンドが実装済み・公開済みという意味ではありません。
+文書先行baselineには製品sourceを追加しません。[保存済み機能の状態](../cli.md#capability-status)と[移行stage](../migration.md#feature-stage-map)を参照してください。
 
-Snapshotの出典: [monorepo 103754ca](https://github.com/totto2727-org/monorepo/blob/103754ca1872e8913c5fc62c17120787e02b7020/c-plugin-v2/README.ja.md)。以下の旧共存方針とmilestone本文は移行レビュー用に保存しています。独立した製品名は`c-plugin`であり、v1は含みません。計画上の機能は実装済み・公開済みを意味しません。
+[English contract](./contract.md)。
+出典: [raw migration snapshot `5d6f66a8`](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/docs/design/contract.ja.md)。
 
-## 共存時のID
+## 提供状態と識別子
 
-段階的な提供中はnative executableとNix attributeを一時的に`c-plugin-v2`とし、Admiralが表示するapplication名とhelp名は引き続き`c-plugin`とします。明示的に承認されたcutoverまではv1実装へ変更を加えません。両方が存在する間、同じロックスコープに対してv1とv2を実行してはならず、別のproject rootまたは仮のhomeを使用します。
+独立製品のexecutableは`c-plugin`、MoonBit source moduleは`totto2727/c-plugin`、repositoryは`totto2727-org/c-plugin`です。
+これらのsource上の識別子はregistry公開済みの意味ではありません。
+設計書は`docs/design/`、保存したnative packageは`src/`、Go/Testcontainers E2Eは`go/e2e/c-plugin/`に配置します。
+v1および旧ADRは移植せず、旧契約を現行仕様として使用しません。
+v1 lock変換、自動migration、`migrate` commandは提供しません。
+旧版と新版を同じlock scopeへ実行してはいけません。
 
-この共存layoutは一時的なcontrol-plane stateであり、第2のproduct IDではありません。現時点ではv1 lock migrationを実装しません。下記のlock version規則に従う将来の明示的なmigration milestoneは追加できますが、cutover時にmigrationをdecoderや通常command実行へ紛れ込ませてはいけません。
+raw snapshotにはinit、local add/remove/sync/recursive sync、target add/removeが配線されています。
+bit adapterは存在しますが、GitHub add/update/cache、TTY対話、marketplace authoringのleaf機能は未実装です。
+以下の該当契約は計画として保持し、[GitHub lifecycle](https://linear.app/totto2727/issue/TOT-218)、[TTY](https://linear.app/totto2727/issue/TOT-219)、[authoring](https://linear.app/totto2727/issue/TOT-220)、[full parity](https://linear.app/totto2727/issue/TOT-221)で追跡します。
+包括的な冪等性・unionは[TOT-224](https://linear.app/totto2727/issue/TOT-224)の未実装目標であり、採用済みlocal addのduplicate拒否を上書きする保証ではありません。
 
 ## 目標
 
 - 現在のユーザー向け機能を維持しながら、c-pluginをMoonBitで再実装する。
 - 将来拡張可能なリソース名前空間を中心にコマンド体系を整理し、現在のMoonBit移植版より前に存在していた対話的な選択を復元する。
 - 型付きパス、厳格なロックファイルのデコード、ライブラリによるGit操作、決定論的なテストを最初から採用する。
-- プロジェクト単位とグローバルのインストールを分離し、`init`以外のすべての操作を冪等にする。
+- プロジェクトとグローバルを分離する。`init`以外を包括的に冪等化することは目標であり現在の保証ではなく、local addはduplicate identityを拒否する。
 
 機能的な等価性には、公開された`c-plugin skill`名前空間の維持を含めます。内部関数は再設計して構いません。
 
@@ -38,7 +49,7 @@ Snapshotの出典: [monorepo 103754ca](https://github.com/totto2727-org/monorepo
 
 `mizchi/bit`は現在、自身を実験的実装と説明し、リポジトリ破損の可能性を警告しています。そのため、c-pluginではキャッシュしたcloneを破棄可能なデータとして扱い、依存バージョンを固定し、使用するclone、fetch、checkout、HEAD解決APIを正確にテストします。
 
-## コマンド体系
+## 計画上のコマンド体系
 
 スキル管理は引き続き`skill`名前空間に配置します。これにより、将来的に`hook`や`mcp`などのトップレベルリソース名前空間を追加できます。インストールコマンドと分離するため、作者向けのマーケットプレイス変換は`dev`以下に残します。
 
@@ -58,7 +69,7 @@ c-plugin
         └── sync
 ```
 
-末端コマンドの契約は次のとおりです。
+以下は全体の計画契約です。保存済み実装で配線されている範囲は冒頭の提供状態と識別子で区別します。
 
 | コマンド                                                                                                                 | 契約                                                                                                                                                                                                                                                                                                    |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -73,9 +84,9 @@ c-plugin
 
 `-g`と`-r`は同時に指定できません。再帰モードは`sync`と`update`だけに適用します。
 
-### 対話入力と非対話入力
+### 対話入力と非対話入力（計画、未実装）
 
-stdinがTTYであり、明示的な選択オプションが省略されている場合、`mizchi/tui`が選択UIを提供します。
+以下のTTY選択は保存済みsnapshotでは未実装の計画です。stdinがTTYであり、明示的な選択オプションが省略されている場合、`mizchi/tui`が選択UIを提供します。
 
 - `skill add`は、対応する種別が複数存在するとき、マーケットプレイス種別の単一選択を表示する。
 - `skill add`は`plugin/skill`エントリの複数選択を表示し、すでに有効なスキルを事前選択する。
@@ -167,7 +178,7 @@ GitHubのownerとrepository componentは、それぞれのdomain constructorで�
 
 ## Git方針
 
-- `mizchi/bit`モジュールを宣言し、そのライブラリパッケージを直接呼び出す。
+- 保存済みsourceが使用する`mizchi/bit_lib`、`mizchi/bit_object`、`mizchi/bit_osfs`を固定し、そのAPIを直接呼び出す。
 - Git操作に`moonbitlang/async/process`を使用せず、インストール済みの`git`や`bit`実行ファイルへフォールバックしない。
 - 1つの狭い`BitRepositoryStore`アダプターを通じて、HTTPS GitHub clone、fetch、デフォルトブランチ解決、固定commitのcheckout、HEAD object ID解決を提供する。
 - bitが現在要求する文字列パスはそのアダプター内部だけで扱い、c-plugin向けpublic APIは`Path`と型付きobject IDを受け渡す。
@@ -179,10 +190,11 @@ GitHubのownerとrepository componentは、それぞれのdomain constructorで�
 
 `init`によるロック作成だけを排他的な作成操作とします。既存のロックファイルを上書きしてはいけません。
 
-その他の操作はすべて`mkdir -p`相当の規則に従います。
+既存directoryと各commandのno-opは以下の規則に従います。これはすべての非`init`再実行が成功するという包括的保証ではありません。
 
 - 期待する既存ディレクトリを受け入れる。
-- 既存のsource、skill、正規化済みtargetの再登録は、正常なno-opまたはmergeとする。
+- local addは既存repositoryの再登録を含むduplicate repository/plugin/skillを永続化前に拒否する。skill unionやforceによる同一sourceのsync-onlyは追加しない。[TOT-121](https://linear.app/totto2727/issue/TOT-121)の採用済み契約を維持する。
+- 正規化済みtargetの再登録、および文書化されたempty/unknown/repeat removeは個別の正常no-op契約を維持する。
 - c-pluginが管理する既存ファイルとシンボリックリンクは、ロックに従って更新または削除してよい。
 - デフォルトでは、出力先にある管理外ファイル、ディレクトリ、または管理外シンボリックリンクは変更せず、スキップしたことを報告する。
 - `skill add -f`または`skill add --force`は、containment確認済みのdesired output pathと完全一致する通常ファイルまたはシンボリックリンクだけを置換できる。実ディレクトリ、特殊path、neighbor、managed root外のpathは削除しない。
@@ -204,10 +216,10 @@ GitHubのownerとrepository componentは、それぞれのdomain constructorで�
 
 1. ロックと所有stateの両方を読み込み、厳格に検証する。
 2. ロックから望ましいリンクを計算し、`以前の所有link - 望ましいlink`から古いリンクを計算する。
-3. 古いpathが現在もシンボリックリンクであり、そのresolved targetが記録済みtargetと一致する場合だけ削除する。
+3. stale pathを削除する前にsymlink kind、記録されたresolved target、managed-root containment、ownership identityを検証する。literal `symlinkTarget`を別identityへ正規化しない。
 4. pathがfile、directory、または別のsymlinkへ置き換えられている場合は変更せず、所有権を失ったことを報告し、次の所有stateから除外する。
 5. 事前に存在する未記録のsymlinkは、現在のresolved targetが望ましいtargetと一致していても自動的に採用しない。
-6. 不足している望ましいリンクを調整した後、c-pluginが引き続き検証可能な形で所有するリンクから所有stateを構築し、atomicに書き込む。
+6. 不足している望ましいリンクを調整し、各filesystem mutationの後にstateをcheckpointする。新規作成したlinkはpost-create verificationとcheckpointの両方が成功した後にのみ永続的な所有stateへ登録する。checkpointが失敗した場合は成功とせず、処理を停止して失敗を報告する。
 
 このstateは外部からのロック変更後も残るため、後から`c-plugin skill sync`を実行すると、削除されたskillやtarget登録に対応するリンクを削除できます。所有権はロックごとに分離し、recursive syncで別のロックが所有するリンクを削除してはいけません。
 
@@ -236,6 +248,14 @@ GitHubのownerとrepository componentは、それぞれのdomain constructorで�
 3. 管理対象リンクと破棄可能なキャッシュ状態を調整する。
 
 手順2より前の失敗では以前の状態を維持します。手順2より後の失敗は`sync`の再実行で復旧可能にします。
+
+
+### Durabilityとliteral identityの補足
+
+filesystem mutationとdurability checkpointの間のcrashについて、自動復旧やownership adoptionは保証しません。
+未記録の既存linkは目的targetと一致しても自動adoptionしません。
+`symlinkTarget`は保存したliteralを保持し、正規化したresolved targetとは別identityとしてconstructor/codecでround-tripします。
+所有権stateはmutation後にcheckpointし、checkpoint失敗後に成功表示や後続mutationを継続してはいけません。
 
 ## ロックファイルモデル
 
@@ -285,7 +305,9 @@ JSONの規則は次のとおりです。
 
 ロックcodecには、canonical encodingをデコードすると同じドメイン値へ戻るという1つのround-trip propertyを持たせます。整形出力は2スペースindentと末尾の改行を使用します。
 
-## 内部構造
+## 概念上の内部構造
+
+保存済み実装は`src/`の単一executable packageと対応white-box file群です。以下は責務の概念図であり、実在directoryや新package分割の要求ではありません。
 
 実装は小さく保ち、大規模なframeworkではなく明示的な境界アダプターを使用します。
 
@@ -347,15 +369,18 @@ runnerの契約は次のとおりです。
 
 すべてのテストcontainerは、分離された一時`HOME`、working directory、cache root、target directoryを使用します。したがって、global modeのcaseがhost userへ影響することはありません。
 
-通常のE2E coverageで使用するGitHub marketplace sourceは`totto2727-org/monorepo`自身とします。少なくとも`add`と`update`は実際のbit-backed GitHub pathを実行します。他のコマンドテストは、テスト契約で許可されているとおり、事前構築したcanonical lock JSONと再利用可能なcached repository fixtureから開始しても構いません。
+旧GitHub E2E計画は`totto2727-org/monorepo`をfixture sourceとしていましたが、現8件のlocal caseはこの経路を検証していません。GitHub機能を導入するときに旧製品削除後も有効なfixture repository/commitを選定・検証し、少なくとも将来のGitHub add/updateで実bit経路を実行してください。
 
 各末端コマンドのGoシナリオは少なくとも1つの正常系を扱い、そのコマンドに関連するfilesystem state、lock JSON、command output、exit statusをassertします。syncシナリオでは、生成済みのロックを外部から編集し、古くなった所有linkが削除されることと、置換された管理外pathが維持されることを検証します。updateシナリオでは、同じリポジトリを異なるcommitに固定した2つのプロジェクトロックを使用し、一方のロックをupdateしても他方のロックのcacheとlinkが変化しないことを検証します。対話状態は主に単体テストで検証し、Docker実行を決定論的にするため、E2Eでは明示的な非対話selection optionを使用します。
 
-## 段階的な提供方針
+## 旧設計の実装milestone
+
+
+以下の旧milestone IDは設計履歴であり、現在の移行stackや完了状態を示しません。v1共存を復活させる指示でもありません。現移行は[S0〜S18](../migration.md#feature-stage-map)に従います。この旧milestone見出し以下の全小節は元の計画文脈を保存するもので、現在のstackの実行指示ではありません。
 
 c-plugin v2は一度に全面的に書き換えず、独立してレビュー可能なマイルストーンの連続として実装します。各マイルストーンでは、利用可能な1つの垂直スライスを追加し、同じ変更内にテストを含め、次のマイルストーンへ進む前に報告して停止します。
 
-Milestone 0は完了済みの本設計契約です。Milestone 1から7では、次の安定した原子的単位IDを使用します。同じwave内のcomma区切りだけを並行化候補とし、arrowは厳密な順序制約とします。原子的単位`M1`はMilestone 3に属し、Milestone 1のparent issueとは別です。
+旧Milestone 0は設計契約の記録であり、製品実装の完了ではありません。Milestone 1から7では、次の安定した原子的単位IDを使用します。同じwave内のcomma区切りだけを並行化候補とし、arrowは厳密な順序制約とします。原子的単位`M1`はMilestone 3に属し、Milestone 1のparent issueとは別です。
 
 | マイルストーン                    | 原子的な単位                                                                                                                                                                                                                            | 依存関係と並行wave                                                                                        |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -423,7 +448,7 @@ Milestone 0は完了済みの本設計契約です。Milestone 1から7では、
 
 報告では、マイルストーンの境界で作業を停止したことを明記します。先送りした動作を部分的に実装済みと表現したり、自動的に次のマイルストーンへ進んだりしません。
 
-## 受け入れ条件
+## 計画上のfull-parity受け入れ条件
 
 - コマンド体系が`c-plugin skill`を公開スキル管理名前空間として維持し、文書化したすべての末端コマンドを生成済みhelpとversion outputとともに公開する。
 - Project、recursive、`-g`の各scopeが文書どおりに解決される。
@@ -452,8 +477,8 @@ Milestone 0は完了済みの本設計契約です。Milestone 1から7では、
 - GitHub REST repository path parameter: https://docs.github.com/en/rest/repos/contents
 - NIST Secure Hash Standard（FIPS 180-4）: https://csrc.nist.gov/pubs/fips/180-4/upd1/final
 - MoonBit async filesystem API: https://github.com/moonbitlang/async/blob/main/src/fs/pkg.generated.mbti
-- Lens: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/lens
-- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/target-file-discovery
+- Lens: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/lens
+- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/target-file-discovery
 - GitHub stacked pull request public preview発表: https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/
 - GitHub stacked pull request概要: https://docs.github.com/en/pull-requests/get-started/about-stacked-prs
 - 公式stacked PR CLI command: https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands

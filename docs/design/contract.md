@@ -1,21 +1,32 @@
 # c-plugin design contract
 
-This document preserves the design contract for the ground-up c-plugin rewrite. The design documents live under `docs/design/`, while the staged standalone implementation lives under `src/`.
+This document preserves the intended design of the v2 rewrite as the standalone `c-plugin` project.
+It is not a statement that every planned command is implemented or released.
+The documentation-first baseline adds no product source; see the [saved capability status](../cli.md#capability-status) and [migration stage map](../migration.md#feature-stage-map).
 
-Snapshot provenance: [monorepo 103754ca](https://github.com/totto2727-org/monorepo/blob/103754ca1872e8913c5fc62c17120787e02b7020/c-plugin-v2/README.md). The historical coexistence and milestone text below is preserved for migration review. The standalone product is named `c-plugin`; v1 is not included. Planned capabilities are not a statement of implemented or released functionality.
+[Japanese translation](./contract.ja.md).
+Source: [raw migration snapshot `5d6f66a8`](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/docs/design/contract.md).
 
-## Coexistence identity
+## Availability and identities
 
-During staged delivery, the native executable and Nix attribute are temporarily named `c-plugin-v2`, while Admiral must continue to render the application and help name as `c-plugin`. The v1 implementation remains untouched until an explicitly approved cutover. Operators must never run v1 and v2 against the same lock scope; use separate project roots or synthetic homes while both exist.
+The standalone executable is `c-plugin`, the MoonBit source module is `totto2727/c-plugin`, and the repository is `totto2727-org/c-plugin`.
+These source identities are not registry publication claims.
+Design documents live under `docs/design/`, the saved native package under `src/`, and Go/Testcontainers E2E under `go/e2e/c-plugin/`.
+v1 is not included and its old ADRs are not the current contract.
+No v1 lock conversion, automatic migration, or `migrate` command is provided.
+Never run old and new executables against the same lock scope.
 
-This coexistence layout is temporary control-plane state, not a second product identity. No v1 lock migration is implemented now. A future explicit migration milestone remains possible under the lock-version rules below, but cutover must not smuggle migration into decoding or normal command execution.
+The raw snapshot wires init, local add/remove/sync/recursive sync, and target add/remove.
+The bit adapter is present, but GitHub add/update/cache workflows, TTY interaction, and marketplace authoring are not implemented leaf features.
+Their contracts below remain planned, tracked by [GitHub lifecycle](https://linear.app/totto2727/issue/TOT-218), [TTY selection](https://linear.app/totto2727/issue/TOT-219), [authoring](https://linear.app/totto2727/issue/TOT-220), and [full parity](https://linear.app/totto2727/issue/TOT-221).
+Broad idempotence/union behavior remains an unimplemented goal tracked separately in [TOT-224](https://linear.app/totto2727/issue/TOT-224), not a guarantee overriding accepted local-add rejection.
 
 ## Goals
 
 - Reimplement c-plugin in MoonBit while preserving the current user-visible capabilities.
 - Organize the command tree around extensible resource namespaces and restore the interactive choices that were present before the current MoonBit port.
 - Use typed paths, strict lock-file decoding, library-based Git operations, and deterministic tests from the start.
-- Keep project and global installations isolated and make all non-`init` operations idempotent.
+- Keep project and global installations isolated. Broader non-`init` idempotence remains a goal, not a current blanket guarantee; local add rejects duplicate identities.
 
 Functional equivalence includes preserving the public `c-plugin skill` namespace, while allowing internal functions to be redesigned.
 
@@ -38,7 +49,7 @@ All dependencies must be pinned to exact compatible versions. The first implemen
 
 `mizchi/bit` currently describes itself as experimental and warns about possible repository corruption. c-plugin therefore treats cached clones as disposable data, pins the dependency, and tests the exact clone, fetch, checkout, and HEAD-resolution APIs it uses.
 
-## Command model
+## Intended command model
 
 The `skill` namespace remains the home of skill management. This preserves room for future top-level resource namespaces such as `hook` and `mcp`. Author-only marketplace conversion stays under `dev` so it remains separate from installation commands.
 
@@ -58,7 +69,7 @@ c-plugin
         └── sync
 ```
 
-The leaf-command contract is:
+The full intended leaf-command contract is shown below. Only the subset identified under Availability and identities is wired in the saved implementation.
 
 | Command                                                                                                                  | Contract                                                                                                                                                                                                                                                                 |
 | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -73,9 +84,9 @@ The leaf-command contract is:
 
 `-g` and `-r` are mutually exclusive. Recursive mode applies only to `sync` and `update`.
 
-### Interactive and non-interactive input
+### Planned interactive and non-interactive input
 
-When stdin is a TTY and an explicit selection option is absent, `mizchi/tui` provides the selection UI:
+The following TTY behavior is planned, not implemented in the saved snapshot. Once introduced, `mizchi/tui` will provide the selection UI when stdin is a TTY and an explicit selection option is absent:
 
 - `skill add` shows a single-select marketplace-kind prompt when multiple supported kinds exist.
 - `skill add` shows a multi-select list of `plugin/skill` entries, with already-enabled skills preselected.
@@ -167,7 +178,7 @@ The consequences are:
 
 ## Git policy
 
-- Declare the `mizchi/bit` module and call its library packages directly.
+- Declare the pinned bit library modules used by the saved source (`mizchi/bit_lib`, `mizchi/bit_object`, and `mizchi/bit_osfs`) and call their APIs directly.
 - Do not use `moonbitlang/async/process` for Git and do not fall back to an installed `git` or `bit` executable.
 - Support HTTPS GitHub clone, fetch, default-branch resolution, checkout of a pinned commit, and HEAD object-id resolution through one narrow `BitRepositoryStore` adapter.
 - Keep bit's current string paths inside that adapter; its public c-plugin-facing API accepts and returns `Path` and typed object IDs.
@@ -179,15 +190,16 @@ The consequences are:
 
 `init` lock creation is the only exclusive creation operation. It must not overwrite an existing lock file.
 
-All other operations follow `mkdir -p` semantics:
+Existing directories and command-specific no-op behavior follow the rules below. This is not a general promise that every repeated non-`init` command succeeds:
 
 - Existing expected directories are accepted.
-- Re-registering an existing source, skill, or normalized target is a successful no-op or merge.
+- Local add rejects duplicate repository, plugin, and skill identities before persistence, including a repeated source registration. It does not merge enabled skills or rerun synchronization merely because force was requested. [TOT-121](https://linear.app/totto2727/issue/TOT-121) defines this accepted behavior.
+- Registering an already normalized target is a successful no-op. Empty, unknown, and repeated removals retain their documented no-op behavior. These individual guarantees do not imply union semantics for add.
 - Existing c-plugin-managed files and symlinks may be refreshed or removed according to the lock.
 - By default, a foreign file, directory, or non-managed symlink at a desired output path is left untouched and reported as skipped.
 - `skill add -f` or `skill add --force` may replace only a regular file or symlink at the exact contained desired output path. It never removes a real directory, special path, neighbor, or path outside the managed root.
 - Sync never clears a directory wholesale; it removes only links known to be managed by c-plugin.
-- Marketplace generation may replace its own target manifest and copied `plugin.json`, but never removes unrelated files from existing directories.
+- Planned marketplace generation may replace its own target manifest and copied `plugin.json`, but must never remove unrelated files from existing directories.
 
 ### Symlink ownership state
 
@@ -204,10 +216,10 @@ The ownership state is generated runtime state, not shared configuration and not
 
 1. Read and strictly validate both the lock and ownership state.
 2. Compute desired links from the lock and stale links from `previously owned - desired`.
-3. Delete a stale path only when it is still a symlink and its resolved target matches the recorded target.
+3. Delete a stale path only after verifying its symlink kind, recorded resolved target, managed-root containment, and applicable ownership identity. Preserve the recorded literal `symlinkTarget` rather than normalizing it into a different identity.
 4. If the path is now a file, directory, or different symlink, leave it untouched, report that ownership was lost, and omit it from the next ownership state.
 5. Do not automatically adopt a pre-existing unrecorded symlink, even when it currently resolves to the desired target.
-6. Reconcile missing desired links, then atomically write ownership state from the links c-plugin still verifiably owns.
+6. Reconcile missing desired links and checkpoint the state after each filesystem mutation. Admit a newly created link into durable ownership only after post-create verification and a successful checkpoint; stop and report checkpoint failure instead of declaring success.
 
 This state survives external lock edits, so a later `c-plugin skill sync` can remove links for deleted skills and deleted target registrations. Ownership is scoped per lock; recursive sync must not let one lock delete links owned by another lock.
 
@@ -217,6 +229,8 @@ Safety rules:
 - Every path loaded from ownership state must be validated against its recorded managed root before any filesystem mutation.
 - A broken symlink cannot be target-verified with the current public `moonbitlang/async/fs` API because it exposes symlink-aware `kind` and `realpath`, but not the literal `readlink` value. Leave such a link untouched and report it. A small `readlink` filesystem adapter may be added later if broken-link cleanup becomes required.
 - Ownership state writes use a temporary sibling and atomic rename. Ownership-state writes do not recursively trigger `sync`; only lock mutations do.
+- A crash between a filesystem mutation and its durability checkpoint does not guarantee recovery or automatic ownership adoption. A pre-existing unrecorded result remains protected by the no-adoption rule.
+- Preserve `symlinkTarget` as the exact stored literal and keep it distinct from the normalized resolved target; constructor/codec round trips must not rewrite its identity.
 - Disposable Git cache deletion happens after stale managed links are reconciled so their targets remain verifiable during deletion.
 
 ### Lock-mutation invariant
@@ -285,9 +299,9 @@ JSON rules:
 
 The lock codec has one round-trip property: decoding the canonical encoded form returns the same domain value. Pretty output uses two-space indentation and a trailing newline.
 
-## Internal structure
+## Conceptual internal structure
 
-The implementation should stay small and use explicit boundary adapters rather than a large framework:
+The saved implementation is one executable package under `src/` with implementation-aligned source and white-box files. The following diagram describes intended responsibilities, not directories already present or a required package split:
 
 ```text
 src/
@@ -347,15 +361,15 @@ The runner contract is:
 
 Every test container uses an isolated temporary `HOME`, working directory, cache root, and target directories. Global-mode cases therefore cannot affect the host user.
 
-The GitHub marketplace source for normal E2E coverage is `totto2727-org/monorepo` itself. At least `add` and `update` exercise the real bit-backed GitHub path. Other command tests may start from preconstructed canonical lock JSON and a reusable cached-repository fixture, as allowed by the test contract.
+The historical GitHub E2E plan named `totto2727-org/monorepo` as a fixture source. This is not covered by the current eight local cases. Before introducing GitHub add/update coverage, select and verify a real fixture repository/commit that remains valid after the old product is removed. At least the future GitHub `add` and `update` scenarios must exercise the real bit-backed path. Other command tests may start from preconstructed canonical lock JSON and a reusable cached-repository fixture, as allowed by the test contract.
 
 Each leaf-command Go scenario covers at least one successful flow and asserts filesystem state, lock JSON, command output, and exit status relevant to that command. The sync scenario must edit a previously materialized lock externally, verify stale owned links are removed, and verify replaced foreign paths are preserved. The update scenario must use two project locks that pin the same repository differently and verify that updating one lock does not change the other lock's cache or links. Interactive state is primarily unit-tested; E2E uses explicit non-interactive selection options so Docker runs are deterministic.
 
-## Incremental delivery policy
+## Historical implementation milestones
 
-c-plugin v2 is implemented as a sequence of independently reviewable milestones, not as one large rewrite. Each milestone adds one usable vertical slice, includes its tests in the same change, and stops with a report before the next milestone begins.
+The following original milestone IDs preserve design provenance. They are not the current migration stack, completion status, or instructions to restore v1 coexistence. The current independent migration uses [S0 through S18](../migration.md#feature-stage-map). All subsections below this historical milestone heading retain original planning context and are not execution instructions for the current stack.
 
-Milestone 0 is this completed design contract. Milestones 1 through 7 use the following stable atomic-unit IDs. Commas in one wave are the only planned overlap; arrows are hard ordering constraints. The atomic unit `M1` belongs to Milestone 3 and is distinct from the Milestone 1 parent issue.
+Historical Milestone 0 recorded the design contract, not product completion. Historical Milestones 1 through 7 used the following stable atomic-unit IDs. Commas in one wave are the only planned overlap; arrows are hard ordering constraints. The atomic unit `M1` belongs to Milestone 3 and is distinct from the Milestone 1 parent issue.
 
 | Milestone                   | Atomic units                                                                                                                                                                                                                                       | Dependency and parallel waves                                                                             |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -423,7 +437,7 @@ Every milestone handoff reports:
 
 The report must state that work stopped at the milestone boundary. It must not describe deferred behavior as partially implemented or automatically continue into the next milestone.
 
-## Acceptance criteria
+## Planned full-parity acceptance criteria
 
 - The command tree preserves `c-plugin skill` as the public skill-management namespace and exposes every documented leaf command with generated help and version output.
 - Project, recursive, and `-g` scopes resolve exactly as documented.
@@ -452,8 +466,8 @@ The report must state that work stopped at the milestone boundary. It must not d
 - GitHub REST repository path parameters: https://docs.github.com/en/rest/repos/contents
 - NIST Secure Hash Standard (FIPS 180-4): https://csrc.nist.gov/pubs/fips/180-4/upd1/final
 - MoonBit async filesystem API: https://github.com/moonbitlang/async/blob/main/src/fs/pkg.generated.mbti
-- Lens: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/lens
-- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/target-file-discovery
+- Lens: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/lens
+- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/target-file-discovery
 - GitHub stacked pull requests public preview: https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/
 - GitHub stacked pull requests overview: https://docs.github.com/en/pull-requests/get-started/about-stacked-prs
 - Official stacked PR CLI commands: https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands
