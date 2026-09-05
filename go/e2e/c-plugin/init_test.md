@@ -2,7 +2,7 @@
 
 Source: [init_test.go](./init_test.go)
 
-The Source link identifies the implementation described below. Until the owning feature layer introduces Go source, it points to the immutable saved snapshot.
+The relative Source link identifies the sibling Go implementation described below.
 The two functions below are independently registered cases. They call the shared `runInitWorkflow` helper, which is not a separately registered scenario.
 
 ## `initProjectScenario`
@@ -51,7 +51,7 @@ Create the project lock exclusively and reject a repeated initialization without
 
 ### Notes
 
-- These source assertions do not certify execution by this documentation-only layer and do not independently assert stderr.
+- These sibling-source assertions do not certify a successful test run and do not independently assert stderr.
 - The two public init cases are isolated even though they share the `runInitWorkflow` helper.
 
 ## `initGlobalScenario`
@@ -101,5 +101,5 @@ Create the global lock exclusively and reject a repeated initialization without 
 
 ### Notes
 
-- These source assertions do not certify execution by this documentation-only layer and do not independently assert stderr.
+- These sibling-source assertions do not certify a successful test run and do not independently assert stderr.
 - The two public init cases are isolated even though they share the `runInitWorkflow` helper.

@@ -15,11 +15,11 @@ CLAUDE.md               Relative symlink to AGENTS.md
 docs/cli.md             Saved implementation reference and capability status
 docs/design/            English design contract and existing Japanese translation
 docs/migration.md       Snapshot provenance, stage map, and validation boundaries
-go/e2e/c-plugin/*.md    Scenario documents before their Go sources are introduced
-src/                    Inherited template sample in the documentation-first baseline
-moon.mod                Inherited template metadata until the bootstrap layer
-flake.nix, package.nix  Inherited template environment and packaging definitions
-.github/workflows/      Inherited validation and disabled publishing workflows
+go/e2e/c-plugin/         Scenario documents; Go sources enter with their owning layers
+src/                    Native CLI sources and tests introduced through the current stage
+moon.mod                Independent c-plugin module metadata introduced at bootstrap
+flake.nix, package.nix  Independent environment and CLI packaging definitions
+.github/workflows/      Native/E2E validation and disabled publishing workflows
 ```
 
 S0 is the documentation-first baseline; subsequent stages introduce product source and integration.
@@ -34,7 +34,7 @@ See [the stage map](./docs/migration.md#feature-stage-map) before treating a pla
 - Enter the pinned environment with `nix develop` before MoonBit validation when using Nix.
 - Use existing Vite+ tasks once the bootstrap and E2E layers introduce them. Do not invent task names or restore unrelated Go/Elixir packages.
 - Never use `npx` or `bunx`. Prefer `vp run`, then `vp exec`, then `vpx` for supported commands.
-- Do not modify the inherited template implementation merely to make documentation appear executable.
+- At S0, do not modify the inherited template implementation merely to make documentation appear executable. In feature layers, validate the actual product sources instead.
 - Before production edits read [share-coding](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/share-coding/SKILL.md) and [mbt-coding](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/mbt-coding/SKILL.md).
 - Before test edits read [share-test](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/share-test/SKILL.md) and [mbt-test](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/mbt-test/SKILL.md).
 - Use the installed `moonbit-orientation` skill for language questions, or the [official documentation index](https://raw.githubusercontent.com/moonbitlang/moonbit-docs/main/next/index.md).
@@ -53,7 +53,7 @@ moon test --target native
 The README contains no executable MoonBit fences.
 Do not report a zero-test run, `no work to do`, or a template-only check as product or documentation-example coverage.
 At S0 there are no Go source files, so a scenario validator that discovers zero files is not a successful E2E-documentation check.
-Use the pinned-source projection described in [migration validation](./docs/migration.md#documentation-validation) instead.
+For that source-free baseline, use the pinned-source projection described in [migration validation](./docs/migration.md#documentation-validation). Once a scenario source is introduced, validate its real source/document directory without projection.
 
 ### Commands introduced by later layers
 

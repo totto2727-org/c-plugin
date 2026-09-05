@@ -61,7 +61,7 @@ Supported target-add and remove no-ops remain separate existing contracts.
 ## Source links across layers
 
 Scenario documents are placed under `go/e2e/c-plugin/`, beside the eventual Go sources.
-Their Source links use the complete raw SHA above while source is absent from this layer.
+In a layer where the corresponding Go source is absent, Source links use the complete raw SHA above; after source introduction, they use the actual relative sibling link.
 They refer to real immutable saved files, not nonexistent relative targets or mutable branch contents.
 When introducing a source file, restore its document's `[name_test.go](./name_test.go)` link and validate the pair in the real directory.
 Keep the raw provenance reference available for comparison.
@@ -69,13 +69,15 @@ The initial `initScenario` helper is documented as a helper, not a ninth case; a
 
 ## Documentation validation
 
-The baseline contains seven E2E documents for eight registered cases.
-The pinned Go source contains nine functions ending in `Scenario` because init's shared helper also matches that naming rule.
-The init document therefore has three complete sections, explicitly distinguishing two registered cases from the shared helper.
-Other files each have one section.
+The S0 documentation baseline contains seven E2E documents for eight registered cases.
+Its pinned raw Go source contains nine functions ending in `Scenario` because init's shared helper also matches that naming rule.
+The S0 init document therefore has three complete sections, explicitly distinguishing two registered cases from the shared helper.
+The reviewed source renames that helper to `runInitWorkflow`; after all owning layers introduce the reviewed sources, the suite has eight `Scenario` functions and init has two documented sections.
+Each other scenario document has one section in both variants.
+This historical S0 projection description does not replace validation against the source files actually present in a feature layer.
 
 Use the validator shipped with the `document-e2e-scenarios` skill and the [current E2E documentation contract](https://github.com/totto2727-org/e2e/pull/8).
-For this source-free layer:
+For the historical source-free S0 layer:
 
 1. Export the exact pinned Go sources into a disposable directory outside the committed tree.
 2. Copy these seven documents into that directory and check each original Source URL against the pinned SHA and file path.
