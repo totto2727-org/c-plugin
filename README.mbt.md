@@ -2,7 +2,7 @@
 
 <!-- Temporary: this feature PR intentionally precedes complete command integration.
 Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S5.**
+**Current feature stage: S6.**
 Available CLI entrypoints: help/version.
 Later-stage commands and their examples below are specifications, not executable claims for this checkout.
 
