@@ -1,20 +1,13 @@
 # CLI reference
 
-<!-- Temporary: this feature PR intentionally precedes complete command integration.
-Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S16.**
-Available CLI entrypoints: help/version, init, skill sync, recursive sync, skill add --local, skill target add, skill remove, skill target remove.
-Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-Registered Go/Testcontainers cases in this checkout: 8.
-
-This reference describes the complete feature-stack contract. The [current CLI entrypoint](../src/main.mbt) exposes only the commands listed in the stage note above.
+This reference describes the [current CLI implementation](../src/main.mbt).
 It is not an installation guide.
 The public executable name is `c-plugin`.
 No supported standalone release is asserted here.
 
 ## Capability status
 
-| Capability | Complete feature-stack contract |
+| Capability | Implementation status |
 | --- | --- |
 | Help/version, project/global init | Command wiring and tests exist |
 | Local add, remove, sync, recursive sync | Explicit non-interactive commands exist |
@@ -25,7 +18,7 @@ No supported standalone release is asserted here.
 | Developer marketplace conversion | Not implemented |
 | Automatic v1 lock conversion | Not provided |
 
-This stage registers 8 Go cases. The complete S17 suite registers eight cases in seven files.
+The Go suite registers eight cases in seven files.
 That is not complete coverage of every leaf in the broader design, and source presence is not test-pass evidence.
 
 ## Representative workflow

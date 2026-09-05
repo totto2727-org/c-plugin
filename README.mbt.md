@@ -1,18 +1,12 @@
 # c-plugin
 
-<!-- Temporary: this feature PR intentionally precedes complete command integration.
-Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S16.**
-Available CLI entrypoints: help/version, init, skill sync, recursive sync, skill add --local, skill target add, skill remove, skill target remove.
-Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-
 c-plugin is a native MoonBit command-line project for managing agent skills across project and global scopes.
-The complete feature stack introduces initialization, local skill lifecycle, recursive sync, additional targets, and the bit adapter.
+Initialization, local skill lifecycle, recursive sync, additional targets, and the bit adapter are present.
 GitHub leaf workflows, interactive selection, marketplace authoring, and a supported standalone release remain unavailable.
 
 ## Usage
 
-Once S7 introduces `init`, initialize the current project before adding local skills (local add enters in S13):
+Initialize the current project before adding local skills:
 
 ```bash
 c-plugin init
