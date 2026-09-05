@@ -367,7 +367,7 @@ Each leaf-command Go scenario covers at least one successful flow and asserts fi
 
 ## Historical implementation milestones
 
-The following original milestone IDs preserve design provenance. They are not the current migration stack, completion status, or instructions to restore v1 coexistence. The current independent migration uses [S0 through S18](../migration.md#feature-stage-map).
+The following original milestone IDs preserve design provenance. They are not the current migration stack, completion status, or instructions to restore v1 coexistence. The current independent migration uses [S0 through S18](../migration.md#feature-stage-map). All subsections below this historical milestone heading retain original planning context and are not execution instructions for the current stack.
 
 Historical Milestone 0 recorded the design contract, not product completion. Historical Milestones 1 through 7 used the following stable atomic-unit IDs. Commas in one wave are the only planned overlap; arrows are hard ordering constraints. The atomic unit `M1` belongs to Milestone 3 and is distinct from the Milestone 1 parent issue.
 
@@ -466,8 +466,8 @@ The report must state that work stopped at the milestone boundary. It must not d
 - GitHub REST repository path parameters: https://docs.github.com/en/rest/repos/contents
 - NIST Secure Hash Standard (FIPS 180-4): https://csrc.nist.gov/pubs/fips/180-4/upd1/final
 - MoonBit async filesystem API: https://github.com/moonbitlang/async/blob/main/src/fs/pkg.generated.mbti
-- Lens: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/lens
-- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/target-file-discovery
+- Lens: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/lens
+- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/target-file-discovery
 - GitHub stacked pull requests public preview: https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/
 - GitHub stacked pull requests overview: https://docs.github.com/en/pull-requests/get-started/about-stacked-prs
 - Official stacked PR CLI commands: https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands

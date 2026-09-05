@@ -219,7 +219,7 @@ GitHubのownerとrepository componentは、それぞれのdomain constructorで�
 3. stale pathを削除する前にsymlink kind、記録されたresolved target、managed-root containment、ownership identityを検証する。literal `symlinkTarget`を別identityへ正規化しない。
 4. pathがfile、directory、または別のsymlinkへ置き換えられている場合は変更せず、所有権を失ったことを報告し、次の所有stateから除外する。
 5. 事前に存在する未記録のsymlinkは、現在のresolved targetが望ましいtargetと一致していても自動的に採用しない。
-6. 不足している望ましいリンクを調整した後、c-pluginが引き続き検証可能な形で所有するリンクから所有stateを構築し、atomicに書き込む。
+6. 不足している望ましいリンクを調整し、各filesystem mutationの後にstateをcheckpointする。新規作成したlinkはpost-create verificationとcheckpointの両方が成功した後にのみ永続的な所有stateへ登録する。checkpointが失敗した場合は成功とせず、処理を停止して失敗を報告する。
 
 このstateは外部からのロック変更後も残るため、後から`c-plugin skill sync`を実行すると、削除されたskillやtarget登録に対応するリンクを削除できます。所有権はロックごとに分離し、recursive syncで別のロックが所有するリンクを削除してはいけません。
 
@@ -376,7 +376,7 @@ runnerの契約は次のとおりです。
 ## 旧設計の実装milestone
 
 
-以下の旧milestone IDは設計履歴であり、現在の移行stackや完了状態を示しません。v1共存を復活させる指示でもありません。現移行は[S0〜S18](../migration.md#feature-stage-map)に従います。
+以下の旧milestone IDは設計履歴であり、現在の移行stackや完了状態を示しません。v1共存を復活させる指示でもありません。現移行は[S0〜S18](../migration.md#feature-stage-map)に従います。この旧milestone見出し以下の全小節は元の計画文脈を保存するもので、現在のstackの実行指示ではありません。
 
 c-plugin v2は一度に全面的に書き換えず、独立してレビュー可能なマイルストーンの連続として実装します。各マイルストーンでは、利用可能な1つの垂直スライスを追加し、同じ変更内にテストを含め、次のマイルストーンへ進む前に報告して停止します。
 
@@ -477,8 +477,8 @@ c-plugin v2は一度に全面的に書き換えず、独立してレビュー可
 - GitHub REST repository path parameter: https://docs.github.com/en/rest/repos/contents
 - NIST Secure Hash Standard（FIPS 180-4）: https://csrc.nist.gov/pubs/fips/180-4/upd1/final
 - MoonBit async filesystem API: https://github.com/moonbitlang/async/blob/main/src/fs/pkg.generated.mbti
-- Lens: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/lens
-- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/main/mbt/package/target-file-discovery
+- Lens: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/lens
+- target-file-discovery: https://github.com/totto2727-org/monorepo/tree/f0523b8e9232afa6a47b83cb62df607f2a83d6de/mbt/package/target-file-discovery
 - GitHub stacked pull request public preview発表: https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/
 - GitHub stacked pull request概要: https://docs.github.com/en/pull-requests/get-started/about-stacked-prs
 - 公式stacked PR CLI command: https://docs.github.com/en/pull-requests/reference/stacked-prs-cli-commands
