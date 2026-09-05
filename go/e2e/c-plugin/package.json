@@ -1,0 +1,8 @@
+{
+  "name": "@go/c-plugin-e2e",
+  "private": true,
+  "scripts": {},
+  "devDependencies": {
+    "vite-plus": "catalog:"
+  }
+}

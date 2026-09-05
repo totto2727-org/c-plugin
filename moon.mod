@@ -1,27 +1,30 @@
-name = "username/project"
+name = "totto2727/c-plugin"
 
 version = "0.1.0"
 
-readme = "README.mbt.md"
+readme = "README.md"
 
-repository = "https://github.com/username/project"
+repository = "https://github.com/totto2727-org/c-plugin"
 
 license = "MIT"
 
-keywords = [ "moonbit", "cli" ]
+description = "Native MoonBit plugin skill manager"
 
-description = "A simple MoonBit command-line application"
+source = "src"
 
-// Leave both settings unset for synchronous, backend-neutral libraries.
-//
-// For async libraries, uncomment supported_targets and exactly one
-// preferred_target. Choose the first viable preferred target in this order:
-// wasm, js, native. If a dependency supports fewer targets, narrow both
-// settings to match that dependency.
-//
-// supported_targets = "+native+js+wasm"
-// preferred_target = "wasm"
-// preferred_target = "js"
-// preferred_target = "native"
+preferred_target = "native"
 
-source = "./src"
+supported_targets = "native"
+
+import {
+  "mizchi/bit_lib@0.45.6",
+  "mizchi/bit_object@0.45.6",
+  "mizchi/bit_osfs@0.45.6",
+  "mizchi/tui@0.10.0",
+  "moonbitlang/async@0.20.3",
+  "moonbitlang/x@0.4.50",
+  "totto2727/admiral@0.6.2",
+  "totto2727/lens@0.4.2",
+  "totto2727/target-file-discovery@0.2.1",
+  "totto2727/x@0.3.0",
+}

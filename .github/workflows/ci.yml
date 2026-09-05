@@ -3,7 +3,9 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    # Validate migration snapshots without opening a PR before the docs-first layer.
+    branches: [main, migration/v2-snapshot, migration/final-reviewed]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,3 +19,65 @@ jobs:
       - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
       - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@main
       - uses: totto2727-org/monorepo/.github/actions/check-moonbit@main
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NO_COLOR: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
+      - uses: totto2727-org/monorepo/.github/actions/setup-typescript@main
+
+      - name: Check Docker and Go tooling
+        shell: bash
+        run: |
+          eval "$(nix print-dev-env "$GITHUB_WORKSPACE#default")"
+          docker version
+          go version
+          golangci-lint version
+          vp run --filter @go/c-plugin-e2e check
+          vp run --filter @go/c-plugin-e2e build
+
+      - name: Run isolated CLI scenarios
+        id: scenarios
+        shell: bash
+        run: |
+          eval "$(nix print-dev-env "$GITHUB_WORKSPACE#default")"
+          vp run --filter @go/c-plugin-e2e test 2>&1 | tee "$RUNNER_TEMP/c-plugin-e2e.log"
+
+      - name: Verify container cleanup and caller-owned image
+        if: always() && steps.scenarios.outcome != 'skipped'
+        env:
+          SCENARIO_OUTCOME: ${{ steps.scenarios.outcome }}
+        shell: bash
+        run: |
+          image_id=$(docker image inspect c-plugin-e2e:local --format '{{.Id}}')
+          remaining=$(docker ps --all --filter "ancestor=$image_id" --format '{{.ID}}')
+          printf 'retained_image=%s\nremaining_scenario_containers=%s\n' "$image_id" "$remaining" | tee "$RUNNER_TEMP/c-plugin-e2e-cleanup.log"
+          test -z "$remaining"
+          if [ "$SCENARIO_OUTCOME" = success ]; then
+            python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          source = pathlib.Path('go/e2e/c-plugin/e2e_test.go').read_text()
+          log = (pathlib.Path(os.environ['RUNNER_TEMP']) / 'c-plugin-e2e.log').read_text()
+          expected = set(re.findall(r'Name: "([^"]+)"', source))
+          passed = set(re.findall(r'--- PASS: TestCLI/([A-Za-z0-9_]+)', log))
+          containers = set(re.findall(r'container=([0-9a-f]{64})', log))
+          if not expected or passed != expected or len(containers) != len(expected):
+              raise SystemExit(f'scenario verification failed: expected={sorted(expected)} passed={sorted(passed)} distinct_containers={len(containers)}')
+          print(f'Passed {len(expected)} cases in {len(containers)} distinct containers.')
+          PY
+          fi
+
+      - name: Preserve E2E execution evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: c-plugin-e2e-logs
+          path: ${{ runner.temp }}/c-plugin-e2e*.log
+          if-no-files-found: ignore

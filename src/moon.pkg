@@ -1,1 +1,28 @@
+import {
+  "mizchi/bit_lib",
+  "mizchi/bit_lib/native" @bit_native,
+  "mizchi/bit_object",
+  "mizchi/bit_osfs",
+  "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/os_error",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/immut/hashmap" @immut_hashmap,
+  "moonbitlang/core/immut/hashset" @immut_hashset,
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+  "moonbitlang/x/path",
+  "totto2727/admiral",
+  "totto2727/lens",
+  "totto2727/target-file-discovery" @target_file_discovery,
+  "totto2727/x/path" @x_path,
+}
+
+import {
+  "mizchi/tui",
+} for "wbtest"
+
+supported_targets = "native"
+
 pkgtype(kind: "executable")

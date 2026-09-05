@@ -1,5 +1,5 @@
 {
-  description = "A simple MoonBit CLI template";
+  description = "A native MoonBit plugin skill manager";
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
@@ -11,6 +11,10 @@
       url = "git+https://mooncakes.io/git/index";
       flake = false;
     };
+    vite-plus-overlay = {
+      url = "github:ryoppippi/nix-vite-plus";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -19,6 +23,7 @@
       nixpkgs,
       moonbit-overlay,
       moon-registry,
+      vite-plus-overlay,
       ...
     }:
     let
@@ -31,7 +36,10 @@
         system:
         import nixpkgs {
           inherit system;
-          overlays = [ moonbit-overlay.overlays.default ];
+          overlays = [
+            moonbit-overlay.overlays.default
+            vite-plus-overlay.overlays.default
+          ];
         };
       mkProject =
         pkgs:
@@ -41,17 +49,17 @@
     in
     {
       overlays.default = _final: previous: {
-        project = self.packages.${previous.stdenv.hostPlatform.system}.project;
+        c-plugin = self.packages.${previous.stdenv.hostPlatform.system}.c-plugin;
       };
 
       packages = forEachSystem (
         system:
         let
-          project = mkProject (mkPkgs system);
+          c-plugin = mkProject (mkPkgs system);
         in
         {
-          inherit project;
-          default = project;
+          inherit c-plugin;
+          default = c-plugin;
         }
       );
 
@@ -62,9 +70,23 @@
         in
         {
           default = pkgs.mkShell {
+            env = pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+              MOONBIT_OPENSSL_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.openssl ];
+              MOONBIT_NEW_NATIVE = "1";
+            };
             packages = [
               pkgs.moonbit-bin.moonbit.latest
+              pkgs.go
+              pkgs.golangci-lint
+              pkgs.vite-plus
+              pkgs.bun
+              pkgs.nodejs_24
+              pkgs.just
+              pkgs.nixfmt
             ];
+            shellHook = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+              export NIX_LDFLAGS="$NIX_LDFLAGS -no_compact_unwind"
+            '';
           };
         }
       );

@@ -1,4 +1,6 @@
-# template-moonbit-simple
+# c-plugin
+
+Migration snapshot: the standalone v2 source is placed under `src/`, its preserved design contract is at [docs/design/contract.md](./docs/design/contract.md), and Go/Testcontainers E2E sources and sibling documents are placed under `go/e2e/c-plugin/`. The inherited template guidance below is preserved in this raw snapshot and will be adapted in the documentation-first layer. This snapshot does not certify that all planned capabilities are implemented.
 
 ## Repository structure
 
