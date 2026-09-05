@@ -1,0 +1,103 @@
+{
+  "nodes": {
+    "moon-registry": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787349202,
+        "narHash": "sha256-yGLMEeR1ofiyfhdNFK8SopjodYIGyLu2ZT4X1F/cIvM=",
+        "ref": "refs/heads/main",
+        "rev": "be1f10130a8ac0011c04f7e11216c3c58c2fc888",
+        "revCount": 13318,
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      }
+    },
+    "moon-registry_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787107903,
+        "narHash": "sha256-/t89hdhfhBEgPsbDbGap0kZpEoab0nZbBGEPrKWou24=",
+        "ref": "refs/heads/main",
+        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
+        "revCount": 13008,
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      },
+      "original": {
+        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      }
+    },
+    "moonbit-overlay": {
+      "inputs": {
+        "moon-registry": "moon-registry_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "treefmt-nix": "treefmt-nix"
+      },
+      "locked": {
+        "lastModified": 1787364676,
+        "narHash": "sha256-GQzB13KQ4E7WERNPUmI7dOXDP81tBz01zLC2IxRvvD8=",
+        "owner": "totto2727-org",
+        "repo": "moonbit-overlay",
+        "rev": "69472b3a340b3feb0091f2c2de6760d528942d2b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "totto2727-org",
+        "repo": "moonbit-overlay",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1786106723,
+        "narHash": "sha256-zDSUbpoeo/9ZmD2+wXnzxoo1+uhL8vxc0b8yuYMKYq0=",
+        "rev": "f13ff45afd1bb73e640eaa08a7066dbed07e3238",
+        "revCount": 1049422,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/NixOS/nixpkgs/0.1.1049422%2Brev-f13ff45afd1bb73e640eaa08a7066dbed07e3238/019fe37d-02f5-75c1-a6ac-d62d08878e10/source.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://flakehub.com/f/NixOS/nixpkgs/0.1"
+      }
+    },
+    "root": {
+      "inputs": {
+        "moon-registry": "moon-registry",
+        "moonbit-overlay": "moonbit-overlay",
+        "nixpkgs": "nixpkgs"
+      }
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "moonbit-overlay",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786901030,
+        "narHash": "sha256-WSFCsDSE5ffgD2MqzkM2CYjeFiKhRF/dJUN8uedb6YE=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "27b3b12a8e6375f28ebe122f07d230ca5459bbfa",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

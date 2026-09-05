@@ -1,0 +1,9 @@
+_build/
+.moon/
+.mooncakes/
+.direnv/
+.omo/
+src/**/pkg.generated.mbti
+trace.json
+.DS_Store
+result
