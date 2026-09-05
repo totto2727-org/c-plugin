@@ -108,8 +108,11 @@ impl @json.FromJson for ClaudeMarketplacePlugin with fn from_json(json, path) {
 ///|
 pub impl ToJson for ClaudeMarketplacePlugin with fn to_json(self) {
   let builder = @lens.JsonBuilder::JsonBuilder()
-  marketplace_plugin_name_lens.set_or_abort(builder, self.name.to_json())
-  marketplace_plugin_source_lens.set_or_abort(builder, self.source.to_json())
+  marketplace_plugin_name_lens.set_or_abort(builder, ToJson::to_json(self.name))
+  marketplace_plugin_source_lens.set_or_abort(
+    builder,
+    ToJson::to_json(self.source),
+  )
   builder.to_json()
 }
 
@@ -169,7 +172,7 @@ impl @json.FromJson for CodexMarketplacePlugin with fn from_json(json, path) {
 ///|
 pub impl ToJson for CodexMarketplacePlugin with fn to_json(self) {
   let builder = @lens.JsonBuilder::JsonBuilder()
-  marketplace_plugin_name_lens.set_or_abort(builder, self.name.to_json())
+  marketplace_plugin_name_lens.set_or_abort(builder, ToJson::to_json(self.name))
   marketplace_plugin_source_lens.set_or_abort(
     builder,
     ToJson::to_json(self.source),
@@ -222,7 +225,7 @@ impl @json.FromJson for CodexMarketplaceSource with fn from_json(json, path) {
 pub impl ToJson for CodexMarketplaceSource with fn to_json(self) {
   let builder = @lens.JsonBuilder::JsonBuilder()
   codex_source_kind_lens.set_or_abort(builder, ToJson::to_json(self.source))
-  codex_source_path_lens.set_or_abort(builder, self.path.to_json())
+  codex_source_path_lens.set_or_abort(builder, ToJson::to_json(self.path))
   builder.to_json()
 }
 

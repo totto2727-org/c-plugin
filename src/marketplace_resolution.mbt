@@ -80,7 +80,7 @@ async fn resolve_plugin_skills(
       candidates.push((skill_name, candidate_path))
     }
   }
-  candidates.sort_by((left, right) => left.0.compare(right.0))
+  candidates.sort_by((left, right) => Compare::compare(left.0, right.0))
   candidates.map(candidate => {
     plugin_name: plugin.name,
     plugin_path: plugin.path,

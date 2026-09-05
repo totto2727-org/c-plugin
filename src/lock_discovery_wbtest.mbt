@@ -48,13 +48,11 @@ async fn with_lock_discovery_fixture(
     root,
     paths: RuntimePaths::RuntimePaths(home, cwd, cache_root),
   }
-  action(fixture) catch {
-    error => {
-      @async.protect_from_cancel(async fn() {
-        @fs.rmdir(root.to_string(), recursive=true)
-      })
-      raise error
-    }
+  {
+    errdefer @async.protect_from_cancel(async fn() {
+      @fs.rmdir(root.to_string(), recursive=true)
+    })
+    action(fixture)
   }
   @fs.rmdir(root.to_string(), recursive=true)
 }

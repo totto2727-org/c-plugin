@@ -10,18 +10,6 @@ fn ownership_root_json_path() -> @json.JsonPath raise {
 }
 
 ///|
-fn expect_ownership_rejection(
-  action : () -> Unit raise,
-  detail : String,
-) -> Unit raise {
-  try action() catch {
-    _ => ()
-  } noraise {
-    _ => fail("expected ownership rejection: \{detail}")
-  }
-}
-
-///|
 test "OwnershipState ToJson::to_json - round trips ownership metadata" {
   let state = OwnershipState::OwnershipState([
     OwnershipEntry::OwnershipEntry(
@@ -78,18 +66,19 @@ test "OwnershipState ToJson::to_json - round trips local ownership metadata" {
 }
 
 ///|
-test "OwnershipState ToJson::to_json - preserves literal symlink targets" {
-  for target in ["a/../b", "/absolute/target"] {
-    let text = "{\"version\":\"1\",\"entries\":[{" +
-      "\"link\":\"/home/alice/project/.agents/skills/sync\"," +
-      "\"symlinkTarget\":\"\{target}\"," +
-      "\"resolvedTarget\":\"/home/alice/.cache/c-plugin/skills/sync\"," +
-      "\"managedRoot\":\"/home/alice/project/.agents/skills\"," +
-      "\"source\":{\"type\":\"github\",\"repository\":\"openai/codex\"," +
-      "\"plugin\":\"c-plugin\",\"skill\":\"sync\"}}]}"
-    let state : OwnershipState = @json.from_json(@json.parse(text))
-    inspect(ToJson::to_json(state).stringify(), content=text)
-  }
+test "OwnershipLiteralTarget 1 preserves a non-normalized relative symlink payload" {
+  let text =
+    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"a/../b","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"openai/codex","plugin":"c-plugin","skill":"sync"}}]}
+  let state : OwnershipState = @json.from_json(@json.parse(text))
+  inspect(ToJson::to_json(state).stringify(), content=text)
+}
+
+///|
+test "OwnershipLiteralTarget 2 preserves a absolute symlink payload" {
+  let text =
+    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"/absolute/target","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"openai/codex","plugin":"c-plugin","skill":"sync"}}]}
+  let state : OwnershipState = @json.from_json(@json.parse(text))
+  inspect(ToJson::to_json(state).stringify(), content=text)
 }
 
 ///|
@@ -103,154 +92,213 @@ test "OwnershipState ToJson::to_json - sorts entries by link" {
 }
 
 ///|
-test "OwnershipSource FromJson::from_json - rejects an invalid discriminator" {
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      let json = @json.parse(
-        "{\"type\":\"archive\",\"repository\":\"OpenAI/Codex\",\"plugin\":\"c-plugin\",\"skill\":\"sync\"}",
-      )
-      (@json.from_json(json) : OwnershipSource) |> ignore
-    },
-    "invalid source discriminator",
-  )
-}
-
-///|
-test "OwnershipSource FromJson::from_json - reports an invalid plugin at its exact path" {
-  let json = @json.parse(
-    "{\"type\":\"github\",\"repository\":\"OpenAI/Codex\",\"plugin\":\"bad/plugin\",\"skill\":\"sync\"}",
-  )
-  try {
-    let _ : OwnershipSource = @json.from_json(json)
-    fail("expected JsonDecodeError")
-  } catch {
+test "OwnershipCodec 1 rejects relative link" {
+  let text =
+    #|{"link":".agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipEntry) |> ignore catch {
     @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
-      inspect(error_path, content="/plugin")
-    _ => fail("unexpected error")
+      inspect(error_path.to_string(), content="/link")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
   }
 }
 
 ///|
-test "OwnershipSource FromJson::from_json - preserves a prefixed local repository path" {
-  let json = @json.parse(
-    "{\"type\":\"local\",\"repository\":\"../outside\",\"plugin\":\"c-plugin\",\"skill\":\"sync\"}",
-  )
+test "OwnershipCodec 2 rejects relative resolvedTarget" {
+  let text =
+    #|{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"cache/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipEntry) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/resolvedTarget")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 3 rejects relative managedRoot" {
+  let text =
+    #|{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":".agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipEntry) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/managedRoot")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 4 reports outside link relationship" {
+  let text =
+    #|{"link":"/home/alice/other/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipEntry) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/link")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 5 reports nested link relationship" {
+  let text =
+    #|{"link":"/home/alice/project/.agents/skills/nested/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipEntry) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/link")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 6 rejects normalized duplicate identities" {
+  let text =
+    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}},{"link":"/home/alice/project/.agents/skills/./sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}]}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/entries")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 7 preserves prefix and array index for relative link" {
+  let text =
+    #|{"version":"1","entries":[{"link":".agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}]}
+  let json = @json.parse(text)
+  let path = ownership_root_json_path().add_key("state")
+  try (@json.from_json(json, path~) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/state/entries/0/link")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 8 preserves prefix and array index for nested link" {
+  let text =
+    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/nested/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}]}
+  let json = @json.parse(text)
+  let path = ownership_root_json_path().add_key("state")
+  try (@json.from_json(json, path~) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/state/entries/0/link")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 9 preserves prefix for duplicate identities" {
+  let text =
+    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}},{"link":"/home/alice/project/.agents/skills/./sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}]}
+  let json = @json.parse(text)
+  let path = ownership_root_json_path().add_key("state")
+  try (@json.from_json(json, path~) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/state/entries")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 10 rejects numeric version" {
+  let text =
+    #|{"version":1,"entries":[]}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/version")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 11 rejects unsupported version" {
+  let text =
+    #|{"version":"2","entries":[]}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/version")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 12 rejects precision sensitive version" {
+  let text =
+    #|{"version":"1.0000000000000001","entries":[]}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/version")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 13 rejects unknown source discriminator" {
+  let text =
+    #|{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"archive","repository":"OpenAI/Codex","plugin":"c-plugin","skill":"sync"}}
+  let json = @json.parse(text)
+  try (@json.from_json(json) : OwnershipEntry) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/source/type")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 14 preserves nested invalid plugin path" {
+  let text =
+    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"OpenAI/Codex","plugin":"bad/plugin","skill":"sync"}}]}
+  let json = @json.parse(text)
+  let path = ownership_root_json_path().add_key("state")
+  try (@json.from_json(json, path~) : OwnershipState) |> ignore catch {
+    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
+      inspect(error_path.to_string(), content="/state/entries/0/source/plugin")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
+  }
+}
+
+///|
+test "OwnershipCodec 15 preserves prefixed invalid local repository path" {
+  let text =
+    #|{"type":"local","repository":"../outside","plugin":"c-plugin","skill":"sync"}
+  let json = @json.parse(text)
   let path = ownership_root_json_path().add_key("source")
-  try {
-    let _ : OwnershipSource = @json.from_json(json, path~)
-    fail("expected JsonDecodeError")
-  } catch {
+  try (@json.from_json(json, path~) : OwnershipSource) |> ignore catch {
     @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
       inspect(error_path.to_string(), content="/source/repository")
-    _ => fail("unexpected error")
+  } noraise {
+    _ => fail("expected ownership JsonDecodeError")
   }
 }
 
 ///|
-test "OwnershipEntry FromJson::from_json - reports invalid absolute fields at their exact paths" {
-  let resolved_target_json = @json.parse(
-    "{\"link\":\"/home/alice/project/.agents/skills/sync\",\"symlinkTarget\":\"../../../cache/skills/sync\",\"resolvedTarget\":\"cache/skills/sync\",\"managedRoot\":\"/home/alice/project/.agents/skills\",\"source\":{\"type\":\"github\",\"repository\":\"OpenAI/Codex\",\"plugin\":\"c-plugin\",\"skill\":\"sync\"}}",
-  )
-  try {
-    let _ : OwnershipEntry = @json.from_json(resolved_target_json)
-    fail("expected resolved target JsonDecodeError")
-  } catch {
-    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
-      inspect(error_path, content="/resolvedTarget")
-    _ => fail("unexpected error")
-  }
-  let managed_root_json = @json.parse(
-    "{\"link\":\"/home/alice/project/.agents/skills/sync\",\"symlinkTarget\":\"../../../cache/skills/sync\",\"resolvedTarget\":\"/home/alice/.cache/c-plugin/skills/sync\",\"managedRoot\":\".agents/skills\",\"source\":{\"type\":\"github\",\"repository\":\"OpenAI/Codex\",\"plugin\":\"c-plugin\",\"skill\":\"sync\"}}",
-  )
-  try {
-    let _ : OwnershipEntry = @json.from_json(managed_root_json)
-    fail("expected managed root JsonDecodeError")
-  } catch {
-    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
-      inspect(error_path, content="/managedRoot")
-    _ => fail("unexpected error")
-  }
-}
-
-///|
-test "OwnershipEntry FromJson::from_json - reports a relative link at its exact path" {
-  let json = @json.parse(
-    "{\"link\":\".agents/skills/sync\",\"symlinkTarget\":\"../../../cache/skills/sync\",\"resolvedTarget\":\"/home/alice/.cache/c-plugin/skills/sync\",\"managedRoot\":\"/home/alice/project/.agents/skills\",\"source\":{\"type\":\"github\",\"repository\":\"OpenAI/Codex\",\"plugin\":\"c-plugin\",\"skill\":\"sync\"}}",
-  )
-  try {
-    let _ : OwnershipEntry = @json.from_json(json)
-    fail("expected JsonDecodeError")
-  } catch {
-    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
-      inspect(error_path, content="/link")
-    _ => fail("unexpected error")
-  }
-}
-
-///|
-test "OwnershipEntry FromJson::from_json - reports a managed-root direct-child violation at the link path" {
-  let json = @json.parse(
-    "{\"link\":\"/home/alice/project/.agents/skills/nested/sync\",\"symlinkTarget\":\"../../../../cache/skills/sync\",\"resolvedTarget\":\"/home/alice/.cache/c-plugin/skills/sync\",\"managedRoot\":\"/home/alice/project/.agents/skills\",\"source\":{\"type\":\"github\",\"repository\":\"OpenAI/Codex\",\"plugin\":\"c-plugin\",\"skill\":\"sync\"}}",
-  )
-  try {
-    let _ : OwnershipEntry = @json.from_json(json)
-    fail("expected JsonDecodeError")
-  } catch {
-    @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
-      inspect(error_path, content="/link")
-    _ => fail("unexpected error")
-  }
-}
-
-///|
-test "OwnershipState FromJson::from_json - rejects unsupported version shapes" {
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      let json = @json.parse("{\"version\":1,\"entries\":[]}")
-      (@json.from_json(json) : OwnershipState) |> ignore
-    },
-    "numeric version",
-  )
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      let json = @json.parse("{\"version\":\"2\",\"entries\":[]}")
-      (@json.from_json(json) : OwnershipState) |> ignore
-    },
-    "unsupported string version",
-  )
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      let json = @json.parse(
-        "{\"version\":\"1.0000000000000001\",\"entries\":[]}",
-      )
-      (@json.from_json(json) : OwnershipState) |> ignore
-    },
-    "precision-sensitive version",
-  )
-}
-
-///|
-test "OwnershipState FromJson::from_json - rejects duplicate normalized links" {
-  let text =
-    #|{"version":"1","entries":[{"link":"/home/alice/project/.agents/skills/sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"openai/codex","plugin":"c-plugin","skill":"sync"}},{"link":"/home/alice/project/.agents/skills/./sync","symlinkTarget":"../../../cache/skills/sync","resolvedTarget":"/home/alice/.cache/c-plugin/skills/sync","managedRoot":"/home/alice/project/.agents/skills","source":{"type":"github","repository":"openai/codex","plugin":"c-plugin","skill":"sync"}}]}
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      (@json.from_json(@json.parse(text)) : OwnershipState) |> ignore
-    },
-    "duplicate normalized ownership link",
-  )
-}
-
-///|
-test "OwnershipState FromJson::from_json - retains the incoming JSON path" {
+test "OwnershipCodec 16 preserves the incoming path for a missing entry field" {
   let json = @json.parse("{\"version\":\"1\",\"entries\":[{}]}")
   let path = ownership_root_json_path().add_key("ownership")
-  try {
-    let _ : OwnershipState = @json.from_json(json, path~)
-    fail("expected JsonDecodeError")
-  } catch {
+  try (@json.from_json(json, path~) : OwnershipState) |> ignore catch {
     @json.JsonDecodeError::JsonDecodeError((error_path, _)) =>
-      inspect(error_path, content="/ownership/entries/0/link")
-    _ => fail("unexpected error")
+      inspect(error_path.to_string(), content="/ownership/entries/0/link")
+  } noraise {
+    _ => fail("expected missing ownership field JsonDecodeError")
   }
 }

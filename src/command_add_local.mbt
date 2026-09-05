@@ -145,7 +145,7 @@ fn build_local_add_candidate(
       skill.skill_name == selection.skill_name
     }) else {
       raise InvalidInput(
-        reason="unknown marketplace skill: {selection.plugin_name.value}/{selection.skill_name.value}",
+        reason="unknown marketplace skill: \{selection.plugin_name.value}/\{selection.skill_name.value}",
       )
     }
   }

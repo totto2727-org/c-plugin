@@ -9,7 +9,7 @@ async fn reconcile_desired_entries(
 ) -> (OwnershipState, LinkReconciliationResult?) {
   let mut durable_state = durable_state
   let desired_entries = desired_state.entries.to_array()
-  desired_entries.sort_by((left, right) => left.0.compare(right.0))
+  desired_entries.sort_by((left, right) => Compare::compare(left.0, right.0))
 
   for pair in desired_entries {
     let identity = pair.0

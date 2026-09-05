@@ -8,15 +8,15 @@ import (
 
 func initProjectScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
-	initScenario(t, environment, false)
+	runInitWorkflow(t, environment, false)
 }
 
 func initGlobalScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
-	initScenario(t, environment, true)
+	runInitWorkflow(t, environment, true)
 }
 
-func initScenario(t *testing.T, environment *cli.Environment, global bool) {
+func runInitWorkflow(t *testing.T, environment *cli.Environment, global bool) {
 	t.Helper()
 	root := "/tmp/c-plugin-v2-init-e2e"
 	home := root + "/home"

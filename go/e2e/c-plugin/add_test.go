@@ -40,6 +40,7 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireContains(state, `"skill": "beta"`)
 	scenario.requireNotContains(state, `"skill": "alpha"`)
 	beforeRepeat := scenario.digest(lockPath)
+	stateBeforeRepeat := scenario.digest(statePath)
 
 	repeat := scenario.run(project+"/nested", "skill", "add",
 		"--local", "./marketplace",
@@ -50,8 +51,10 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireFailure(repeat)
 	scenario.requireContains(repeat.Stdout, "totto2727/c-plugin.AddLocalError.InvalidInput")
 	scenario.requireDigest(lockPath, beforeRepeat)
+	scenario.requireDigest(statePath, stateBeforeRepeat)
+	scenario.requireRegularFile(foreign)
+	scenario.requireFile(foreign, "foreign\n")
 	scenario.requireSymlink(link, plugin+"/skills/beta")
-	scenario.requireContains(string(scenario.readFile(statePath)), `"skill": "beta"`)
 
 	removed := scenario.run(project+"/nested", "skill", "remove",
 		"--skill", "marketplace/demo/alpha",

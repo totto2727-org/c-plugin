@@ -27,7 +27,7 @@ test "GitHubRepository FromJson and ToJson - canonicalizes route" {
     @json.parse("\"OpenAI/Codex\""),
   )
   inspect(repository.route(), content="openai/codex")
-  let decoded : GitHubRepository = @json.from_json(repository.to_json())
+  let decoded : GitHubRepository = @json.from_json(ToJson::to_json(repository))
   inspect(decoded == repository, content="true")
 }
 
@@ -68,7 +68,7 @@ test "identity FromJson - rejects invalid boundary values" {
 test "Target FromJson and ToJson - preserves Path value" {
   let target : Target = @json.from_json(@json.parse("\".agents/skills\""))
   inspect(target.path.to_string(), content=".agents/skills")
-  let decoded : Target = @json.from_json(target.to_json())
+  let decoded : Target = @json.from_json(ToJson::to_json(target))
   inspect(decoded == target, content="true")
 }
 
@@ -110,7 +110,7 @@ let canonical_lock_json =
 test "Lock FromJson and ToJson - canonical round trip is sorted" {
   let lock : Lock = @json.parse(canonical_lock_json) |> @json.from_json
   inspect(lock.to_pretty_json(), content=canonical_lock_json + "\n")
-  let decoded : Lock = @json.from_json(lock.to_json())
+  let decoded : Lock = @json.from_json(ToJson::to_json(lock))
   inspect(decoded == lock, content="true")
   inspect(
     decoded.targets.contains(Target::Target(".agents/skills")),
@@ -125,7 +125,7 @@ test "Lock FromJson and ToJson - sorts collections at the JSON boundary" {
   let lock : Lock = @json.from_json(@json.parse(text))
   let expected =
     #|{"version":"2","targets":[".agents/skills",".cursor/skills"],"repositories":[{"type":"github","repository":"a-owner/a-repo","marketplaceKind":"codex","commit":"0123456789abcdef0123456789abcdef01234567","plugins":[]},{"type":"local","path":"vendor/z-last","marketplaceKind":"claude","plugins":[{"name":"a-plugin","path":"plugins/a","enabledSkills":[]},{"name":"z-plugin","path":"plugins/z","enabledSkills":["install","sync"]}]}]}
-  inspect(lock.to_json().stringify(), content=expected)
+  inspect(ToJson::to_json(lock).stringify(), content=expected)
 }
 
 ///|

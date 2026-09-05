@@ -10,7 +10,7 @@ async fn reconcile_stale_entries(
   let stale_entries = durable_state.entries
     .to_array()
     .filter(pair => desired_state.entries.get(pair.0) is None)
-  stale_entries.sort_by((left, right) => left.0.compare(right.0))
+  stale_entries.sort_by((left, right) => Compare::compare(left.0, right.0))
   for pair in stale_entries {
     let identity = pair.0
     let recorded_entry = pair.1

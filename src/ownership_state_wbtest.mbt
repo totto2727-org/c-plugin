@@ -1,15 +1,23 @@
 ///|
-test "Ownership path values OwnershipLink - normalize absolute paths" {
+test "OwnershipLink 2 normalizes an absolute path" {
   inspect(
     OwnershipLink::OwnershipLink("/workspace/skills/./sync").path.to_string(),
     content="/workspace/skills/sync",
   )
+}
+
+///|
+test "OwnershipResolvedTarget 2 normalizes an absolute path" {
   inspect(
     OwnershipResolvedTarget::OwnershipResolvedTarget(
       "/cache/skills/../skills/sync",
     ).path.to_string(),
     content="/cache/skills/sync",
   )
+}
+
+///|
+test "OwnershipManagedRoot 2 normalizes an absolute path" {
   inspect(
     OwnershipManagedRoot::OwnershipManagedRoot("/workspace/./skills").path.to_string(),
     content="/workspace/skills",
@@ -27,24 +35,58 @@ test "OwnershipStatePath OwnershipStatePath - normalizes an absolute path" {
 }
 
 ///|
-test "panic_OwnershipLink OwnershipLink - rejects a relative path" {
-  try! (OwnershipLink::OwnershipLink("skills/sync") |> ignore)
+test "OwnershipLink 1 rejects relative input with its original cause" {
+  try OwnershipLink::OwnershipLink("skills/sync") |> ignore catch {
+    OwnershipLinkConstructionFailed(path~, cause~) => {
+      inspect(path.to_string(), content="skills/sync")
+      assert_true(cause is Failure(_))
+    }
+  } noraise {
+    _ => fail("expected typed path construction failure")
+  }
 }
 
 ///|
-test "panic_OwnershipResolvedTarget OwnershipResolvedTarget - rejects a relative path" {
-  try! (OwnershipResolvedTarget::OwnershipResolvedTarget("cache/sync") |> ignore)
+test "OwnershipResolvedTarget 1 rejects relative input with its original cause" {
+  try
+    OwnershipResolvedTarget::OwnershipResolvedTarget("cache/sync") |> ignore
+  catch {
+    OwnershipResolvedTargetConstructionFailed(path~, cause~) => {
+      inspect(path.to_string(), content="cache/sync")
+      assert_true(cause is Failure(_))
+    }
+  } noraise {
+    _ => fail("expected typed path construction failure")
+  }
 }
 
 ///|
-test "panic_OwnershipManagedRoot OwnershipManagedRoot - rejects a relative path" {
-  try! (OwnershipManagedRoot::OwnershipManagedRoot("workspace/skills") |> ignore)
+test "OwnershipManagedRoot 1 rejects relative input with its original cause" {
+  try
+    OwnershipManagedRoot::OwnershipManagedRoot("workspace/skills") |> ignore
+  catch {
+    OwnershipManagedRootConstructionFailed(path~, cause~) => {
+      inspect(path.to_string(), content="workspace/skills")
+      assert_true(cause is Failure(_))
+    }
+  } noraise {
+    _ => fail("expected typed path construction failure")
+  }
 }
 
 ///|
-test "panic_OwnershipStatePath OwnershipStatePath - rejects a relative path" {
-  try! (OwnershipStatePath::OwnershipStatePath(".agents/c-plugin-state.json")
-  |> ignore)
+test "OwnershipStatePath 1 rejects relative input with its original cause" {
+  try
+    OwnershipStatePath::OwnershipStatePath(".agents/c-plugin-state.json")
+    |> ignore
+  catch {
+    OwnershipStatePathConstructionFailed(path~, cause~) => {
+      inspect(path.to_string(), content=".agents/c-plugin-state.json")
+      assert_true(cause is Failure(_))
+    }
+  } noraise {
+    _ => fail("expected typed path construction failure")
+  }
 }
 
 ///|
@@ -114,15 +156,16 @@ test "OwnershipEntry Compare::compare - uses every Eq field as a tie breaker" {
       ),
     ),
   )
-  inspect(base.compare(base), content="0")
-  inspect(base.compare(changed_symlink) != 0, content="true")
-  inspect(base.compare(changed_target) != 0, content="true")
-  inspect(base.compare(changed_source) != 0, content="true")
+  inspect(Compare::compare(base, base), content="0")
+  inspect(Compare::compare(base, changed_symlink) != 0, content="true")
+  inspect(Compare::compare(base, changed_target) != 0, content="true")
+  inspect(Compare::compare(base, changed_source) != 0, content="true")
   inspect(base != changed_symlink, content="true")
   inspect(base != changed_target, content="true")
   inspect(base != changed_source, content="true")
   inspect(
-    OwnershipManagedRoot::OwnershipManagedRoot("/workspace/a").compare(
+    Compare::compare(
+      OwnershipManagedRoot::OwnershipManagedRoot("/workspace/a"),
       OwnershipManagedRoot::OwnershipManagedRoot("/workspace/b"),
     ) !=
     0,
@@ -189,40 +232,151 @@ test "OwnershipLinkIdentity Compare::compare - uses normalized lexical path orde
   let last = OwnershipLinkIdentity(
     OwnershipLink::OwnershipLink("/home/alice/project/.agents/skills/z").path,
   )
-  inspect(first.compare(last), content="-1")
+  inspect(Compare::compare(first, last), content="-1")
 }
 
 ///|
-test "OwnershipEntry OwnershipEntry - rejects a link outside managed root" {
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      ownership_entry("/home/alice/project/.agents-other/skills/sync") |> ignore
-    },
-    "link outside managed root",
+test "OwnershipEntry 1 rejects a link outside its managed root with typed context" {
+  let link = OwnershipLink::OwnershipLink(
+    "/home/alice/project/.agents-other/skills/sync",
   )
+  let managed_root = OwnershipManagedRoot::OwnershipManagedRoot(
+    "/home/alice/project/.agents/skills",
+  )
+  let target = OwnershipResolvedTarget::OwnershipResolvedTarget("/cache/sync")
+  let source = github_ownership_source()
+  try
+    OwnershipEntry::OwnershipEntry(
+      link, "../../../cache/sync", target, managed_root, source,
+    )
+    |> ignore
+  catch {
+    OwnershipLinkOutsideManagedRoot(link=actual_link, managed_root=actual_root) => {
+      assert_true(actual_link == link)
+      assert_true(actual_root == managed_root)
+    }
+  } noraise {
+    _ => fail("expected direct-child failure")
+  }
 }
 
 ///|
-test "OwnershipEntry OwnershipEntry - rejects a nested link below a managed skill root" {
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      ownership_entry("/home/alice/project/.agents/skills/nested/sync")
-      |> ignore
-    },
-    "nested link below managed root",
+test "OwnershipEntry 2 rejects a link nested below its managed root with typed context" {
+  let link = OwnershipLink::OwnershipLink(
+    "/home/alice/project/.agents/skills/nested/sync",
   )
+  let managed_root = OwnershipManagedRoot::OwnershipManagedRoot(
+    "/home/alice/project/.agents/skills",
+  )
+  let target = OwnershipResolvedTarget::OwnershipResolvedTarget("/cache/sync")
+  let source = github_ownership_source()
+  try
+    OwnershipEntry::OwnershipEntry(
+      link, "../../../cache/sync", target, managed_root, source,
+    )
+    |> ignore
+  catch {
+    OwnershipLinkOutsideManagedRoot(link=actual_link, managed_root=actual_root) => {
+      assert_true(actual_link == link)
+      assert_true(actual_root == managed_root)
+    }
+  } noraise {
+    _ => fail("expected direct-child failure")
+  }
 }
 
 ///|
-test "OwnershipState OwnershipState - rejects duplicate normalized links" {
-  expect_ownership_rejection(
-    fn() -> Unit raise {
-      OwnershipState::OwnershipState([
-        ownership_entry("/home/alice/project/.agents/skills/sync"),
-        ownership_entry("/home/alice/project/.agents/skills/./sync"),
-      ])
-      |> ignore
-    },
-    "duplicate normalized links",
+test "OwnershipEntry 3 rejects a link equal to its managed root with typed context" {
+  let link = OwnershipLink::OwnershipLink("/home/alice/project/.agents/skills")
+  let managed_root = OwnershipManagedRoot::OwnershipManagedRoot(
+    "/home/alice/project/.agents/skills",
   )
+  let target = OwnershipResolvedTarget::OwnershipResolvedTarget("/cache/sync")
+  let source = github_ownership_source()
+  try
+    OwnershipEntry::OwnershipEntry(
+      link, "../../../cache/sync", target, managed_root, source,
+    )
+    |> ignore
+  catch {
+    OwnershipLinkOutsideManagedRoot(link=actual_link, managed_root=actual_root) => {
+      assert_true(actual_link == link)
+      assert_true(actual_root == managed_root)
+    }
+  } noraise {
+    _ => fail("expected direct-child failure")
+  }
+}
+
+///|
+test "OwnershipState 1 rejects identical entries" {
+  let first = ownership_entry("/home/alice/project/.agents/skills/sync")
+  try OwnershipState::OwnershipState([first, first]) |> ignore catch {
+    DuplicateOwnershipLink(identity~) =>
+      inspect(
+        identity.path.path.to_string(),
+        content="/home/alice/project/.agents/skills/sync",
+      )
+  } noraise {
+    _ => fail("expected duplicate ownership identity")
+  }
+}
+
+///|
+test "OwnershipState 2 rejects normalized duplicate links" {
+  let first = ownership_entry("/home/alice/project/.agents/skills/sync")
+  let second = ownership_entry("/home/alice/project/.agents/skills/./sync")
+  try OwnershipState::OwnershipState([first, second]) |> ignore catch {
+    DuplicateOwnershipLink(identity~) =>
+      inspect(
+        identity.path.path.to_string(),
+        content="/home/alice/project/.agents/skills/sync",
+      )
+  } noraise {
+    _ => fail("expected duplicate ownership identity")
+  }
+}
+
+///|
+test "OwnershipState 3 rejects a duplicate link with different metadata" {
+  let first = ownership_entry("/home/alice/project/.agents/skills/sync")
+  let second = ownership_entry_with(
+    first.link.path.path,
+    "other-target",
+    "/cache/other",
+    first.source,
+  )
+  try OwnershipState::OwnershipState([first, second]) |> ignore catch {
+    DuplicateOwnershipLink(identity~) =>
+      inspect(
+        identity.path.path.to_string(),
+        content="/home/alice/project/.agents/skills/sync",
+      )
+  } noraise {
+    _ => fail("expected duplicate ownership identity")
+  }
+}
+
+///|
+test "OwnershipState 4 reports the first duplicate in input order" {
+  let first = ownership_entry("/home/alice/project/.agents/skills/a")
+  let second = ownership_entry("/home/alice/project/.agents/skills/b")
+  try
+    OwnershipState::OwnershipState([first, second, second, first]) |> ignore
+  catch {
+    DuplicateOwnershipLink(identity~) =>
+      inspect(
+        identity.path.path.to_string(),
+        content="/home/alice/project/.agents/skills/b",
+      )
+  } noraise {
+    _ => fail("expected duplicate ownership identity")
+  }
+}
+
+///|
+test "OwnershipState 5 accepts an empty ownership collection" {
+  let state = OwnershipState::OwnershipState([])
+  inspect(state.version, content="1")
+  inspect(state.entries.length(), content="0")
 }

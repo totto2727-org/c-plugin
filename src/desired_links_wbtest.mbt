@@ -77,15 +77,24 @@ fn desired_links_entry(
 }
 
 ///|
-test "ManagedSkillRoot::ManagedSkillRoot - normalizes absolute path and rejects relative path" {
-  let normalized = ManagedSkillRoot::ManagedSkillRoot(
-    @path.Path("/tmp/managed/../managed"),
+test "ManagedSkillRoot 1 normalizes absolute input" {
+  inspect(
+    ManagedSkillRoot::ManagedSkillRoot("/tmp/managed/../managed").path.to_string(),
+    content="/tmp/managed",
   )
-  inspect(normalized.path.to_string(), content="/tmp/managed")
-  try ManagedSkillRoot::ManagedSkillRoot(@path.Path("managed")) catch {
-    _ => ()
+}
+
+///|
+test "ManagedSkillRoot 2 rejects relative input with its original cause" {
+  try ManagedSkillRoot::ManagedSkillRoot("managed") |> ignore catch {
+    ManagedSkillRootConstructionFailed(path~, cause~) as error => {
+      inspect(path.to_string(), content="managed")
+      assert_true(cause is Failure(_))
+      let original : Error = error
+      assert_true("\{error}" == original.to_string())
+    }
   } noraise {
-    _ => fail("relative managed root must fail")
+    _ => fail("expected typed managed root failure")
   }
 }
 
@@ -312,28 +321,259 @@ test "DesiredLinks plan_desired_skill_links - preserves GitHub and local provena
 }
 
 ///|
-test "DesiredLinks plan_desired_skill_links - empty roots or repositories produce empty plan" {
-  let empty = plan_desired_skill_links(
+test "DesiredEmptyPlan 1 accepts both collections empty" {
+  let plan = plan_desired_skill_links(
     @immut_hashset.HashSet([]),
     RepositorySkillResolutions::RepositorySkillResolutions([]),
   )
+  inspect(plan.ownership_state.entries.length(), content="0")
+  inspect(plan.unavailable_repositories.length(), content="0")
+}
+
+///|
+test "DesiredEmptyPlan 2 accepts no managed roots" {
   let repository = desired_links_local_repository([])
-  let no_roots = plan_desired_skill_links(
+  let plan = plan_desired_skill_links(
     @immut_hashset.HashSet([]),
     RepositorySkillResolutions::RepositorySkillResolutions([
       Available(repository~, skills=ReadOnlyArray::from_array([])),
     ]),
   )
-  let no_repositories = plan_desired_skill_links(
-    @immut_hashset.HashSet([
-      ManagedSkillRoot::ManagedSkillRoot(@path.Path("/tmp/managed")),
-    ]),
+  inspect(plan.ownership_state.entries.length(), content="0")
+  inspect(plan.unavailable_repositories.length(), content="0")
+}
+
+///|
+test "DesiredEmptyPlan 3 accepts no repositories" {
+  let plan = plan_desired_skill_links(
+    @immut_hashset.HashSet([ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")]),
     RepositorySkillResolutions::RepositorySkillResolutions([]),
   )
-  for plan in [empty, no_roots, no_repositories] {
-    inspect(plan.ownership_state.entries.length(), content="0")
-    inspect(plan.unavailable_repositories.length(), content="0")
+  inspect(plan.ownership_state.entries.length(), content="0")
+  inspect(plan.unavailable_repositories.length(), content="0")
+}
+
+///|
+test "DesiredOwnershipState 1 preserves the duplicate identity and its error type" {
+  let root = ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")
+  let repository = desired_links_local_repository([SkillName::SkillName("sync")])
+  let skill = desired_links_resolved_skill("/tmp", "sync")
+  let entry = desired_entry(root, repository, skill)
+  try desired_ownership_state([entry, entry]) |> ignore catch {
+    InvalidOwnershipState(cause=DuplicateOwnershipLink(identity~)) =>
+      assert_true(identity.path == entry.link.path)
+    InvalidDesiredEntry(..) =>
+      fail("aggregate failure must not be an entry failure")
+  } noraise {
+    _ => fail("expected typed duplicate aggregate failure")
   }
 }
 
 ///|
+test "DesiredOwnershipState 2 accepts an empty aggregate" {
+  let state = desired_ownership_state([])
+  inspect(state.version, content="1")
+  inspect(state.entries.length(), content="0")
+}
+
+///|
+// This tests the real error-to-planner context adapter, not an invalid
+// AbsolutePath fabricated as an input to the public planner.
+test "DesiredEntryContext 1 retains the Link stage and original path cause" {
+  let root = ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")
+  let repository = desired_links_local_repository([SkillName::SkillName("sync")])
+  let skill = desired_links_resolved_skill("/tmp", "sync")
+  let cause = try OwnershipLink::OwnershipLink("skills/sync") catch {
+    OwnershipLinkConstructionFailed(..) as cause => cause
+  } noraise {
+    _ => fail("expected invalid raw path")
+  }
+  let error = DesiredLinkPlanningError::from_entry_failure(
+    Link(cause~),
+    root,
+    repository,
+    skill,
+  )
+  match error {
+    InvalidDesiredEntry(
+      stage=Link(cause=OwnershipLinkConstructionFailed(path~, cause=original)),
+      repository=actual_repository,
+      managed_root=actual_root,
+      skill=actual_skill,
+      skill_path=actual_path
+    ) => {
+      assert_true(actual_repository == repository.identity())
+      assert_true(actual_root == root)
+      assert_true(actual_skill == skill.skill_name)
+      assert_true(actual_path == skill.skill_path)
+      inspect(path.to_string(), content="skills/sync")
+      assert_true(original is Failure(_))
+    }
+    _ => fail("expected Link construction stage")
+  }
+}
+
+///|
+// This tests the real error-to-planner context adapter, not an invalid
+// AbsolutePath fabricated as an input to the public planner.
+test "DesiredEntryContext 2 retains the ResolvedTarget stage and original path cause" {
+  let root = ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")
+  let repository = desired_links_local_repository([SkillName::SkillName("sync")])
+  let skill = desired_links_resolved_skill("/tmp", "sync")
+  let cause = try
+    OwnershipResolvedTarget::OwnershipResolvedTarget("cache/sync")
+  catch {
+    OwnershipResolvedTargetConstructionFailed(..) as cause => cause
+  } noraise {
+    _ => fail("expected invalid raw path")
+  }
+  let error = DesiredLinkPlanningError::from_entry_failure(
+    ResolvedTarget(cause~),
+    root,
+    repository,
+    skill,
+  )
+  match error {
+    InvalidDesiredEntry(
+      stage=ResolvedTarget(
+        cause=OwnershipResolvedTargetConstructionFailed(path~, cause=original)
+      ),
+      repository=actual_repository,
+      managed_root=actual_root,
+      skill=actual_skill,
+      skill_path=actual_path
+    ) => {
+      assert_true(actual_repository == repository.identity())
+      assert_true(actual_root == root)
+      assert_true(actual_skill == skill.skill_name)
+      assert_true(actual_path == skill.skill_path)
+      inspect(path.to_string(), content="cache/sync")
+      assert_true(original is Failure(_))
+    }
+    _ => fail("expected ResolvedTarget construction stage")
+  }
+}
+
+///|
+// This tests the real error-to-planner context adapter, not an invalid
+// AbsolutePath fabricated as an input to the public planner.
+test "DesiredEntryContext 3 retains the ManagedRoot stage and original path cause" {
+  let root = ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")
+  let repository = desired_links_local_repository([SkillName::SkillName("sync")])
+  let skill = desired_links_resolved_skill("/tmp", "sync")
+  let cause = try OwnershipManagedRoot::OwnershipManagedRoot("managed") catch {
+    OwnershipManagedRootConstructionFailed(..) as cause => cause
+  } noraise {
+    _ => fail("expected invalid raw path")
+  }
+  let error = DesiredLinkPlanningError::from_entry_failure(
+    ManagedRoot(cause~),
+    root,
+    repository,
+    skill,
+  )
+  match error {
+    InvalidDesiredEntry(
+      stage=ManagedRoot(
+        cause=OwnershipManagedRootConstructionFailed(path~, cause=original)
+      ),
+      repository=actual_repository,
+      managed_root=actual_root,
+      skill=actual_skill,
+      skill_path=actual_path
+    ) => {
+      assert_true(actual_repository == repository.identity())
+      assert_true(actual_root == root)
+      assert_true(actual_skill == skill.skill_name)
+      assert_true(actual_path == skill.skill_path)
+      inspect(path.to_string(), content="managed")
+      assert_true(original is Failure(_))
+    }
+    _ => fail("expected ManagedRoot construction stage")
+  }
+}
+
+///|
+// Entry relationship failures remain constructible from individually valid
+// paths. The context adapter is tested without weakening SkillName or paths.
+test "DesiredEntryContext 4 retains the Entry stage and cross-field cause" {
+  let root = ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")
+  let repository = desired_links_local_repository([SkillName::SkillName("sync")])
+  let skill = desired_links_resolved_skill("/tmp", "sync")
+  let link = OwnershipLink::OwnershipLink("/tmp/outside/sync")
+  let target = OwnershipResolvedTarget::OwnershipResolvedTarget(
+    skill.skill_path.path,
+  )
+  let managed_root = OwnershipManagedRoot::OwnershipManagedRoot(root.path.path)
+  let cause = try
+    OwnershipEntry::OwnershipEntry(
+      link,
+      "../target",
+      target,
+      managed_root,
+      ownership_source(repository, skill),
+    )
+  catch {
+    OwnershipLinkOutsideManagedRoot(..) as cause => cause
+  } noraise {
+    _ => fail("expected invalid direct-child relationship")
+  }
+  let error = DesiredLinkPlanningError::from_entry_failure(
+    Entry(cause~),
+    root,
+    repository,
+    skill,
+  )
+  match error {
+    InvalidDesiredEntry(
+      stage=Entry(
+        cause=OwnershipLinkOutsideManagedRoot(
+          link=actual_link,
+          managed_root=actual_managed_root
+        )
+      ),
+      repository=actual_repository,
+      managed_root=actual_root,
+      skill=actual_skill,
+      skill_path=actual_path
+    ) => {
+      assert_true(actual_repository == repository.identity())
+      assert_true(actual_root == root)
+      assert_true(actual_skill == skill.skill_name)
+      assert_true(actual_path == skill.skill_path)
+      assert_true(actual_link == link)
+      assert_true(actual_managed_root == managed_root)
+    }
+    _ => fail("expected Entry construction stage")
+  }
+}
+
+///|
+test "DesiredLinkPlanningError 1 preserves the existing command rendering boundary" {
+  let identity = OwnershipLinkIdentity(
+    OwnershipLink::OwnershipLink("/tmp/managed/sync").path,
+  )
+  let error = DesiredLinkPlanningError::InvalidOwnershipState(
+    cause=DuplicateOwnershipLink(identity~),
+  )
+  let original : Error = error
+  assert_true(error.to_string() == original.to_string())
+}
+
+///|
+test "DesiredLinks 1 excludes a resolved skill whose plugin is absent" {
+  let repository = desired_links_local_repository([SkillName::SkillName("sync")])
+  let skill = ResolvedSkill::{
+    plugin_name: PluginName::PluginName("other"),
+    plugin_path: RelativePluginPath::RelativePluginPath("plugins/other"),
+    skill_name: SkillName::SkillName("sync"),
+    skill_path: @x_path.AbsolutePath::AbsolutePath("/tmp/other/skills/sync"),
+  }
+  let plan = plan_desired_skill_links(
+    @immut_hashset.HashSet([ManagedSkillRoot::ManagedSkillRoot("/tmp/managed")]),
+    RepositorySkillResolutions::RepositorySkillResolutions([
+      Available(repository~, skills=ReadOnlyArray::from_array([skill])),
+    ]),
+  )
+  inspect(plan.ownership_state.entries.length(), content="0")
+}

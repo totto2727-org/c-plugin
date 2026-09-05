@@ -130,7 +130,8 @@ pub impl ToJson for OwnershipSource with fn to_json(self) -> Json {
 pub impl FromJson for OwnershipLink with fn from_json(json, path) {
   let absolute : @x_path.AbsolutePath = @json.from_json(json, path~)
   OwnershipLink::OwnershipLink(absolute.path) catch {
-    _ => raise @json.JsonDecodeError((path, "ownership link must be absolute"))
+    OwnershipLinkConstructionFailed(..) =>
+      raise @json.JsonDecodeError((path, "ownership link must be absolute"))
   }
 }
 
@@ -143,7 +144,7 @@ pub impl ToJson for OwnershipLink with fn to_json(self) -> Json {
 pub impl FromJson for OwnershipResolvedTarget with fn from_json(json, path) {
   let absolute : @x_path.AbsolutePath = @json.from_json(json, path~)
   OwnershipResolvedTarget::OwnershipResolvedTarget(absolute.path) catch {
-    _ =>
+    OwnershipResolvedTargetConstructionFailed(..) =>
       raise @json.JsonDecodeError(
         (path, "ownership resolved target must be absolute"),
       )
@@ -159,7 +160,7 @@ pub impl ToJson for OwnershipResolvedTarget with fn to_json(self) -> Json {
 pub impl FromJson for OwnershipManagedRoot with fn from_json(json, path) {
   let absolute : @x_path.AbsolutePath = @json.from_json(json, path~)
   OwnershipManagedRoot::OwnershipManagedRoot(absolute.path) catch {
-    _ =>
+    OwnershipManagedRootConstructionFailed(..) =>
       raise @json.JsonDecodeError(
         (path, "ownership managed root must be absolute"),
       )
@@ -191,7 +192,7 @@ pub impl FromJson for OwnershipEntry with fn from_json(json, path) {
     managed_root,
     source,
   ) catch {
-    _ =>
+    OwnershipLinkOutsideManagedRoot(..) =>
       raise ownership_entry_link_lens.json_decode_error(
         path, "ownership link must be a direct child of its managed root",
       )
@@ -230,7 +231,7 @@ pub impl FromJson for OwnershipState with fn from_json(json, path) {
     json, path,
   )
   OwnershipState::OwnershipState(entries) catch {
-    _ =>
+    DuplicateOwnershipLink(..) =>
       raise ownership_state_entries_lens.json_decode_error(
         path, "ownership links must be unique",
       )

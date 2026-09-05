@@ -218,8 +218,8 @@ pub impl ToJson for Plugin with fn to_json(self) -> Json {
   let builder = @lens.JsonBuilder::JsonBuilder()
   let enabled_skills = self.enabled_skills.iter().to_array()
   enabled_skills.sort()
-  plugin_name_lens.set_or_abort(builder, self.name.to_json())
-  plugin_path_lens.set_or_abort(builder, self.path.to_json())
+  plugin_name_lens.set_or_abort(builder, ToJson::to_json(self.name))
+  plugin_path_lens.set_or_abort(builder, ToJson::to_json(self.path))
   plugin_enabled_skills_lens.set_or_abort(builder, enabled_skills.to_json())
   builder.to_json()
 }
@@ -229,7 +229,7 @@ fn sorted_plugins_for_json(
   plugins : @immut_hashmap.HashMap[PluginName, Plugin],
 ) -> Array[Plugin] {
   let entries = plugins.to_array()
-  entries.sort_by((left, right) => left.0.compare(right.0))
+  entries.sort_by((left, right) => Compare::compare(left.0, right.0))
   entries.map(entry => entry.1)
 }
 
@@ -266,12 +266,12 @@ pub impl @json.FromJson for GitHubLockRepository with fn from_json(json, path) {
 pub impl ToJson for GitHubLockRepository with fn to_json(self) -> Json {
   let builder = @lens.JsonBuilder::JsonBuilder()
   repository_type_lens.set_or_abort(builder, "github")
-  github_repository_lens.set_or_abort(builder, self.repository.to_json())
+  github_repository_lens.set_or_abort(builder, ToJson::to_json(self.repository))
   github_marketplace_kind_lens.set_or_abort(
     builder,
-    self.marketplace_kind.to_json(),
+    ToJson::to_json(self.marketplace_kind),
   )
-  github_commit_lens.set_or_abort(builder, self.commit.to_json())
+  github_commit_lens.set_or_abort(builder, ToJson::to_json(self.commit))
   github_plugins_lens.set_or_abort(
     builder,
     sorted_plugins_for_json(self.plugins).to_json(),
@@ -308,10 +308,10 @@ pub impl @json.FromJson for LocalLockRepository with fn from_json(json, path) {
 pub impl ToJson for LocalLockRepository with fn to_json(self) -> Json {
   let builder = @lens.JsonBuilder::JsonBuilder()
   repository_type_lens.set_or_abort(builder, "local")
-  local_path_lens.set_or_abort(builder, self.path.to_json())
+  local_path_lens.set_or_abort(builder, ToJson::to_json(self.path))
   local_marketplace_kind_lens.set_or_abort(
     builder,
-    self.marketplace_kind.to_json(),
+    ToJson::to_json(self.marketplace_kind),
   )
   local_plugins_lens.set_or_abort(
     builder,
@@ -343,8 +343,8 @@ pub impl @json.FromJson for LockRepository with fn from_json(json, path) {
 ///|
 pub impl ToJson for LockRepository with fn to_json(self) -> Json {
   match self {
-    GitHub(repository) => repository.to_json()
-    Local(repository) => repository.to_json()
+    GitHub(repository) => ToJson::to_json(repository)
+    Local(repository) => ToJson::to_json(repository)
   }
 }
 
@@ -379,7 +379,7 @@ pub impl ToJson for Lock with fn to_json(self) -> Json {
   let targets = self.targets.iter().to_array()
   targets.sort()
   let repository_entries = self.repositories.to_array()
-  repository_entries.sort_by((left, right) => left.0.compare(right.0))
+  repository_entries.sort_by((left, right) => Compare::compare(left.0, right.0))
   let repositories = repository_entries.map(entry => entry.1)
   lock_version_lens.set_or_abort(builder, self.version.to_string().to_json())
   lock_targets_lens.set_or_abort(builder, targets.to_json())
@@ -389,5 +389,5 @@ pub impl ToJson for Lock with fn to_json(self) -> Json {
 
 ///|
 pub fn Lock::to_pretty_json(self : Lock) -> String {
-  self.to_json().stringify(indent=2) + "\n"
+  ToJson::to_json(self).stringify(indent=2) + "\n"
 }

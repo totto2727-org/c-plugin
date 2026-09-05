@@ -134,21 +134,21 @@ test "domain names reject empty and slash values" {
 test "PluginName Compare::compare - uses lexical order" {
   let alpha = PluginName::PluginName("alpha")
   let z = PluginName::PluginName("z")
-  inspect(alpha.compare(z), content="-1")
+  inspect(Compare::compare(alpha, z), content="-1")
 }
 
 ///|
 test "SkillName Compare::compare - uses lexical order" {
   let install = SkillName::SkillName("install")
   let sync = SkillName::SkillName("sync")
-  inspect(install.compare(sync), content="-1")
+  inspect(Compare::compare(install, sync), content="-1")
 }
 
 ///|
 test "Target Compare::compare - uses normalized lexical path order" {
   let agents = Target::Target("project/.agents")
   let cursor = Target::Target("project/.cursor")
-  inspect(agents.compare(cursor), content="-1")
+  inspect(Compare::compare(agents, cursor), content="-1")
 }
 
 ///|
@@ -162,8 +162,8 @@ test "RepositoryIdentity Compare::compare - orders type then identity" {
   let local_repository = RepositoryIdentity::LocalIdentity(
     RelativeSourcePath::RelativeSourcePath("alpha"),
   )
-  inspect(github.compare(later_github), content="-1")
-  inspect(later_github.compare(local_repository), content="-1")
+  inspect(Compare::compare(github, later_github), content="-1")
+  inspect(Compare::compare(later_github, local_repository), content="-1")
 }
 
 ///|
@@ -198,19 +198,22 @@ test "path identity Hash::hash - matches normalized equality" {
   let target = Target::Target(".agents/skills")
   let equivalent_target = Target::Target(".agents/./skills")
   inspect(target == equivalent_target, content="true")
-  inspect(target.hash() == equivalent_target.hash(), content="true")
+  inspect(Hash::hash(target) == Hash::hash(equivalent_target), content="true")
   let source = RelativeSourcePath::RelativeSourcePath("vendor/plugin")
   let equivalent_source = RelativeSourcePath::RelativeSourcePath(
     "vendor/./plugin",
   )
   inspect(source == equivalent_source, content="true")
-  inspect(source.hash() == equivalent_source.hash(), content="true")
+  inspect(Hash::hash(source) == Hash::hash(equivalent_source), content="true")
   let plugin_path = RelativePluginPath::RelativePluginPath("plugins/example")
   let equivalent_plugin_path = RelativePluginPath::RelativePluginPath(
     "plugins/./example",
   )
   inspect(plugin_path == equivalent_plugin_path, content="true")
-  inspect(plugin_path.hash() == equivalent_plugin_path.hash(), content="true")
+  inspect(
+    Hash::hash(plugin_path) == Hash::hash(equivalent_plugin_path),
+    content="true",
+  )
 }
 
 ///|

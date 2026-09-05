@@ -88,9 +88,7 @@ async test "LinkReconciliation reconcile_skill_links 14 - continues independent 
 ///|
 async test "LinkReconciliation reconcile_skill_links 15 - retains failed stale removal while checkpointing an independent removal" {
   @async.with_task_group() <| group => {
-    let temporary : @path.Path = @fs.tmpdir(
-      prefix="c-plugin-remove-partial-",
-    )
+    let temporary : @path.Path = @fs.tmpdir(prefix="c-plugin-remove-partial-")
     group.add_defer(() => @fs.rmdir(temporary.to_string(), recursive=true))
     let root : @path.Path = @fs.realpath(temporary.to_string())
     let entries = []

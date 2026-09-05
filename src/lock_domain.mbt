@@ -402,10 +402,11 @@ pub enum RepositoryIdentity {
 ///|
 pub impl Compare for RepositoryIdentity with fn compare(self, other) {
   match (self, other) {
-    (GitHubIdentity(left), GitHubIdentity(right)) => left.compare(right)
+    (GitHubIdentity(left), GitHubIdentity(right)) =>
+      Compare::compare(left, right)
     (GitHubIdentity(_), LocalIdentity(_)) => -1
     (LocalIdentity(_), GitHubIdentity(_)) => 1
-    (LocalIdentity(left), LocalIdentity(right)) => left.compare(right)
+    (LocalIdentity(left), LocalIdentity(right)) => Compare::compare(left, right)
   }
 }
 
