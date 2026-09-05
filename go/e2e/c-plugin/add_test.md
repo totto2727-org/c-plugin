@@ -1,8 +1,8 @@
 # Add local skills and handle collisions
 
-Source: [add_test.go](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/go/e2e/c-plugin/add_test.go)
+Source: [add_test.go](./add_test.go)
 
-The Source link identifies the implementation described below. Until the owning feature layer introduces Go source, it points to the immutable saved snapshot.
+The relative Source link identifies the sibling Go implementation described below.
 
 ## `addScenario`
 
@@ -39,7 +39,7 @@ The Source link identifies the implementation described below. Until the owning 
 
 1. From `project`, run `c-plugin init`, then create foreign alpha and the nested working directory.
 2. From `project/nested`, run `c-plugin skill add --local ./marketplace --kind claude --skill demo/alpha --skill demo/beta` and inspect the lock, beta link, foreign alpha, and ownership state.
-3. From the same directory, repeat `c-plugin skill add --local ./marketplace --kind claude --skill demo/alpha --skill demo/beta`; require rejection and unchanged lock digest with beta still linked and owned.
+3. From the same directory, repeat `c-plugin skill add --local ./marketplace --kind claude --skill demo/alpha --skill demo/beta`; require rejection and unchanged lock and complete ownership-state digests, with alpha still a regular file containing `foreign\n` and beta still linked and owned.
 4. Run `c-plugin skill remove --skill marketplace/demo/alpha --skill marketplace/demo/beta` from `project/nested`; alpha remains foreign and beta is removed.
 5. Create the real beta directory with `keep` and the foreign `neighbor` file, then run `c-plugin skill add --local ./marketplace --kind claude --skill demo/alpha --skill demo/beta --force` from `project/nested`.
 6. Verify exact forced output, alpha replacement, beta directory contents, neighbor contents, and final ownership entries.
@@ -51,7 +51,7 @@ Here `<repository>` is `$HOME/project/marketplace` and `<lock>` is `$HOME/projec
 | Phase           | Expected result                                                                                                                                                   |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Initial add     | Exit 0; stdout is `Added <repository> to <lock>: partial (2 notices, 0 unavailable repositories)`; beta is managed, while the foreign alpha file remains unowned. |
-| Duplicate add   | Nonzero exit with `totto2727/c-plugin.AddLocalError.InvalidInput`; the lock digest is unchanged, and the beta link and ownership entry still exist.                                  |
+| Duplicate add   | Nonzero exit with `totto2727/c-plugin.AddLocalError.InvalidInput`; the lock and complete ownership-state digests are unchanged, alpha remains a regular file containing `foreign\n`, and the beta link and ownership entry still exist.                                  |
 | Forced add      | Exit 0; exactly `Added <repository> to <lock>: partial (1 notices, 0 unavailable repositories)\n`; alpha becomes a symlink to the marketplace skill, beta remains a directory with its content, and `neighbor` remains unchanged.            |
 | Ownership state | The final state contains alpha and excludes beta because only alpha was safely replaced.                                                                          |
 
@@ -62,4 +62,4 @@ Here `<repository>` is `$HOME/project/marketplace` and `<lock>` is `$HOME/projec
 - Force runs only after the selected repository was removed. This scenario does not authorize a same-source force-repeat sync or union merge.
 
 - Output expectations refer to the helper's captured `cli.Result.Stdout`; these tests do not assert a separate stderr stream.
-- These are assertions in the pinned source, not execution results from this documentation-only layer.
+- These are assertions in the sibling Go source, not evidence that this workflow has been executed successfully.
