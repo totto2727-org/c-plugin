@@ -1,54 +1,56 @@
-# MoonBit Simple CLI Template
+# c-plugin
 
-A GitHub repository template for starting a small MoonBit command-line application with a dependency-free Hello World example.
+c-plugin is a native MoonBit command-line project for managing agent skills across project and global scopes.
+The independent repository introduces the saved implementation through reviewable feature layers.
+
+<!-- migration-stage:start -->
+**Current stage: S0, documentation only.**
+This checkout contains the inherited template sample, not the c-plugin implementation.
+The commands described below are not runnable product capabilities at this stage.
+<!-- migration-stage:end -->
 
 ## Usage
 
-Run the sample directly from the MoonBit source package:
+On an implementation stage that provides `init`, initialize the current project before adding local skills:
 
-```console
-$ moon run src
-Hello, world!
+```bash
+c-plugin init
 ```
 
-When the optional Nix package is retained, it exposes the same command:
-
-```console
-$ nix run .
-Hello, world!
-```
+Expected result: a new `c-plugin-lock.json` containing the empty version-2 lock and `Created <absolute lock path>` followed by a newline.
+An existing lock is rejected without being overwritten.
+The [CLI reference](./docs/cli.md) describes local add, synchronization, removal, additional targets, and their fixture-dependent results.
+Check the current stage above and the [capability status](./docs/cli.md#capability-status) before relying on a command.
 
 ## Key features
 
-- Dependency-free MoonBit Hello World command-line sample
-- Runs directly from MoonBit source or through the optional Nix command
-- Predictable standard output and exit behavior for the starter command
+- Project/global initialization and explicit local skill selection in the saved implementation.
+- Ownership-aware synchronization, recursive project synchronization, and additional skill targets.
+- Strict versioned locks and preservation of foreign paths, with a narrowly scoped explicit force option.
+
+GitHub installation and updates, interactive selection, and marketplace authoring remain planned rather than available features of the saved implementation.
 
 ## Prerequisites
 
-- **GitHub**: Create a repository with GitHub's **Use this template** flow.
-- **MoonBit**: Install the MoonBit toolchain and `moon` command for the primary `moon run src` path.
-- **Nix (optional)**: Install Nix only to use the alternative packaged `nix run .` path.
+A stage that provides the native CLI requires filesystem permissions for its project/global lock, cache, and managed links.
+Reading the documentation requires no toolchain.
+No published installation route is asserted by this migration baseline.
 
 ## Setup
 
-1. Create a repository with GitHub's **Use this template** button.
-2. Clone the created repository.
+No supported standalone release or installation route is documented yet.
+Mooncakes publication, release artifacts, and standalone Nix acquisition commands will be added only after their actual availability has been verified.
+The repository and its saved implementation snapshot are not evidence of a published package.
 
 ## API
 
-### `project`
-
-The sample command accepts no defined options or positional arguments. Extra arguments are ignored, successful execution writes exactly `Hello, world!` followed by a newline to standard output, writes nothing to standard error, and exits with status 0. The sample has no expected runtime failure condition.
-
-```console
-$ moon run src
-Hello, world!
-```
+The [CLI reference](./docs/cli.md) documents the saved command subset, observable results, duplicate rejection, and safety constraints.
+The [design contract](./docs/design/contract.md) separately records intended behavior and future milestones.
+Neither source claims that the complete design is implemented.
 
 ## Development
 
-For development guidance, see [AGENTS.md](./AGENTS.md).
+For repository development and validation, see [AGENTS.md](./AGENTS.md).
 
 ## License
 
