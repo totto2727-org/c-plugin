@@ -3,8 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    # Validate migration snapshots without opening a PR before the docs-first layer.
-    branches: [main, migration/v2-snapshot, migration/final-reviewed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

@@ -14,14 +14,10 @@ import {
   "moonbitlang/x/crypto",
   "moonbitlang/x/path",
   "totto2727/admiral",
+  "totto2727/admiral/util/target-file-discovery" @target_file_discovery,
   "totto2727/lens",
-  "totto2727/target-file-discovery" @target_file_discovery,
   "totto2727/x/path" @x_path,
 }
-
-import {
-  "mizchi/tui",
-} for "wbtest"
 
 supported_targets = "native"
 

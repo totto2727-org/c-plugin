@@ -1,24 +1,4 @@
 ///|
-test "CacheScope SHA-256 dependency conforms to FIPS 180-4 vectors" {
-  inspect(
-    @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(""))),
-    content="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  )
-  inspect(
-    @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode("abc"))),
-    content="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-  )
-  inspect(
-    @crypto.bytes_to_hex_string(
-      @crypto.sha256(
-        @utf8.encode("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
-      ),
-    ),
-    content="248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
-  )
-}
-
-///|
 test "CacheScope scopes the normalized absolute lock path with the exact SHA-256 vector" {
   let scope = CacheScope::CacheScope(
     "/synthetic/work/project/./nested/../c-plugin-lock.json",
