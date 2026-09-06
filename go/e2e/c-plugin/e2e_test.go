@@ -17,5 +17,6 @@ func TestCLI(t *testing.T) {
 		{Name: "add", Run: addScenario},
 		{Name: "remove", Run: removeScenario},
 		{Name: "target_add", Run: targetAddScenario},
+		{Name: "target_remove", Run: targetRemoveScenario},
 	})
 }
