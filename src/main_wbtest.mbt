@@ -10,6 +10,7 @@ test "CliApp app - exposes implemented stage commands" {
   inspect(cli.commands.length(), content="2")
   inspect(cli.commands[0].name, content="init")
   inspect(cli.commands[1].name, content="skill")
-  inspect(cli.commands[1].subcommands.length(), content="1")
-  inspect(cli.commands[1].subcommands[0].name, content="sync")
+  inspect(cli.commands[1].subcommands.length(), content="2")
+  inspect(cli.commands[1].subcommands[0].name, content="add")
+  inspect(cli.commands[1].subcommands[1].name, content="sync")
 }

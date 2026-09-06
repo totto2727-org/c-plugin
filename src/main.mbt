@@ -23,6 +23,9 @@ fn app(runtime : Runtime) -> @admiral.CliApp {
         name="skill",
         description="Manage skills from plugin repositories",
         subcommands=[
+          add_local_command_def(async fn(context) {
+            run_add_local(runtime, context)
+          }),
           sync_command_def(async fn(context) { run_sync(runtime, context) }),
         ],
       ),
