@@ -1,8 +1,10 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/immut/hashmap" @immut_hashmap,
   "moonbitlang/core/immut/hashset" @immut_hashset,
   "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
   "moonbitlang/x/path",
   "totto2727/admiral",
   "totto2727/lens",
