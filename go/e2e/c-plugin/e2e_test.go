@@ -12,5 +12,7 @@ func TestCLI(t *testing.T) {
 	cli.Run(t, imageName, []cli.Case{
 		{Name: "init_project", Run: initProjectScenario},
 		{Name: "init_global", Run: initGlobalScenario},
+		{Name: "sync", Run: syncScenario},
+		{Name: "sync_recursive", Run: syncRecursiveScenario},
 	})
 }

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"github.com/totto2727-org/e2e/cli"
+	"path"
 	"strings"
 	"testing"
 )
@@ -49,6 +51,20 @@ func (s *scenarioEnvironment) mkdirAll(paths ...string) {
 	s.t.Helper()
 	result := s.runInfrastructure("", append([]string{"mkdir", "-p"}, paths...)...)
 	s.requireExit(result, 0)
+}
+
+func (s *scenarioEnvironment) remove(paths ...string) {
+	s.t.Helper()
+	result := s.runInfrastructure("", append([]string{"rm", "-rf", "--"}, paths...)...)
+	s.requireExit(result, 0)
+}
+
+func (s *scenarioEnvironment) writeFile(filePath string, content string) {
+	s.t.Helper()
+	s.mkdirAll(path.Dir(filePath))
+	if err := s.environment.WriteFile(cli.File{Path: filePath, Content: []byte(content)}); err != nil {
+		s.t.Fatal(err)
+	}
 }
 
 func (s *scenarioEnvironment) readFile(filePath string) []byte {
@@ -98,6 +114,21 @@ func (s *scenarioEnvironment) requireContains(value string, expected string) {
 	}
 }
 
+func (s *scenarioEnvironment) requireNotContains(value string, unexpected string) {
+	s.t.Helper()
+	if strings.Contains(value, unexpected) {
+		s.t.Fatalf("value=%q unexpectedly contains %q", value, unexpected)
+	}
+}
+
+func (s *scenarioEnvironment) requireFile(filePath string, expected string) {
+	s.t.Helper()
+	actual := s.readFile(filePath)
+	if !bytes.Equal(actual, []byte(expected)) {
+		s.t.Fatalf("file %s=%q want=%q", filePath, actual, expected)
+	}
+}
+
 func (s *scenarioEnvironment) requireJSON(filePath string, expected string) {
 	s.t.Helper()
 	var actualValue any
@@ -138,9 +169,47 @@ func (s *scenarioEnvironment) requireMissing(filePath string) {
 	}
 }
 
+func (s *scenarioEnvironment) requireRegularFile(filePath string) {
+	s.t.Helper()
+	s.requireExit(s.runInfrastructure("", "test", "-f", filePath), 0)
+	if s.runInfrastructure("", "test", "-L", filePath).ExitCode == 0 {
+		s.t.Fatalf("path %s is a symlink", filePath)
+	}
+}
+
+func (s *scenarioEnvironment) requireSymlink(link string, target string) {
+	s.t.Helper()
+	s.requireExit(s.runInfrastructure("", "test", "-L", link), 0)
+	result := s.runInfrastructure("", "realpath", link)
+	s.requireSuccess(result)
+	s.requireOutput(result, target+"\n")
+}
+
 func (s *scenarioEnvironment) requireDigest(filePath string, expected [sha256.Size]byte) {
 	s.t.Helper()
 	if actual := s.digest(filePath); actual != expected {
 		s.t.Fatalf("digest %s=%x want=%x", filePath, actual, expected)
 	}
+}
+
+func marketplaceJSON() string {
+	return `{"name":"fixture","plugins":[{"name":"demo","source":"plugins/demo"}]}` + "\n"
+}
+
+func localLock(targets []string, repository string, skills []string) string {
+	value := map[string]any{
+		"version": "2",
+		"targets": targets,
+		"repositories": []any{map[string]any{
+			"type": "local", "path": repository, "marketplaceKind": "claude",
+			"plugins": []any{map[string]any{
+				"name": "demo", "path": "plugins/demo", "enabledSkills": skills,
+			}},
+		}},
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(fmt.Sprintf("encode lock fixture: %v", err))
+	}
+	return string(encoded)
 }
