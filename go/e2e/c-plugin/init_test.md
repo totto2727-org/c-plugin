@@ -1,9 +1,9 @@
 # Initialize project and global locks
 
-Source: [init_test.go](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/go/e2e/c-plugin/init_test.go)
+Source: [init_test.go](./init_test.go)
 
-The Source link identifies the implementation described below. Until the owning feature layer introduces Go source, it points to the immutable saved snapshot.
-The first two functions are registered cases. The third is their shared helper and is included because the source validator discovers every function whose name ends in `Scenario`.
+The relative Source link identifies the sibling Go implementation described below.
+The two functions below are independently registered cases. They call the shared `runInitWorkflow` helper, which is not a separately registered scenario.
 
 ## `initProjectScenario`
 
@@ -51,8 +51,8 @@ Create the project lock exclusively and reject a repeated initialization without
 
 ### Notes
 
-- These source assertions do not certify execution by this documentation-only layer and do not independently assert stderr.
-- The two public init cases are isolated even though they share the `initScenario` helper.
+- These sibling-source assertions do not certify a successful test run and do not independently assert stderr.
+- The two public init cases are isolated even though they share the `runInitWorkflow` helper.
 
 ## `initGlobalScenario`
 
@@ -101,56 +101,5 @@ Create the global lock exclusively and reject a repeated initialization without 
 
 ### Notes
 
-- These source assertions do not certify execution by this documentation-only layer and do not independently assert stderr.
-- The two public init cases are isolated even though they share the `initScenario` helper.
-
-## `initScenario`
-
-### Scope
-
-Document the shared workflow used by the two registered init cases. This function is a helper, not a separately registered ninth E2E case.
-
-### Commands under test
-
-| Command path | Purpose |
-| --- | --- |
-| `c-plugin init` | Exclusively create the selected lock and reject a repeated initialization. |
-
-### Arguments and options
-
-| Argument or option | Purpose |
-| --- | --- |
-| `-g` | Select the global lock on the initial command. |
-| `--global` | Select the same global lock on the repeated command. |
-
-### Preconditions and fixtures
-
-- Each registered case receives its own `c-plugin-e2e:local` container.
-- `HOME=/tmp/c-plugin-v2-init-e2e/home` and `PROJECT=/tmp/c-plugin-v2-init-e2e/totto2727-org/monorepo` are synthetic container paths.
-- The helper creates HOME and PROJECT directories with no existing project/global lock, marketplace, cache, ownership state, or managed skill directory.
-- `c-plugin` denotes `/sandbox/.local/bin/c-plugin`; argv is passed directly with `WorkingDir=$PROJECT` and the isolated HOME.
-
-### Execution flow
-
-1. Select the project branch for `global=false`: initial argv `c-plugin init`, repeated argv `c-plugin init`.
-2. Select the global branch for `global=true`: initial argv `c-plugin init -g`, repeated argv `c-plugin init --global`.
-3. For either branch, execute the initial command from `$PROJECT`, verify its exact output and empty lock JSON, and hash the selected lock.
-4. Execute that branch's repeated command from `$PROJECT`, verify nonzero status and the error substring, and compare the original digest.
-5. Verify the opposite-scope lock, both `.agents` roots, and `$HOME/.cache/c-plugin` are absent.
-
-### Expected results
-
-| Observation | Expected result |
-| --- | --- |
-| Initial status/output | Exit 0; exactly `Created <absolute selected lock path>\n` in captured output. |
-| Lock JSON | Exactly the JSON value `{"version":"2","targets":[],"repositories":[]}`; object key ordering is not asserted by the JSON helper. |
-| Scope isolation | The selected project/global lock only, according to `global`. |
-| Repeated status/output | Nonzero exit; captured output contains `totto2727/c-plugin.StateStoreError.AlreadyExists`. |
-| Non-mutation | The selected lock digest is unchanged by the repeat and the opposite lock remains absent. |
-| Filesystem | No project `.agents`, home `.agents`, or `$HOME/.cache/c-plugin` is created. |
-
-### Notes
-
-- These source assertions do not certify execution by this documentation-only layer and do not independently assert stderr.
-- The two public init cases are isolated even though they share the `initScenario` helper.
-- A later source-layer rename of this helper must update this section without changing the count of eight registered suite cases.
+- These sibling-source assertions do not certify a successful test run and do not independently assert stderr.
+- The two public init cases are isolated even though they share the `runInitWorkflow` helper.

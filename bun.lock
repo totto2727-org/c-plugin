@@ -8,6 +8,12 @@
         "vite-plus": "catalog:",
       },
     },
+    "go/e2e/c-plugin": {
+      "name": "@go/c-plugin-e2e",
+      "devDependencies": {
+        "vite-plus": "catalog:",
+      },
+    },
   },
   "catalog": {
     "vite-plus": "0.2.8",
@@ -20,6 +26,8 @@
     "@babel/runtime": ["@babel/runtime@7.29.7", "", {}, "sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw=="],
 
     "@blazediff/core": ["@blazediff/core@1.9.1", "", {}, "sha512-ehg3jIkYKulZh+8om/O25vkvSsXXwC+skXmyA87FFx6A/45eqOkZsBltMw/TVteb0mloiGT8oGRTcjRAz66zaA=="],
+
+    "@go/c-plugin-e2e": ["@go/c-plugin-e2e@workspace:go/e2e/c-plugin"],
 
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.6.0", "", {}, "sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw=="],
 

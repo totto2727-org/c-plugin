@@ -2,7 +2,9 @@
   "name": "c-plugin",
   "private": true,
   "type": "module",
-  "workspaces": [],
+  "workspaces": [
+    "go/e2e/*"
+  ],
   "scripts": {},
   "devDependencies": {
     "vite-plus": "catalog:"
