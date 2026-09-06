@@ -2,7 +2,7 @@
 
 この文書はv2再実装の設計契約を独立製品`c-plugin`へ保存するものです。
 すべての計画コマンドが実装済み・公開済みという意味ではありません。
-文書先行baselineには製品sourceを追加しません。[保存済み機能の状態](../cli.md#capability-status)と[移行stage](../migration.md#feature-stage-map)を参照してください。
+実装済み機能と計画の区別は[機能の状態](../cli.md#capability-status)を参照してください。
 
 [English contract](./contract.md)。
 出典: [raw migration snapshot `5d6f66a8`](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/docs/design/contract.ja.md)。
@@ -36,16 +36,19 @@ bit adapterは存在しますが、GitHub add/update/cache、TTY対話、marketp
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 言語とターゲット | MoonBit、nativeターゲットのみ                                                                                                          |
 | CLI解析          | `totto2727/admiral`                                                                                                                    |
-| 対話入力         | `mizchi/tui`                                                                                                                           |
+| 対話入力         | `mizchi/tui`は将来のTTY機能向け候補であり、c-pluginの直接依存には含めない。Admiral経由の推移依存は残る                                                                                                                           |
 | Git              | `mizchi/bit`モジュールをライブラリとして使用し、主に`mizchi/bit_lib`などのライブラリパッケージを利用する。`git`や`bit` CLIは起動しない |
 | パス             | filesystem境界では`moonbitlang/x/path.Path`、検証済みdomain値では`totto2727/x@0.3.0/path.AbsolutePath`と`RelativePath`                 |
-| ロック探索       | `totto2727/target-file-discovery`                                                                                                      |
+| ロック探索       | `totto2727/admiral/util/target-file-discovery`                                                                                                      |
 | JSON             | `totto2727/lens`と標準の`FromJson`、`ToJson`トレイト                                                                                   |
 | 非同期I/O        | `moonbitlang/async`                                                                                                                    |
 | 単体テスト       | テストごとの一時ルートを使用するMoonBitブラックボックス・ホワイトボックステスト                                                        |
 | E2Eテスト        | Go/Testcontainersによる制御、fixture、assertion、シナリオごとの独立container                                                           |
 
-すべての依存関係は、互換性を確認した正確なバージョンに固定します。最初の実装ゲートでは、Admiral、TUI、bit、Lens、target-file-discovery、async、`moonbitlang/x/path`、`totto2727/x@0.3.0/path`を同時にimportする最小構成のnativeビルドを行います。未検証の依存関係の組み合わせでは実装を進めません。
+採用した依存関係は、互換性を確認した正確なバージョンに固定します。
+Admiral内蔵の探索パッケージを使用し、独立した探索モジュールは追加しません。
+互換性は製品のnativeビルドと動作テストで検証し、依存ライブラリ単体のprobeは維持しません。
+TTY依存は対話機能を実装するときに追加し、製品の振る舞いを通して検証します。
 
 `mizchi/bit`は現在、自身を実験的実装と説明し、リポジトリ破損の可能性を警告しています。そのため、c-pluginではキャッシュしたcloneを破棄可能なデータとして扱い、依存バージョンを固定し、使用するclone、fetch、checkout、HEAD解決APIを正確にテストします。
 
@@ -110,7 +113,7 @@ TUIは選択状態を扱うアダプターであり、コマンドのビジネ�
 - リモートのデフォルトブランチへの更新と、それに続くロックとリンクの更新。
 - `.agents/skills`以下の主リンクと、0個以上の追加リンクターゲット。
 - 最も近い親のプロジェクトロック探索、home直下のグローバルロック探索、再帰的な子孫ロック探索。
-- `totto2727/target-file-discovery`による`.gitignore`を考慮した再帰探索。
+- `totto2727/admiral/util/target-file-discovery`による`.gitignore`を考慮した再帰探索。
 - 複数リポジトリ同期の耐障害性。1つのリポジトリが利用できない場合は報告してスキップし、独立した他のリポジトリの同期を妨げない。
 - JSON入力順や内部collectionの反復順に依存せず、同期時にcanonical repository順で最後のリポジトリを採用する決定論的なスキル名重複解決。
 - Claude、Cursor、Codex形式間のマーケットプレイス変換。
@@ -134,7 +137,7 @@ TUIは選択状態を扱うアダプターであり、コマンドのビジネ�
 
 グローバルロックファイルは意図的に`~/.agents/`以下へ配置しません。
 
-`init`は現在の作業ディレクトリをプロジェクトルートとして使用し、`-g`では注入されたhomeディレクトリを使用します。その他のスコープ付きコマンドはすべて、`totto2727/target-file-discovery`で既存のロックを探索し、別のルートを推測しません。
+`init`は現在の作業ディレクトリをプロジェクトルートとして使用し、`-g`では注入されたhomeディレクトリを使用します。その他のスコープ付きコマンドはすべて、`totto2727/admiral/util/target-file-discovery`で既存のロックを探索し、別のルートを推測しません。
 
 再帰探索は、最も近いプロジェクトロックを含むディレクトリから開始し、そのロックと子孫のロックを含みます。グローバルモードでは再帰探索を行いません。
 
@@ -174,7 +177,7 @@ GitHubのownerとrepository componentは、それぞれのdomain constructorで�
 - 相対ローカルマーケットプレイスパスとターゲットパスは、constructorが制約を保証する型付きドメイン値として保持する。
 - パスは比較前に正規化する。ユーザーが入力したパス表記を直接比較しない。
 
-`totto2727/target-file-discovery`は現在、文字列ベースのpublic関数を公開しています。その変換は1つの探索アダプターに閉じ込め、型なしパスをc-pluginの他の領域へ漏らしません。後からこのライブラリにPathベースAPIを追加しても構いませんが、別の探索実装を作るための必須条件とはしません。
+`totto2727/admiral/util/target-file-discovery`は現在、文字列ベースのpublic関数を公開しています。その変換は1つの探索アダプターに閉じ込め、型なしパスをc-pluginの他の領域へ漏らしません。後からこのライブラリにPathベースAPIを追加しても構いませんが、別の探索実装を作るための必須条件とはしません。
 
 ## Git方針
 
@@ -376,7 +379,9 @@ runnerの契約は次のとおりです。
 ## 旧設計の実装milestone
 
 
-以下の旧milestone IDは設計履歴であり、現在の移行stackや完了状態を示しません。v1共存を復活させる指示でもありません。現移行は[S0〜S18](../migration.md#feature-stage-map)に従います。この旧milestone見出し以下の全小節は元の計画文脈を保存するもので、現在のstackの実行指示ではありません。
+以下の旧milestone IDは設計履歴であり、完了状態を示しません。
+v1共存を復活させる指示でもありません。
+この旧milestone見出し以下の全小節は元の計画文脈を保存するもので、現在の実行指示ではありません。
 
 c-plugin v2は一度に全面的に書き換えず、独立してレビュー可能なマイルストーンの連続として実装します。各マイルストーンでは、利用可能な1つの垂直スライスを追加し、同じ変更内にテストを含め、次のマイルストーンへ進む前に報告して停止します。
 
@@ -394,7 +399,7 @@ c-plugin v2は一度に全面的に書き換えず、独立してレビュー可
 
 ### 単位ごとの検証契約
 
-各原子的な単位では、動作とテストを同じ変更に含めます。`B0`では文書化したv1/v2のpathとidentity、v1が未変更であること、両versionが同じlock scopeを共有しないことを検証します。`B1`では固定した全dependencyと正確な`mizchi/bit` APIを使用するnative buildを証明してから、対象を絞ったcheck・format・parser test・native buildを実行し、実際の`--help`/`--version`とAdmiral名`c-plugin`を確認します。`B2`では`c-plugin-v2` Nix packageをbuild/evaluateし、そのexecutableが動作してv1 packageが未変更であることを検証します。`F0`と`F1`ではconstructor・normalization・拒否・仮home、`F2`ではcanonical round trip・JSON path・strict failure・未対応versionのbyte維持・最上位dispatch、`F3`では厳格なownership-state round trip、`F4`ではexclusive create・temporary-sibling rename・永続化前後の失敗、`F5`では完全SHA-256 vector・検証済みmetadataの生成とround trip・canonicalization・lock移動・2ロックcache分離をテストします。metadata不一致の拒否は、永続化metadataを利用する将来のcache storage adapter testでその利用境界に対して検証します。`F6`ではnearest project・exact global・ignore/recursive descendant・home境界・`-g`/`-r`、`F7`では全runtime boundaryの注入と実ユーザーpathの非使用をテストします。`C-init`ではproject/global正常系・既存fileのbyte維持・不正scope・繰り返しをテストし、`E0`ではimage/executableを1回だけbuildして、分離したproject/global initのstatus・output・lock JSON・host stateをassertします。
+各原子的な単位では、動作とテストを同じ変更に含めます。`B0`では文書化したv1/v2のpathとidentity、v1が未変更であること、両versionが同じlock scopeを共有しないことを検証します。`B1`では固定した全dependencyと正確な`mizchi/bit` APIを使用するnative buildを証明してから、対象を絞ったcheck・format・parser test・native buildを実行し、実際の`--help`/`--version`とAdmiral名`c-plugin`を確認します。`B2`では`c-plugin-v2` Nix packageをbuild/evaluateし、そのexecutableが動作してv1 packageが未変更であることを検証します。`F0`と`F1`ではconstructor・normalization・拒否・仮home、`F2`ではcanonical round trip・JSON path・strict failure・未対応versionのbyte維持・最上位dispatch、`F3`では厳格なownership-state round trip、`F4`ではexclusive create・temporary-sibling rename・永続化前後の失敗、`F5`ではSHA-256から導出するCacheScopeの正確なscope key・検証済みmetadataの生成とround trip・canonicalization・lock移動・2ロックcache分離をテストします。metadata不一致の拒否は、永続化metadataを利用する将来のcache storage adapter testでその利用境界に対して検証します。`F6`ではnearest project・exact global・ignore/recursive descendant・home境界・`-g`/`-r`、`F7`では全runtime boundaryの注入と実ユーザーpathの非使用をテストします。`C-init`ではproject/global正常系・既存fileのbyte維持・不正scope・繰り返しをテストし、`E0`ではimage/executableを1回だけbuildして、分離したproject/global initのstatus・output・lock JSON・host stateをassertします。
 
 `M0`と`M1`ではClaude/Cursor/Codexとlocal fixtureを使い、明示的なkind/skill選択・重複ID・ordering・不正manifest・正規化pathをテストします。`R1-P`ではfilesystemを変更せず、enabled skill filtering、不変なdesired ownership、canonical repository precedence、provenance、unavailable repository、正規化link pathを網羅します。`R1-FS`では不足・古い・管理外・置換済み・壊れたlink、欠落/破損ownership state、削除target、一部失敗、冪等性、ロック間分離を網羅します。`C-sync`と`C-sync-r`ではunit flowとclean-container E2Eを追加し、外部編集したlockとignore対象のrecursive descendantも検証します。`A1`では成功した全mutationが永続化済みcandidateと同じ値をsyncし、cancel/no-opはwriteもsyncも行わず、write後のsync失敗から復旧できることを証明します。`C-add-local`、`C-remove`、`C-target-add`、`C-target-remove`は、それぞれunitと独立したclean-container E2Eで、該当するstatus/output、canonical lock、link/state、繰り返しまたは選択、cleanup、管理外path維持をassertします。
 

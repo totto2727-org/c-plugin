@@ -1,9 +1,11 @@
 # c-plugin
 
-<!-- migration-stage:start -->
-**Current stage: S0, documentation only.**
-Product sources and Go E2E code are not present at this stage. Native checks exercise only the inherited template.
-<!-- migration-stage:end -->
+<!-- Temporary: this feature PR intentionally precedes complete command integration.
+Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
+**Current feature stage: S1.**
+Available CLI entrypoints: help/version.
+Later-stage commands and their examples below are specifications, not executable claims for this checkout.
+Registered Go/Testcontainers cases in this checkout: 0.
 
 ## Repository structure
 
@@ -12,55 +14,58 @@ README.mbt.md           Canonical end-user entrypoint
 README.md               Relative symlink to README.mbt.md
 AGENTS.md               Developer and agent instructions
 CLAUDE.md               Relative symlink to AGENTS.md
-docs/cli.md             Saved implementation reference and capability status
-docs/design/            English design contract and existing Japanese translation
-docs/migration.md       Snapshot provenance, stage map, and validation boundaries
-go/e2e/c-plugin/*.md    Scenario documents before their Go sources are introduced
-src/                    Inherited template sample in the documentation-first baseline
-moon.mod                Inherited template metadata until the bootstrap layer
-flake.nix, package.nix  Inherited template environment and packaging definitions
-.github/workflows/      Inherited validation and disabled publishing workflows
+docs/cli.md             CLI reference and capability status
+docs/design/            English design contract and Japanese translation
+go/e2e/c-plugin/         Scenario documents and cases introduced through this stage
+src/                    Native CLI sources and implementation-aligned tests
+moon.mod                Independent c-plugin module metadata
+flake.nix, package.nix  Independent environment and CLI packaging definitions
+.github/workflows/      Native and E2E validation
 ```
-
-S0 is the documentation-first baseline; subsequent stages introduce product source and integration.
-Product MoonBit sources, Go sources, E2E Dockerfile, and Vite+/Just integration are saved on the pinned migration snapshot and are introduced by their owning feature layers.
-See [the stage map](./docs/migration.md#feature-stage-map) before treating a planned file or command as available in the current checkout.
 
 ## Development commands
 
 ### Execution rules
 
 - Run commands from this independent repository's root, not from its parent workspace.
-- Enter the pinned environment with `nix develop` before MoonBit validation when using Nix.
-- Use existing Vite+ tasks once the bootstrap and E2E layers introduce them. Do not invent task names or restore unrelated Go/Elixir packages.
+- Enter the pinned environment with `nix develop`, install JavaScript dependencies with `vp install --frozen-lockfile`, and synchronize MoonBit dependencies with `moon update` before validation.
 - Never use `npx` or `bunx`. Prefer `vp run`, then `vp exec`, then `vpx` for supported commands.
-- Do not modify the inherited template implementation merely to make documentation appear executable.
 - Before production edits read [share-coding](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/share-coding/SKILL.md) and [mbt-coding](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/mbt-coding/SKILL.md).
 - Before test edits read [share-test](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/share-test/SKILL.md) and [mbt-test](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/mbt-test/SKILL.md).
 - Use the installed `moonbit-orientation` skill for language questions, or the [official documentation index](https://raw.githubusercontent.com/moonbitlang/moonbit-docs/main/next/index.md).
 - Write repository artifacts in English, preserving the existing Japanese design translation. Use Japanese for PR titles, descriptions, review discussions, and Linear collaboration.
-- Keep publishing workflows disabled until publication is explicitly approved and their authentication and immutable action pins have been verified.
+- Add publishing automation only after publication is explicitly approved and licensing, authentication, actual package availability, and immutable action pins have been verified.
 
-### Baseline and feature checks
-
-At S0, the following commands check only the inherited template, not c-plugin product behavior. At later stages, validate the product sources actually present and prefer their defined Vite+ tasks:
+### Standard tasks
 
 ```bash
-moon check --target native
-moon test --target native
+vp run check       # Native checks
+vp run build       # Native CLI build
+vp run mbt:test    # Native product tests without Docker
+moon fmt --check   # Strict MoonBit formatting check
+vp run test        # Native tests
+vp run fix         # MoonBit formatting/lint fixes
 ```
 
-The README contains no executable MoonBit fences.
-Do not report a zero-test run, `no work to do`, or a template-only check as product or documentation-example coverage.
-At S0 there are no Go source files, so a scenario validator that discovers zero files is not a successful E2E-documentation check.
-Use the pinned-source projection described in [migration validation](./docs/migration.md#documentation-validation) instead.
+Go sources, Go formatting/lint tasks, the image recipe, and E2E execution enter together in S7. Do not invoke these absent tasks in this checkout.
+Keep native validation, Go/Testcontainers E2E, and Nix package builds as separately reported checks.
+For package validation, run `nix build .#c-plugin` independently of development-shell checks.
+Inspect the root and Go `vite.config.ts`, `package.json`, `Justfile`, and Nix outputs before changing task contracts.
+Tests verify c-plugin behavior, not upstream-library conformance.
+Dependency/toolchain probes are temporary investigation artifacts and must stay outside tracked output.
+Product adapter contracts and end-to-end scenarios remain required.
+Do not report a zero-test run or `no work to do` as product coverage.
 
-### Commands introduced by later layers
+### Documentation validation
 
-The saved implementation's Vite+ tasks, Just image recipe, Go commands, Dockerfile, and Nix package commands belong to the feature layers that introduce their real definitions.
-Inspect that layer's root and Go `vite.config.ts`, `package.json`, `Justfile`, and Nix outputs before running or documenting them.
-Keep ordinary native validation separate from Nix package builds and from Go/Testcontainers E2E.
-Run the real E2E suite after its image, source, and dependency-bearing feature layers exist.
+Use the validator shipped with the `document-e2e-scenarios` skill:
+
+```bash
+python3 <skill-directory>/scripts/validate_scenario_docs.py go/e2e/c-plugin
+```
+
+Validate the real source/document directory, then run Go/Testcontainers separately.
+A validator that discovers zero Go sources is not coverage, and documented expected results are not test-run reports.
 
 ## Architecture
 
@@ -69,10 +74,10 @@ Run the real E2E suite after its image, source, and dependency-bearing feature l
 - Preserve the native MoonBit stack: Admiral CLI parsing, Lens codecs, validated path values, async filesystem I/O, target-file discovery, and bit library adapters.
 - Keep untrusted text at adapters and validate it into typed domain values once. Do not pass raw paths or generic JSON through command policy.
 - Keep the source module identity `totto2727/c-plugin` distinct from the GitHub repository `totto2727-org/c-plugin` and Go E2E module `github.com/totto2727-org/c-plugin/go/e2e/c-plugin`.
-These identities describe the saved product source, not a publication claim or the initial template metadata.
-- The saved implementation uses one executable package under `src/`, with implementation-aligned white-box test files. A conceptual layered diagram is not permission to add empty framework packages.
+These identities describe product source, not a publication claim.
+- The implementation uses one executable package under `src/`, with implementation-aligned white-box test files. A conceptual layered diagram is not permission to add empty framework packages.
 - Git operations use the bit libraries, not spawned `git` or `bit` CLI commands. The adapter alone does not implement GitHub add/update workflows.
-- Preserve strict lock version `"2"`, canonical JSON, validated source identities, and isolated project/global lock scopes. Repository migration does not add v1 lock conversion.
+- Preserve strict lock version `"2"`, canonical JSON, validated source identities, and isolated project/global lock scopes. No v1 lock conversion is provided.
 
 ### Filesystem and persistence
 
@@ -80,34 +85,34 @@ These identities describe the saved product source, not a publication claim or t
 - Record ownership only after creating and verifying a link and successfully checkpointing it. Do not promise automatic adoption across the filesystem-mutation/checkpoint crash window.
 - Missing or corrupt ownership records never authorize deletion or adoption of pre-existing paths.
 - Explicit add force can replace only the exact contained eligible file or symlink. It does not authorize real-directory deletion, neighbor mutation, or scope escape.
-- Duplicate local repositories/plugins/skills remain invalid input. Do not introduce union merge or same-source force-repeat synchronization under a naming or documentation migration.
+- Duplicate local repositories/plugins/skills remain invalid input. Do not introduce union merge or same-source force-repeat synchronization through unrelated naming or documentation changes.
 - Keep cancellation and supported semantic no-ops distinct from rejection. A persisted mutation synchronizes the exact candidate, while a rejected or no-op candidate must not be silently rewritten.
 
 ## Development tools
 
 - **MoonBit**: Native implementation and implementation-aligned tests.
 - **Nix flakes and direnv**: Pinned environment and separate CLI package/overlay validation.
-- **Vite+ and Just**: Existing task orchestration and caller-owned E2E image setup, introduced with their feature layers.
+- **Vite+ and Just**: Task orchestration and caller-owned E2E image setup.
 - **Go and Testcontainers**: Isolated CLI workflows through [totto2727-org/e2e](https://github.com/totto2727-org/e2e).
-- **GitHub Actions**: Baseline validation, with separately introduced E2E integration. Disabled publishing workflows are not release evidence.
+- **GitHub Actions**: Native validation and separate Go/Testcontainers E2E execution.
 
 ## Package-specific rules
 
-- Preserve each existing Go scenario, fixture, assertion, module checksum, lint configuration, image input, and task dependency when its feature layer is introduced.
+- Preserve each existing Go scenario, fixture, assertion, module checksum, lint configuration, image input, and task dependency.
 - The caller builds `c-plugin-e2e:local`. Each registered case receives a separate disposable container with synthetic `HOME`, working directory, cache, and targets.
 - The CLI under test is `/sandbox/.local/bin/c-plugin`. Existing `/tmp/c-plugin-v2-*` fixture paths are synthetic compatibility fixtures, not obsolete public names to rewrite indiscriminately.
 - Maintain one complete section per source `*Scenario` function in each sibling `<stem>_test.md`, in source order, following the [E2E documentation contract](https://github.com/totto2727-org/e2e/pull/8).
 - In each scenario use `Scope`, `Commands under test`, `Arguments and options`, `Preconditions and fixtures`, `Execution flow`, `Expected results`, and `Notes` as ordered third-level headings.
 - Command tables contain executable/subcommand paths only. Put option tokens in their own table and complete ordered argv in the execution flow.
-- Source links point to the pinned snapshot while source is absent. When adding the corresponding Go source, restore its relative source link and validate against the real directory.
-- The raw `initScenario` helper is not a ninth registered case. If renamed in a later layer, update the document's helper section and source reference together.
+- Scenario Source links remain pinned while the corresponding Go source is absent. Restore sibling links with the owning implementation and validate every real source/document pair.
+- The shared `runInitWorkflow` helper is not a ninth registered case. Keep the two init scenario sections aligned with the registered cases.
 
 ## MoonBit README maintenance
 
 Keep the physical `README.mbt.md` as canonical content and `README.md -> README.mbt.md` as a relative symlink.
 Keep `CLAUDE.md -> AGENTS.md` as the relative alias of these instructions.
 Do not duplicate README content under `src/` or add permanent package manifests, stubs, or tests solely to compile documentation.
-Use explicit `mbt nocheck` only for a real existing example that depends on an API not yet introduced, and record its path, API dependency, feature stage, and re-enablement check.
+Use explicit `mbt nocheck` only for a real existing example that depends on an API not yet introduced, and record its path, API dependency, owning implementation, and re-enablement check.
 The documentation has no MoonBit code fences, so there is nothing to disable and no reason to invent an example.
 Re-enable real examples as `mbt check` with their implementing feature and validate the exact rendered artifact using supported `moon check README.mbt.md` and `moon test README.mbt.md` context.
 Require evidence that the artifact was compiled or executed, not merely a zero-work exit status.

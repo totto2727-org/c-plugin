@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+.direnv
+.moon
+.mooncakes
+_build
+node_modules
+tmp
+**/.DS_Store
+**/_build
+**/node_modules
