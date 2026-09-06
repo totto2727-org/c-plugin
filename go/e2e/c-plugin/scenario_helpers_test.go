@@ -5,10 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"github.com/totto2727-org/e2e/cli"
 	"path"
 	"strings"
 	"testing"
+
+	"github.com/totto2727-org/e2e/cli"
 )
 
 const cPlugin = "/sandbox/.local/bin/c-plugin"
@@ -172,6 +173,14 @@ func (s *scenarioEnvironment) requireMissing(filePath string) {
 func (s *scenarioEnvironment) requireRegularFile(filePath string) {
 	s.t.Helper()
 	s.requireExit(s.runInfrastructure("", "test", "-f", filePath), 0)
+	if s.runInfrastructure("", "test", "-L", filePath).ExitCode == 0 {
+		s.t.Fatalf("path %s is a symlink", filePath)
+	}
+}
+
+func (s *scenarioEnvironment) requireDirectory(filePath string) {
+	s.t.Helper()
+	s.requireExit(s.runInfrastructure("", "test", "-d", filePath), 0)
 	if s.runInfrastructure("", "test", "-L", filePath).ExitCode == 0 {
 		s.t.Fatalf("path %s is a symlink", filePath)
 	}

@@ -14,6 +14,8 @@ func TestCLI(t *testing.T) {
 		{Name: "init_global", Run: initGlobalScenario},
 		{Name: "sync", Run: syncScenario},
 		{Name: "sync_recursive", Run: syncRecursiveScenario},
+		{Name: "add", Run: addScenario},
+		{Name: "remove", Run: removeScenario},
 		{Name: "target_add", Run: targetAddScenario},
 	})
 }
