@@ -1,4 +1,8 @@
 import {
+  "mizchi/bit_lib",
+  "mizchi/bit_lib/native" @bit_native,
+  "mizchi/bit_object",
+  "mizchi/bit_osfs",
   "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/os_error",

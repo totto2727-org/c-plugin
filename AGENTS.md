@@ -1,12 +1,5 @@
 # c-plugin
 
-<!-- Temporary: this feature PR intentionally precedes complete command integration.
-Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S16.**
-Available CLI entrypoints: help/version, init, skill sync, recursive sync, skill add --local, skill target add, skill remove, skill target remove.
-Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-Registered Go/Testcontainers cases in this checkout: 8.
-
 ## Repository structure
 
 ```text
@@ -16,7 +9,7 @@ AGENTS.md               Developer and agent instructions
 CLAUDE.md               Relative symlink to AGENTS.md
 docs/cli.md             CLI reference and capability status
 docs/design/            English design contract and Japanese translation
-go/e2e/c-plugin/         Scenario documents and cases introduced through this stage
+go/e2e/c-plugin/         Go/Testcontainers cases and sibling scenario documents
 src/                    Native CLI sources and implementation-aligned tests
 moon.mod                Independent c-plugin module metadata
 flake.nix, package.nix  Independent environment and CLI packaging definitions
@@ -104,7 +97,7 @@ These identities describe product source, not a publication claim.
 - Maintain one complete section per source `*Scenario` function in each sibling `<stem>_test.md`, in source order, following the [E2E documentation contract](https://github.com/totto2727-org/e2e/pull/8).
 - In each scenario use `Scope`, `Commands under test`, `Arguments and options`, `Preconditions and fixtures`, `Execution flow`, `Expected results`, and `Notes` as ordered third-level headings.
 - Command tables contain executable/subcommand paths only. Put option tokens in their own table and complete ordered argv in the execution flow.
-- Scenario Source links remain pinned while the corresponding Go source is absent. Restore sibling links with the owning implementation and validate every real source/document pair.
+- Scenario Source links use the relative sibling Go file. Validate against the real directory whenever either source or documentation changes.
 - The shared `runInitWorkflow` helper is not a ninth registered case. Keep the two init scenario sections aligned with the registered cases.
 
 ## MoonBit README maintenance
