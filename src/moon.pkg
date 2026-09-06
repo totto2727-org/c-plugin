@@ -1,5 +1,7 @@
 import {
   "moonbitlang/async",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/os_error",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/immut/hashmap" @immut_hashmap,
   "moonbitlang/core/immut/hashset" @immut_hashset,
@@ -11,10 +13,6 @@ import {
   "totto2727/lens",
   "totto2727/x/path" @x_path,
 }
-
-import {
-  "moonbitlang/async/fs",
-} for "wbtest"
 
 supported_targets = "native"
 
