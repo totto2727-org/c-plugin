@@ -62,6 +62,23 @@
         "url": "https://mooncakes.io/git/index"
       }
     },
+    "moon-registry_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1787107903,
+        "narHash": "sha256-/t89hdhfhBEgPsbDbGap0kZpEoab0nZbBGEPrKWou24=",
+        "ref": "refs/heads/main",
+        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
+        "revCount": 13008,
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      },
+      "original": {
+        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
+        "type": "git",
+        "url": "https://mooncakes.io/git/index"
+      }
+    },
     "moonbit-overlay": {
       "inputs": {
         "moon-registry": "moon-registry_2",
@@ -100,10 +117,10 @@
     },
     "root": {
       "inputs": {
+        "moon-registry": "moon-registry",
         "moonbit-overlay": "moonbit-overlay",
         "nixpkgs": "nixpkgs",
-        "vite-plus-overlay": "vite-plus-overlay",
-        "moon-registry": "moon-registry"
+        "vite-plus-overlay": "vite-plus-overlay"
       }
     },
     "systems": {
@@ -172,34 +189,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1786516249,
-        "narHash": "sha256-twFkEmzNkHuNH1VTucx6yd0DdFbOzxutxSlYwGVICxs=",
+        "lastModified": 1791198707,
+        "narHash": "sha256-KvtcdSV7O7klcyMl9uHqJ/VJzM0gPJXSkbTWXGw0Z6g=",
         "owner": "ryoppippi",
         "repo": "nix-vite-plus",
-        "rev": "b26a41f6f9406dc490c8b5b6bf1f17668befe011",
+        "rev": "af16f6183aec0717d8975ee858c910ab43babee6",
         "type": "github"
       },
       "original": {
         "owner": "ryoppippi",
         "repo": "nix-vite-plus",
         "type": "github"
-      }
-    },
-    "moon-registry_2": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1787107903,
-        "narHash": "sha256-/t89hdhfhBEgPsbDbGap0kZpEoab0nZbBGEPrKWou24=",
-        "ref": "refs/heads/main",
-        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
-        "revCount": 13008,
-        "type": "git",
-        "url": "https://mooncakes.io/git/index"
-      },
-      "original": {
-        "rev": "c9c84f5ec832ad3ba7ffae330c6dad14775437fa",
-        "type": "git",
-        "url": "https://mooncakes.io/git/index"
       }
     }
   },
