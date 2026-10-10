@@ -55,6 +55,14 @@
           h = mkHaskell pkgs;
         in
         {
+          # Docker builds the Haskell executable itself. The E2E host only
+          # needs the Go harness and the shared task runner.
+          e2e = pkgs.mkShell {
+            packages = [
+              pkgs.go
+              pkgs.just
+            ];
+          };
           default = pkgs.mkShell {
             packages = [
               (h.ghcWithPackages (p: [

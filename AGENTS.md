@@ -30,7 +30,8 @@ Do not bypass dependency bounds with `allow-newer`.
 
 ```sh
 just build     # Cabal product build
-just check     # Static/package checks and Go checks
+just check     # Cabal, Fourmolu, HLint, and Go checks
+just fix       # Apply Fourmolu and check HLint suggestions
 just test      # Haskell product tests, without Docker
 just e2e       # Caller-owned image build and real Go/Testcontainers tests
 just ci        # Combined development validation
@@ -39,6 +40,9 @@ just ci        # Combined development validation
 Report native checks, Docker E2E, and Nix package validation separately.
 Run `nix build .#c-plugin` independently of development-shell checks.
 Docker E2E requires a working Docker daemon.
+Use `nix develop .#e2e --command just e2e` to run only Docker E2E without building the native Haskell development environment.
+The E2E shell contains Go and Just because the Docker builder provides GHC and Cabal.
+The Docker build enables the Cabal `static` flag, which applies Linux static-link options only to the executable.
 Inspect `Justfile`, `c-plugin.cabal`, the E2E Dockerfile, and flake outputs before changing task contracts.
 A zero-test run or a `no work to do` result is not product coverage.
 
