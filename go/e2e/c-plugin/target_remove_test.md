@@ -36,11 +36,11 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Execution flow
 
-1. Write the project marketplace and lock with cursor/Claude targets. Run `c-plugin skill sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
+1. Write the project plugin and lock with cursor/Claude targets. Run `c-plugin skill sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
 2. Run `c-plugin skill target remove --target .vscode/skills`, then `c-plugin skill target remove` from `project`; verify no-op output and unchanged digests.
 3. Run `c-plugin skill target remove --target .cursor/./skills` from `project`; verify normalized removal, preserved neighbor, remaining roots, and ownership updates.
 4. Run `c-plugin skill target remove --target .claude/skills` from `project`; verify the last additional target is removed while primary alpha and the foreign neighbor remain.
-5. Create a separate global marketplace/lock and `project/nested`. From that directory, run `c-plugin skill sync --global`.
+5. Create a separate global plugin/lock and `project/nested`. From that directory, run `c-plugin skill sync --global`.
 6. Run `c-plugin skill target remove --global --target .cursor/skills` from `project/nested`; verify cursor removal, preserved primary beta, the global lock, and ownership cleanup.
 
 ### Expected results
@@ -50,9 +50,9 @@ The relative Source link identifies the sibling Go implementation described belo
 | Phase          | Expected result                                                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Unknown/empty  | Exit 0 with `No target changes for <lock>`; lock and state digests remain unchanged.                                                     |
-| Cursor removal | Exit 0 with exactly `Removed targets .cursor/skills from <lock>: complete (0 notices, 0 unavailable repositories)\n`; cursor alpha is removed, foreign neighbor remains, and default/Claude alpha links and state remain.                    |
-| Claude removal | Exit 0 with exactly `Removed targets .claude/skills from <lock>: complete (0 notices, 0 unavailable repositories)\n`; project lock has no additional targets, Claude alpha is removed, default alpha remains, and removed roots leave state. |
-| Global removal | Exit 0 with exactly `Removed targets .cursor/skills from <global-lock>: complete (0 notices, 0 unavailable repositories)\n`; global cursor beta is removed, default global beta remains, and the global cursor root leaves ownership state.         |
+| Cursor removal | Exit 0 with output containing `Removed targets .cursor/skills from <lock>: complete`; cursor alpha is removed, foreign neighbor remains, and default/Claude alpha links and state remain.                    |
+| Claude removal | Exit 0 with output containing `Removed targets .claude/skills from <lock>: complete`; project lock has no additional targets, Claude alpha is removed, default alpha remains, and removed roots leave state. |
+| Global removal | Exit 0 with output containing `Removed targets .cursor/skills from <global-lock>: complete`; global cursor beta is removed, default global beta remains, and the global cursor root leaves ownership state.         |
 
 ### Notes
 

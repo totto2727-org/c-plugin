@@ -201,19 +201,16 @@ func (s *scenarioEnvironment) requireDigest(filePath string, expected [sha256.Si
 	}
 }
 
-func marketplaceJSON() string {
-	return `{"name":"fixture","plugins":[{"name":"demo","source":"plugins/demo"}]}` + "\n"
+func pluginJSON() string {
+	return `{"$schema":"` + pluginSchema + `","name":"demo"}` + "\n"
 }
 
 func localLock(targets []string, repository string, skills []string) string {
 	value := map[string]any{
-		"version": "2",
+		"version": "3",
 		"targets": targets,
-		"repositories": []any{map[string]any{
-			"type": "local", "path": repository, "marketplaceKind": "claude",
-			"plugins": []any{map[string]any{
-				"name": "demo", "path": "plugins/demo", "enabledSkills": skills,
-			}},
+		"plugins": []any{map[string]any{
+			"source": "./" + repository, "name": "demo", "skills": skills,
 		}},
 	}
 	encoded, err := json.Marshal(value)

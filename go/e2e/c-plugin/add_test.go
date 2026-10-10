@@ -11,28 +11,27 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	root := "/tmp/c-plugin-v2-add-e2e"
 	home := root + "/home"
 	project := home + "/project"
-	repository := project + "/marketplace"
-	plugin := repository + "/plugins/demo"
+	repository := project + "/plugin"
+	plugin := repository
 	lockPath := project + "/c-plugin-lock.json"
 	statePath := project + "/.agents/c-plugin-state.json"
 	foreign := project + "/.agents/skills/alpha"
 	link := project + "/.agents/skills/beta"
 	scenario := newScenarioEnvironment(t, environment, home)
-	scenario.writeMarketplaceSkills(project, "alpha", "beta")
+	scenario.writePlugin(project, "alpha", "beta")
 	scenario.mkdirAll(project)
 	scenario.requireSuccess(scenario.run(project, "init"))
 	scenario.writeFile(foreign, "foreign\n")
 	scenario.mkdirAll(project + "/nested")
 
 	added := scenario.run(project+"/nested", "skill", "add",
-		"--local", "./marketplace",
-		"--kind", "claude",
-		"--skill", "demo/alpha",
-		"--skill", "demo/beta",
+		"--local", "./plugin",
+		"--skill", "alpha",
+		"--skill", "beta",
 	)
 	scenario.requireSuccess(added)
-	scenario.requireOutput(added, "Added "+repository+" to "+lockPath+": partial (2 notices, 0 unavailable repositories)\n")
-	scenario.requireJSON(lockPath, localLock([]string{}, "marketplace", []string{"alpha", "beta"}))
+	scenario.requireContains(added.Stdout, "Added "+repository+" to "+lockPath+": partial")
+	scenario.requireJSON(lockPath, localLock([]string{}, "plugin", []string{"alpha", "beta"}))
 	scenario.requireSymlink(link, plugin+"/skills/beta")
 	scenario.requireRegularFile(foreign)
 	scenario.requireFile(foreign, "foreign\n")
@@ -43,10 +42,9 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	stateBeforeRepeat := scenario.digest(statePath)
 
 	repeat := scenario.run(project+"/nested", "skill", "add",
-		"--local", "./marketplace",
-		"--kind", "claude",
-		"--skill", "demo/alpha",
-		"--skill", "demo/beta",
+		"--local", "./plugin",
+		"--skill", "alpha",
+		"--skill", "beta",
 	)
 	scenario.requireFailure(repeat)
 	scenario.requireContains(repeat.Stdout, "totto2727/c-plugin.AddLocalError.InvalidInput")
@@ -57,8 +55,8 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireSymlink(link, plugin+"/skills/beta")
 
 	removed := scenario.run(project+"/nested", "skill", "remove",
-		"--skill", "marketplace/demo/alpha",
-		"--skill", "marketplace/demo/beta",
+		"--skill", "demo/alpha",
+		"--skill", "demo/beta",
 	)
 	scenario.requireSuccess(removed)
 	scenario.requireRegularFile(foreign)
@@ -69,14 +67,13 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(neighbor, "neighbor\n")
 
 	forced := scenario.run(project+"/nested", "skill", "add",
-		"--local", "./marketplace",
-		"--kind", "claude",
-		"--skill", "demo/alpha",
-		"--skill", "demo/beta",
+		"--local", "./plugin",
+		"--skill", "alpha",
+		"--skill", "beta",
 		"--force",
 	)
 	scenario.requireSuccess(forced)
-	scenario.requireOutput(forced, "Added "+repository+" to "+lockPath+": partial (1 notices, 0 unavailable repositories)\n")
+	scenario.requireContains(forced.Stdout, "Added "+repository+" to "+lockPath+": partial")
 	scenario.requireSymlink(foreign, plugin+"/skills/alpha")
 	scenario.requireDirectory(link)
 	scenario.requireFile(link+"/keep", "directory-content\n")

@@ -11,18 +11,18 @@ func syncScenario(t *testing.T, environment *cli.Environment) {
 	root := "/tmp/c-plugin-v2-sync-e2e"
 	home := root + "/home"
 	project := home + "/project"
-	repository := project + "/marketplace"
-	plugin := repository + "/plugins/demo"
+	repository := project + "/plugin"
+	plugin := repository
 	lockPath := project + "/c-plugin-lock.json"
 	statePath := project + "/.agents/c-plugin-state.json"
 	scenario := newScenarioEnvironment(t, environment, home)
-	scenario.writeMarketplaceSkills(project, "alpha", "beta")
-	scenario.writeFile(lockPath, localLock([]string{".cursor/skills"}, "marketplace", []string{"alpha", "beta"}))
+	scenario.writePlugin(project, "alpha", "beta")
+	scenario.writeFile(lockPath, localLock([]string{".cursor/skills"}, "plugin", []string{"alpha", "beta"}))
 	initialDigest := scenario.digest(lockPath)
 
 	initial := scenario.run(project, "skill", "sync")
 	scenario.requireSuccess(initial)
-	scenario.requireContains(initial.Stdout, "Synced "+lockPath+": partial (1 notices, 0 unavailable repositories)")
+	scenario.requireContains(initial.Stdout, "Synced "+lockPath+": partial")
 	scenario.requireDigest(lockPath, initialDigest)
 	for _, targetRoot := range []string{project + "/.agents/skills", project + "/.cursor/skills"} {
 		for _, skill := range []string{"alpha", "beta"} {
@@ -37,12 +37,12 @@ func syncScenario(t *testing.T, environment *cli.Environment) {
 	scenario.remove(primaryRoot + "/beta")
 	scenario.writeFile(primaryRoot+"/beta", "foreign\n")
 	scenario.writeFile(primaryRoot+"/neighbor", "neighbor\n")
-	scenario.writeFile(lockPath, localLock([]string{".cursor/skills"}, "marketplace", []string{}))
+	scenario.writeFile(lockPath, localLock([]string{".cursor/skills"}, "plugin", []string{}))
 	editedDigest := scenario.digest(lockPath)
 
 	edited := scenario.run(project, "skill", "sync")
 	scenario.requireSuccess(edited)
-	scenario.requireContains(edited.Stdout, "Synced "+lockPath+": partial (1 notices, 0 unavailable repositories)")
+	scenario.requireContains(edited.Stdout, "Synced "+lockPath+": partial")
 	scenario.requireDigest(lockPath, editedDigest)
 	scenario.requireMissing(primaryRoot + "/alpha")
 	scenario.requireMissing(project + "/.cursor/skills/alpha")

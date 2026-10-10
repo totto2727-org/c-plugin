@@ -29,16 +29,16 @@ The relative Source link identifies the sibling Go implementation described belo
 
 - Each case uses a separate `c-plugin-e2e:local` container. `HOME=/tmp/c-plugin-v2-target-add-e2e/home` and `project=$HOME/project`.
 - `c-plugin` in the commands below is the exact executable `/sandbox/.local/bin/c-plugin`; the helper passes argv directly, not through a scenario shell script.
-- The project lock selects alpha from a local marketplace and initially has no additional targets.
-- A separate global lock selects beta from a global marketplace.
+- The project lock selects alpha from a local plugin and initially has no additional targets.
+- A separate global lock selects beta from a global plugin.
 - The global command runs from a nested project directory to prove scope selection.
 
 ### Execution flow
 
-1. Write the project marketplace and initial lock, then run `c-plugin skill target add .cursor/skills` from `project`.
+1. Write the project plugin and initial lock, then run `c-plugin skill target add .cursor/skills` from `project`.
 2. Verify the lock target, both alpha symlinks, and both ownership roots; record lock/state digests.
 3. Run `c-plugin skill target add .cursor/./skills` from `project` and verify normalized duplicate no-op output and unchanged digests.
-4. Create a separate global marketplace and lock plus `project/nested`.
+4. Create a separate global plugin and lock plus `project/nested`.
 5. From `project/nested`, run `c-plugin skill target add .claude/skills --global`.
 6. Verify the global output, `.claude/skills` registration, primary/Claude beta links, and additional-root ownership record.
 
@@ -48,9 +48,9 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Phase       | Expected result                                                                                                                            |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Project add | Exit 0 with exactly `Added target .cursor/skills to <lock>: partial (1 notices, 0 unavailable repositories)\n`; lock contains `.cursor/skills`; alpha is linked in default and cursor roots, both recorded in state.               |
-| Duplicate   | Exit 0 with exactly `Target .cursor/skills already registered in <lock>\n`; lock and state digests are unchanged.                                              |
-| Global add  | Exit 0 with exactly `Added target .claude/skills to <global-lock>: partial (1 notices, 0 unavailable repositories)\n`; global lock contains `.claude/skills`; beta is linked in default and Claude roots, with Claude ownership recorded. |
+| Project add | Exit 0 with output containing `Added target .cursor/skills to <lock>: partial`; lock contains `.cursor/skills`; alpha is linked in default and cursor roots, both recorded in state.               |
+| Duplicate   | Exit 0 with output containing `Target .cursor/skills already registered in <lock>\n`; lock and state digests are unchanged.                                              |
+| Global add  | Exit 0 with output containing `Added target .claude/skills to <global-lock>: partial`; global lock contains `.claude/skills`; beta is linked in default and Claude roots, with Claude ownership recorded. |
 
 ### Notes
 

@@ -27,13 +27,13 @@ The relative Source link identifies the sibling Go implementation described belo
 
 - Each case uses a separate `c-plugin-e2e:local` container. `HOME=/tmp/c-plugin-v2-sync-recursive-e2e/home` and `project=$HOME/project`.
 - `c-plugin` in the commands below is the exact executable `/sandbox/.local/bin/c-plugin`; the helper passes argv directly, not through a scenario shell script.
-- Parent and child projects have separate marketplaces and locks selecting alpha and beta respectively.
+- Parent and child projects have separate plugins and locks selecting alpha and beta respectively.
 - The parent `.gitignore` excludes `ignored/`, which contains an intentionally malformed lock.
 - A foreign file already exists in the parent primary target.
 
 ### Execution flow
 
-1. Write parent/child locks and marketplaces, the ignored malformed lock, `.gitignore`, and foreign parent file. Record both valid lock digests.
+1. Write parent/child locks and plugins, the ignored malformed lock, `.gitignore`, and foreign parent file. Record both valid lock digests.
 2. Run `c-plugin skill sync -r` from `project`.
 3. Verify exactly two `Synced` lines, parent/child links and state, omission of the ignored lock, foreign-file contents, and unchanged digests.
 4. Rewrite only the parent lock to select no skills and record its new digest. Run `c-plugin skill sync --recursive` from `project`.

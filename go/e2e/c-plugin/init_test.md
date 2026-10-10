@@ -27,7 +27,7 @@ Create the project lock exclusively and reject a repeated initialization without
 
 - Each registered case receives its own `c-plugin-e2e:local` container.
 - `HOME=/tmp/c-plugin-v2-init-e2e/home` and `PROJECT=/tmp/c-plugin-v2-init-e2e/totto2727-org/monorepo` are synthetic container paths.
-- The helper creates HOME and PROJECT directories with no existing project/global lock, marketplace, cache, ownership state, or managed skill directory.
+- The helper creates HOME and PROJECT directories with no existing project/global lock, plugin, cache, ownership state, or managed skill directory.
 - `c-plugin` denotes `/sandbox/.local/bin/c-plugin`; argv is passed directly with `WorkingDir=$PROJECT` and the isolated HOME.
 
 ### Execution flow
@@ -43,7 +43,7 @@ Create the project lock exclusively and reject a repeated initialization without
 | Observation | Expected result |
 | --- | --- |
 | Initial status/output | Exit 0; exactly `Created <absolute selected lock path>\n` in captured output. |
-| Lock JSON | Exactly the JSON value `{"version":"2","targets":[],"repositories":[]}`; object key ordering is not asserted by the JSON helper. |
+| Lock JSON | Exactly the JSON value `{"version":"3","targets":[],"plugins":[]}`; object key ordering is not asserted by the JSON helper. |
 | Scope isolation | `$PROJECT/c-plugin-lock.json` exists and `$HOME/c-plugin-lock.json` is absent. |
 | Repeated status/output | Nonzero exit; captured output contains `totto2727/c-plugin.StateStoreError.AlreadyExists`. |
 | Non-mutation | The selected lock digest is unchanged by the repeat and the opposite lock remains absent. |
@@ -77,7 +77,7 @@ Create the global lock exclusively and reject a repeated initialization without 
 
 - Each registered case receives its own `c-plugin-e2e:local` container.
 - `HOME=/tmp/c-plugin-v2-init-e2e/home` and `PROJECT=/tmp/c-plugin-v2-init-e2e/totto2727-org/monorepo` are synthetic container paths.
-- The helper creates HOME and PROJECT directories with no existing project/global lock, marketplace, cache, ownership state, or managed skill directory.
+- The helper creates HOME and PROJECT directories with no existing project/global lock, plugin, cache, ownership state, or managed skill directory.
 - `c-plugin` denotes `/sandbox/.local/bin/c-plugin`; argv is passed directly with `WorkingDir=$PROJECT` and the isolated HOME.
 
 ### Execution flow
@@ -93,7 +93,7 @@ Create the global lock exclusively and reject a repeated initialization without 
 | Observation | Expected result |
 | --- | --- |
 | Initial status/output | Exit 0; exactly `Created <absolute selected lock path>\n` in captured output. |
-| Lock JSON | Exactly the JSON value `{"version":"2","targets":[],"repositories":[]}`; object key ordering is not asserted by the JSON helper. |
+| Lock JSON | Exactly the JSON value `{"version":"3","targets":[],"plugins":[]}`; object key ordering is not asserted by the JSON helper. |
 | Scope isolation | `$HOME/c-plugin-lock.json` exists and `$PROJECT/c-plugin-lock.json` is absent. |
 | Repeated status/output | Nonzero exit; captured output contains `totto2727/c-plugin.StateStoreError.AlreadyExists`. |
 | Non-mutation | The selected lock digest is unchanged by the repeat and the opposite lock remains absent. |
