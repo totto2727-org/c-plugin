@@ -11,6 +11,34 @@ It uses Haskell, Cabal, Iris, and a pinned Nix environment.
 It does not manage marketplaces, vendor-specific packages, Git remotes, MCP servers, hooks, or interactive selection.
 Do not treat those exclusions as future command placeholders.
 
+## Module ownership
+
+Keep a domain type, its pure validation, and its wire-format conversion in the same module.
+`CPlugin.Types` only re-exports the type modules.
+Do not define orphan JSON instances in filesystem or command modules.
+
+| Module | Owned rules |
+| --- | --- |
+| `CPlugin.Types.Path` | Relative and absolute path values, validation, and JSON conversion |
+| `CPlugin.Types.Name` | Item names and plugin/skill name validation, with JSON conversion |
+| `CPlugin.Types.Plugin` | Installed plugin selections, validation, and JSON conversion |
+| `CPlugin.Types.Lock` | Desired lock shape, version, uniqueness, and JSON conversion |
+| `CPlugin.Types.Ownership` | Related ownership records, relationship validation, and JSON conversion |
+| `CPlugin.Types.PluginManifest` | Standard plugin manifest type, decoding, and validation |
+| `CPlugin.Types.Skill` | Discovered skill type and frontmatter decoding/validation |
+| `CPlugin.Types.Sync` | Synchronization results and notices |
+
+Keep Iris CLI parsing in `app/Main.hs`.
+`CPlugin.StateStore` owns file IO, canonical JSON rendering, and durable atomic writes.
+It does not define type-specific wire rules.
+Keep discovery in `CPlugin.Plugin`, filesystem containment in `CPlugin.Paths`, and reconciliation in `CPlugin.Reconcile`.
+`CPlugin.Commands` only dispatches command values to the `Init`, `Sync`, `AddLocal`, `Remove`, `TargetAdd`, and `TargetRemove` handler modules.
+`CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
+`syncLoadedLock` only orchestrates a plan and reconciliation session.
+`CPlugin.Reconcile.Plan` resolves sources and desired links, `Session` owns notices and durable checkpoints, `Mutation` owns named link operations, and `Report` owns user-facing result text.
+Keep mutation/checkpoint order and exception scopes intact when moving these steps.
+Native specs are separate modules by responsibility, with shared isolated fixtures in `CPlugin.TestSupport`.
+
 ## Input boundaries
 
 Use validated path and identity values after parsing CLI strings, JSON, and filesystem input.
@@ -99,17 +127,7 @@ Do not promise automatic recovery or ownership adoption across that window.
 
 These checks reduce accidental scope escape. They are not a sandbox against a concurrent hostile filesystem writer.
 
-## Implementation boundaries
-
-| File/module | Responsibility |
-| --- | --- |
-| `app/Main.hs` | Iris command parser and process entrypoint |
-| `CPlugin.Types` | Validated paths, identities, locks, and ownership values |
-| `CPlugin.Codec` | Strict codecs and atomic state persistence |
-| `CPlugin.Paths` | Runtime scopes, discovery, and physical containment checks |
-| `CPlugin.Plugin` | Standard manifest and skill discovery/validation |
-| `CPlugin.Reconcile` | Desired links, ownership-safe mutations, and checkpoints |
-| `CPlugin.Commands` | Init, add, remove, sync, and target workflows |
+## Toolchain
 
 Keep GHC 9.4.8 and Iris 0.1 within their published dependency bounds.
 Do not substitute dependency probes for product tests.

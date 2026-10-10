@@ -41,11 +41,33 @@ library
   hs-source-dirs: hs-src
   exposed-modules:
       CPlugin.Types
-      CPlugin.Codec
+      CPlugin.Types.Path
+      CPlugin.Types.Name
+      CPlugin.Types.Plugin
+      CPlugin.Types.Lock
+      CPlugin.Types.Ownership
+      CPlugin.Types.PluginManifest
+      CPlugin.Types.Skill
+      CPlugin.Types.Sync
+      CPlugin.StateStore
       CPlugin.Paths
       CPlugin.Plugin
       CPlugin.Reconcile
       CPlugin.Commands
+  other-modules:
+      CPlugin.Reconcile.Plan
+      CPlugin.Reconcile.Session
+      CPlugin.Reconcile.Mutation
+      CPlugin.Reconcile.Report
+      CPlugin.Commands.Init
+      CPlugin.Commands.Sync
+      CPlugin.Commands.AddLocal
+      CPlugin.Commands.Remove
+      CPlugin.Commands.TargetAdd
+      CPlugin.Commands.TargetRemove
+      CPlugin.Commands.Common
+      CPlugin.Internal.Validation
+      CPlugin.Internal.JSON
 
 executable c-plugin
   import: settings
@@ -65,6 +87,13 @@ test-suite product-tests
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Spec.hs
+  other-modules:
+      CPlugin.TypesSpec
+      CPlugin.CodecSpec
+      CPlugin.PluginSpec
+      CPlugin.ReconcileSpec
+      CPlugin.CommandsSpec
+      CPlugin.TestSupport
   build-depends:
       c-plugin
     , hspec >=2.11 && <2.12

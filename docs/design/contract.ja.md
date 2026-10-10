@@ -11,6 +11,34 @@ Haskell、Cabal、Iris、固定したNix環境を使用します。
 マーケットプレイス、ベンダー固有パッケージ、Gitリモート、MCPサーバー、hook、対話選択は管理しません。
 これらの対象外機能のために、将来用のコマンドplaceholderを追加しません。
 
+## モジュールの責務
+
+domain型の定義、純粋な検証、wire形式の変換は同じモジュールに置きます。
+`CPlugin.Types`は型モジュールの再公開だけを行います。
+filesystemやcommandモジュールにorphan JSON instanceを定義しません。
+
+| モジュール | 所有する規則 |
+| --- | --- |
+| `CPlugin.Types.Path` | 相対・絶対パスの型、検証、JSON変換 |
+| `CPlugin.Types.Name` | 識別子の型、plugin/skill名の検証、JSON変換 |
+| `CPlugin.Types.Plugin` | インストール対象pluginの型、選択の検証、JSON変換 |
+| `CPlugin.Types.Lock` | 望ましい状態の型、versionと重複の検証、JSON変換 |
+| `CPlugin.Types.Ownership` | 関連する所有権記録の型、関係の検証、JSON変換 |
+| `CPlugin.Types.PluginManifest` | 標準plugin manifestの型、デコード、検証 |
+| `CPlugin.Types.Skill` | 探索済みskillの型、frontmatterのデコードと検証 |
+| `CPlugin.Types.Sync` | 同期結果と通知の型 |
+
+Iris CLI解析は`app/Main.hs`に置きます。
+`CPlugin.StateStore`はファイルIO、canonical JSON出力、耐久性を持つatomic writeを担当します。
+型固有のwire形式規則は定義しません。
+探索は`CPlugin.Plugin`、filesystem containmentは`CPlugin.Paths`、同期は`CPlugin.Reconcile`に置きます。
+`CPlugin.Commands`はcommand値を`Init`、`Sync`、`AddLocal`、`Remove`、`TargetAdd`、`TargetRemove`のhandlerモジュールへ振り分けるだけです。
+`CPlugin.Commands.Common`は共有のロック読み込み、candidate永続化、完了結果の報告を担当します。
+`syncLoadedLock`は計画と同期sessionを組み合わせるだけです。
+`CPlugin.Reconcile.Plan`はsourceと望ましいlinkの解決、`Session`は通知とdurable checkpoint、`Mutation`は名前付きlink操作、`Report`はユーザー向けの結果出力を担当します。
+これらの処理を移動するときも、mutation/checkpointの順序と例外を捕捉する範囲を維持します。
+native specは責務別のモジュールへ分け、共有の隔離fixtureは`CPlugin.TestSupport`に置きます。
+
 ## 入力境界
 
 CLI文字列、JSON、filesystem入力を解析した後は、検証済みのパスと識別子を使用します。
@@ -100,17 +128,7 @@ atomicな置換でも、filesystem mutationと所有checkpointの間のcrash win
 これらの確認は偶発的なscope逸脱を減らします。
 同時にfilesystemを書き換える攻撃者に対するsandboxではありません。
 
-## 実装境界
-
-| ファイル/module | 責務 |
-| --- | --- |
-| `app/Main.hs` | Irisコマンドparserとprocess entrypoint |
-| `CPlugin.Types` | 検証済みpath、identity、lock、ownership値 |
-| `CPlugin.Codec` | 厳格なcodecとatomicなstate永続化 |
-| `CPlugin.Paths` | 実行scope、探索、物理的containment確認 |
-| `CPlugin.Plugin` | 標準manifestとskillの探索・検証 |
-| `CPlugin.Reconcile` | 望ましいlink、所有権に基づく安全なmutation、checkpoint |
-| `CPlugin.Commands` | Init、add、remove、sync、target workflow |
+## Toolchain
 
 GHC 9.4.8とIris 0.1を公開された依存関係のbounds内で使用します。
 依存関係のprobeを製品テストの代わりにしません。

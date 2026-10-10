@@ -1,8 +1,9 @@
 module CPlugin.Plugin (loadPlugin) where
 
-import CPlugin.Codec (decodeManifest, decodeSkill)
 import CPlugin.Paths (absoluteIO, pathKind, strictRealPath, within)
-import CPlugin.Types
+import CPlugin.Types.Path (AbsolutePath, absoluteText)
+import CPlugin.Types.PluginManifest
+import CPlugin.Types.Skill
 import Control.Exception (IOException, try)
 import Control.Monad (forM, unless)
 import qualified Data.ByteString as BS

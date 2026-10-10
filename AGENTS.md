@@ -10,12 +10,16 @@ README.md              Canonical consumer entrypoint, a physical file
 AGENTS.md              Maintenance instructions
 CLAUDE.md              Relative symlink to AGENTS.md
 app/Main.hs            Iris CLI entrypoint
-hs-src/CPlugin/        Types, Codec, Paths, Plugin, Reconcile, Commands
+hs-src/CPlugin/        Command policy, discovery, paths, reconciliation, state IO
+hs-src/CPlugin/Commands/ Per-command handlers and shared command support
+hs-src/CPlugin/Reconcile/ Planning, session state, mutations, and reporting
+hs-src/CPlugin/Types/  Type definitions with their validation and wire codecs
 c-plugin.cabal         Cabal library, executable, and test definitions
 cabal.project          Cabal project configuration
 flake.nix, flake.lock  Pinned development environment and CLI package
 Justfile               Shared task entrypoints
-test/                  Haskell product tests
+test/Spec.hs            Hspec suite entrypoint
+test/CPlugin/          Domain, codec, plugin, reconciliation, and command specs
 go/e2e/c-plugin/       Go/Testcontainers cases and sibling scenario documents
 docs/                  CLI reference and English/Japanese design contract
 .github/workflows/     Validation automation
@@ -30,15 +34,18 @@ Do not bypass dependency bounds with `allow-newer`.
 
 ```sh
 just build     # Cabal product build
+just build-nix # Independent Nix package build
 just check     # Cabal, Fourmolu, HLint, and Go checks
 just fix       # Apply Fourmolu and check HLint suggestions
 just test      # Haskell product tests, without Docker
 just e2e       # Caller-owned image build and real Go/Testcontainers tests
-just ci        # Combined development validation
+just ci        # Checks, native tests, and independent Nix package build
 ```
 
 Report native checks, Docker E2E, and Nix package validation separately.
-Run `nix build .#c-plugin` independently of development-shell checks.
+CI runs `nix develop --command just ci` and does not require Docker.
+Docker E2E is an explicit local task and is not part of `just ci`.
+Use `just build-nix` to run the independent package build alone.
 Docker E2E requires a working Docker daemon.
 Use `nix develop .#e2e --command just e2e` to run only Docker E2E without building the native Haskell development environment.
 The E2E shell contains Go and Just because the Docker builder provides GHC and Cabal.
@@ -49,7 +56,17 @@ A zero-test run or a `no work to do` result is not product coverage.
 ## Architecture constraints
 
 Read [the design contract](docs/design/contract.md) before changing path validation, parsing, lock persistence, or reconciliation.
-Keep CLI parsing in Iris and command policy in `CPlugin.Commands`.
+Keep CLI parsing in Iris and command policy in `CPlugin.Commands.*`.
+`CPlugin.Commands` owns only the command values and dispatch.
+Keep each handler in its own module: `Init`, `Sync`, `AddLocal`, `Remove`, `TargetAdd`, or `TargetRemove`.
+`CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
+Keep each domain type, its pure validation, and its serialization or deserialization in the same `CPlugin.Types.*` module.
+`CPlugin.Types` is only a re-export entrypoint, not a second implementation.
+Keep filesystem persistence in `CPlugin.StateStore`, separate from wire-format rules.
+Keep `syncLoadedLock` as orchestration, with planning, session state, mutation steps, and reporting in `CPlugin.Reconcile.*`.
+Use named mutation helpers instead of deeply nested local closures.
+Preserve the exception scopes and the mutation/checkpoint order when decomposing these steps.
+Do not add orphan JSON instances in unrelated modules.
 Validate CLI, JSON, and filesystem input into domain values at their boundaries.
 Keep the implementation small and use the existing Haskell modules rather than empty framework layers.
 

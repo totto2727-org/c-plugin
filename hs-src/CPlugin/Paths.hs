@@ -16,7 +16,9 @@ module CPlugin.Paths (
     relativeLinkTarget,
 ) where
 
-import CPlugin.Types
+import CPlugin.Types.Name (ItemName, itemName)
+import CPlugin.Types.Ownership (OwnershipEntry (..))
+import CPlugin.Types.Path
 import Control.Exception (IOException, catch)
 import Control.Monad (forM, unless)
 import Data.List (isPrefixOf, sort)
