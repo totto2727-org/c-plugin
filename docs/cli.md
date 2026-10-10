@@ -1,83 +1,100 @@
 # CLI reference
 
-<!-- Temporary: this feature PR intentionally precedes complete command integration.
-Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S1.**
-Available CLI entrypoints: help/version.
-Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-Registered Go/Testcontainers cases in this checkout: 0.
+This reference is for users who already have the CLI and a local plugin.
+See [README.md](../README.md) for setup and a minimal plugin example.
 
-This reference describes the complete feature-stack contract. The [current CLI entrypoint](../src/main.mbt) exposes only the commands listed in the stage note above.
-It is not an installation guide.
-The public executable name is `c-plugin`.
-No supported standalone release is asserted here.
+## Commands
 
-## Capability status
-
-| Capability | Complete feature-stack contract |
-| --- | --- |
-| Help/version, project/global init | Command wiring and tests exist |
-| Local add, remove, sync, recursive sync | Explicit non-interactive commands exist |
-| Additional target add/remove | Commands and isolated tests exist |
-| Bit repository adapter | Typed adapter exists |
-| GitHub add/update and cache lifecycle | Not implemented as leaf workflows; GitHub sync resolution reports unavailable |
-| TTY selection and cancellation UI | Not implemented |
-| Developer marketplace conversion | Not implemented |
-| Automatic v1 lock conversion | Not provided |
-
-This stage registers 0 Go cases. The complete S17 suite registers eight cases in seven files.
-That is not complete coverage of every leaf in the broader design, and source presence is not test-pass evidence.
-
-## Representative workflow
-
-With the CLI and a local marketplace already available, a project can initialize a lock and select one local skill:
-
-```bash
-c-plugin init
-c-plugin skill add --local ./marketplace --kind claude --skill demo/alpha
-c-plugin skill sync
+```text
+c-plugin init [-g]
+c-plugin skill add --local ./plugin [--skill alpha ...] [-g] [-f]
+c-plugin skill remove [--plugin demo ...] [--skill demo/alpha ...] [-g]
+c-plugin skill sync [-g] [-r]
+c-plugin skill target add PATH [-g]
+c-plugin skill target remove [--target PATH ...] [-g]
 ```
-
-`init` creates `c-plugin-lock.json` containing the empty version-2 lock and prints `Created <absolute lock path>` followed by a newline.
-A successful first local add persists the selected skill and synchronizes its link under `.agents/skills` when no collision prevents it.
-Sync reconciles links without rewriting the lock.
-See the [add scenario](../go/e2e/c-plugin/add_test.md) for exact fixture-dependent output, partial results, and force behavior.
-
-## Command reference
 
 | Command | Behavior |
 | --- | --- |
-| `c-plugin --help` / `c-plugin --version` | Discover the available parser tree and version in the installed CLI |
-| `c-plugin init [-g]` | Create only a new project or exact-home lock; an existing lock is rejected without overwrite |
-| `c-plugin skill add --local <./path> --kind <kind> --skill <plugin/skill>... [-g] [-f \| --force]` | Resolve the explicit local marketplace relative to the discovered lock scope, validate selections, persist once, and synchronize |
-| `c-plugin skill remove [-g] [--skill <repository/plugin/skill>...]` | Remove explicit installed selections; empty, unknown, or repeated removals can be successful no-ops |
-| `c-plugin skill sync [-g \| -r]` | Reconcile the selected lock or recursive project locks without changing pins or lock bytes |
-| `c-plugin skill target add <path> [-g]` | Register and synchronize a normalized additional target; an already registered target is a no-op |
-| `c-plugin skill target remove [-g] [--target <path>...]` | Remove additional target registrations and only safely owned links; never remove the primary target |
+| `init` | Create an empty version-3 lock exclusively. Reject an existing path without overwriting it. |
+| `skill add` | Validate a local plugin, register selected skills, save the lock, and reconcile links. Without `--skill`, select all valid skills. |
+| `skill remove` | Remove selected plugin names or `plugin/skill` pairs, save a changed lock, and reconcile owned links. |
+| `skill sync` | Reconcile links from the existing lock without changing skill selections. |
+| `skill target add` | Register an additional relative target and reconcile links. An already registered target is a no-op. |
+| `skill target remove` | Remove selected target registrations and their unchanged owned links. Unknown targets are a no-op. |
 
-Use `c-plugin skill --help` and the relevant nested command's `--help` to inspect that installed parser rather than assuming the planned command tree is available.
-Global and recursive flags are mutually exclusive.
-The current local add workflow is explicit and non-interactive, not an automatic selection UI.
+`--skill`, `--plugin`, and `--target` selectors can be repeated where shown.
+Remove with no selection is a no-op, not an implicit remove-all operation.
+A remove request that contains an unknown selector is a no-op for the entire request.
+Repeated local source, plugin name, or enabled skill entries are rejected rather than merged.
+`-g` means `--global`, `-r` means `--recursive`, and `-f` means `--force`.
+Global and recursive mode cannot be combined.
+There is no interactive selection or remote installation command.
 
-## Duplicate and failure behavior
+## Scope and paths
 
-A local add containing a duplicate repository, plugin, or skill identity is rejected at the domain boundary.
-Repeating the same add is not an implicit no-op, union merge, or force-triggered sync-only operation.
-The [accepted local-add contract](https://linear.app/totto2727/issue/TOT-121) requires duplicate rejection, and the [force contract](https://linear.app/totto2727/issue/TOT-157) changes eligible filesystem collision handling rather than that identity rule.
-A rejected duplicate preserves the lock and existing managed state, as asserted by the product tests.
-A broader idempotence goal is not an implemented guarantee and is tracked separately in [TOT-224](https://linear.app/totto2727/issue/TOT-224).
+| Scope | Lock | Default skill root | Ownership state |
+| --- | --- | --- | --- |
+| Project | Nearest ancestor `c-plugin-lock.json`, with `HOME` as the search boundary | `<lock-root>/.agents/skills` | `<lock-root>/.agents/c-plugin-state.json` |
+| Global (`-g`) | `$HOME/c-plugin-lock.json` | `$HOME/.agents/skills` | `$HOME/.agents/c-plugin-state.json` |
 
-Errors before lock persistence preserve previous state.
-If persistence succeeds but synchronization fails, the command reports failure rather than claiming success; the persisted desired state can be reconciled by a later sync.
-Do not infer that every filesystem side effect is rolled back after persistence or a failed checkpoint.
+Project `init` uses the current directory.
+Other project commands require an existing lock.
+Local plugin sources and additional targets are relative to the discovered lock root, not the command's working directory.
+Parent traversal and paths that escape physical containment are rejected.
+Additional target roots must remain inside that lock root.
 
-## Safety constraints
+`skill sync -r` starts at the nearest project lock root and includes descendant locks.
+It skips `.git`, applies supported `.gitignore` patterns, and does not traverse symlink directories.
+It is not a complete Git ignore engine.
 
-Project locks are discovered from the nearest ancestor within the home boundary; global mode uses `~/c-plugin-lock.json` exactly.
-Ownership is stored separately in `.agents/c-plugin-state.json` and is not portable desired configuration.
-Default reconciliation preserves foreign files, directories, and unowned or unverifiable links.
-Explicit add force may replace only an eligible regular file or symlink at the exact physically contained desired path.
-It does not delete real directories, neighbors, or paths outside managed roots.
-A pre-existing link is not automatically adopted merely because it resolves to the desired target.
-Interrupted filesystem mutations do not guarantee ownership recovery across a failed or missing durability checkpoint.
-See the [complete safety contract](./design/contract.md#symlink-ownership-state).
+## Plugin inputs
+
+The plugin root must contain `plugin.json` with the canonical Agent Plugins 1.0 schema identifier and a valid name.
+Skills are immediate children of `skills/` with a regular `SKILL.md` and valid Agent Skills frontmatter.
+Invalid skills are reported and skipped. An explicitly selected missing or invalid skill fails add.
+No nested skill discovery or vendor fallback is provided.
+Manifest schema validation uses local rules, not network schema retrieval.
+MCP, hooks, and extension content are not installed or executed.
+This product supports the skills subset and does not claim a complete conformance certification.
+
+## Lock format
+
+```json
+{
+  "version": "3",
+  "targets": ["extra-skills"],
+  "plugins": [
+    {
+      "source": "./demo",
+      "name": "demo",
+      "skills": ["alpha"]
+    }
+  ]
+}
+```
+
+Plugin sources must begin with `./` and are stored in normalized relative form with that prefix.
+Additional targets use normalized relative paths.
+Version must be the exact string `"3"`.
+Missing fields, invalid types, invalid identities, duplicate entries, and unsupported versions are errors.
+There is no conversion from version 2 or other versions.
+Do not delete an existing lock to work around an error unless you intend to replace its configuration.
+
+## Collisions and recovery
+
+By default, c-plugin preserves unowned files, directories, and symlinks, even when a symlink already points to the desired skill.
+Only `skill add -f` can replace an exact contained regular file or symlink collision.
+It cannot delete a real directory or a neighboring path.
+
+Cleanup requires a valid ownership record, physical containment, and the exact recorded literal symlink target and resolved destination.
+A replaced path or a path without proven ownership is preserved.
+Missing or corrupt ownership state does not authorize deletion or automatic adoption.
+
+A changed lock is saved before reconciliation.
+Ordinary collisions and unavailable plugins produce a partial result while preserving unaffected paths.
+A terminal checkpoint, durability, or verification failure stops reconciliation and fails the command.
+The saved lock remains the desired state.
+After fixing the reported cause, run `c-plugin skill sync` in the same scope.
+Each filesystem mutation has an ownership checkpoint.
+A crash between a mutation and its checkpoint can leave an unowned link. Automatic adoption is not guaranteed.

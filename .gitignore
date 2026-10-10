@@ -1,12 +1,17 @@
-_build/
-.moon/
-.mooncakes/
+dist-newstyle/
+.cabal-sandbox/
+cabal.project.local
+.ghc.environment.*
 .direnv/
 .omo/
-src/**/pkg.generated.mbti
 trace.json
 .DS_Store
 result
+tmp/
+
+# Local caches left by earlier checkouts are not part of the Haskell package.
+_build/
+.moon/
+.mooncakes/
 node_modules/
 .vite/
-tmp/

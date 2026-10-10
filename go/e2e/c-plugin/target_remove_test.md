@@ -1,8 +1,8 @@
 # Remove project and global target roots
 
-Source: [target_remove_test.go](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/go/e2e/c-plugin/target_remove_test.go)
+Source: [target_remove_test.go](./target_remove_test.go)
 
-The Source link identifies the implementation described below. Until the owning feature layer introduces Go source, it points to the immutable saved snapshot.
+The relative Source link identifies the sibling Go implementation described below.
 
 ## `targetRemoveScenario`
 
@@ -36,11 +36,11 @@ The Source link identifies the implementation described below. Until the owning 
 
 ### Execution flow
 
-1. Write the project marketplace and lock with cursor/Claude targets. Run `c-plugin skill sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
+1. Write the project plugin and lock with cursor/Claude targets. Run `c-plugin skill sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
 2. Run `c-plugin skill target remove --target .vscode/skills`, then `c-plugin skill target remove` from `project`; verify no-op output and unchanged digests.
 3. Run `c-plugin skill target remove --target .cursor/./skills` from `project`; verify normalized removal, preserved neighbor, remaining roots, and ownership updates.
 4. Run `c-plugin skill target remove --target .claude/skills` from `project`; verify the last additional target is removed while primary alpha and the foreign neighbor remain.
-5. Create a separate global marketplace/lock and `project/nested`. From that directory, run `c-plugin skill sync --global`.
+5. Create a separate global plugin/lock and `project/nested`. From that directory, run `c-plugin skill sync --global`.
 6. Run `c-plugin skill target remove --global --target .cursor/skills` from `project/nested`; verify cursor removal, preserved primary beta, the global lock, and ownership cleanup.
 
 ### Expected results
@@ -50,13 +50,13 @@ The Source link identifies the implementation described below. Until the owning 
 | Phase          | Expected result                                                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | Unknown/empty  | Exit 0 with `No target changes for <lock>`; lock and state digests remain unchanged.                                                     |
-| Cursor removal | Exit 0 with exactly `Removed targets .cursor/skills from <lock>: complete (0 notices, 0 unavailable repositories)\n`; cursor alpha is removed, foreign neighbor remains, and default/Claude alpha links and state remain.                    |
-| Claude removal | Exit 0 with exactly `Removed targets .claude/skills from <lock>: complete (0 notices, 0 unavailable repositories)\n`; project lock has no additional targets, Claude alpha is removed, default alpha remains, and removed roots leave state. |
-| Global removal | Exit 0 with exactly `Removed targets .cursor/skills from <global-lock>: complete (0 notices, 0 unavailable repositories)\n`; global cursor beta is removed, default global beta remains, and the global cursor root leaves ownership state.         |
+| Cursor removal | Exit 0 with output containing `Removed targets .cursor/skills from <lock>: complete`; cursor alpha is removed, foreign neighbor remains, and default/Claude alpha links and state remain.                    |
+| Claude removal | Exit 0 with output containing `Removed targets .claude/skills from <lock>: complete`; project lock has no additional targets, Claude alpha is removed, default alpha remains, and removed roots leave state. |
+| Global removal | Exit 0 with output containing `Removed targets .cursor/skills from <global-lock>: complete`; global cursor beta is removed, default global beta remains, and the global cursor root leaves ownership state.         |
 
 ### Notes
 
 - Removing an additional target never removes the default `.agents/skills` target or foreign files that are not owned links.
 
 - Output expectations refer to the helper's captured `cli.Result.Stdout`; these tests do not assert a separate stderr stream.
-- These are assertions in the pinned source, not execution results from this documentation-only layer.
+- These are assertions in the sibling Go source, not evidence that this workflow has been executed successfully.

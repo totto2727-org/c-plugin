@@ -7,6 +7,9 @@
 _build
 node_modules
 tmp
+dist-newstyle
+result
+result-*
 **/.DS_Store
 **/_build
 **/node_modules
