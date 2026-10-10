@@ -25,6 +25,7 @@ c-plugin skill target remove [--target PATH ...] [-g]
 
 `--skill`, `--plugin`, and `--target` selectors can be repeated where shown.
 Remove with no selection is a no-op, not an implicit remove-all operation.
+A remove request that contains an unknown selector is a no-op for the entire request.
 Repeated local source, plugin name, or enabled skill entries are rejected rather than merged.
 `-g` means `--global`, `-r` means `--recursive`, and `-f` means `--force`.
 Global and recursive mode cannot be combined.
