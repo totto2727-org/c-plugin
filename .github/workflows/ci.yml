@@ -11,39 +11,29 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
-      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@main
-      - uses: totto2727-org/monorepo/.github/actions/check-moonbit@main
+      - name: Check and test Haskell and Go
+        run: nix develop --command just check test
+      - name: Build independent Nix package
+        run: nix build .#c-plugin
 
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       NO_COLOR: '1'
     steps:
       - uses: actions/checkout@v7
       - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
-      - uses: totto2727-org/monorepo/.github/actions/setup-typescript@main
-
-      - name: Check Docker and Go tooling
-        shell: bash
-        run: |
-          eval "$(nix print-dev-env "$GITHUB_WORKSPACE#default")"
-          docker version
-          go version
-          golangci-lint version
-          vp run --filter @go/c-plugin-e2e check
-          vp run --filter @go/c-plugin-e2e build
-
       - name: Run isolated CLI scenarios
         id: scenarios
         shell: bash
         run: |
-          eval "$(nix print-dev-env "$GITHUB_WORKSPACE#default")"
-          vp run --filter @go/c-plugin-e2e test 2>&1 | tee "$RUNNER_TEMP/c-plugin-e2e.log"
+          set -o pipefail
+          nix develop --command just e2e 2>&1 | tee "$RUNNER_TEMP/c-plugin-e2e.log"
 
       - name: Verify container cleanup and caller-owned image
         if: always() && steps.scenarios.outcome != 'skipped'
