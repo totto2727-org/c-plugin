@@ -29,4 +29,9 @@ c-plugin-e2e-image:
 e2e: c-plugin-e2e-image
     cd go/e2e/c-plugin && go test -v -race -shuffle=on -count=1 ./...
 
-ci: check build test e2e
+# Build the independent Nix package, including its product tests.
+build-nix:
+    nix build .#c-plugin
+
+# Standard CI validation. Docker E2E remains an explicit local task.
+ci: check test build-nix
