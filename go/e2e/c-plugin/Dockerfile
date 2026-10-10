@@ -7,8 +7,11 @@ COPY c-plugin.cabal cabal.project cabal.project.freeze ./
 RUN cabal update
 COPY hs-src ./hs-src
 COPY app ./app
+COPY test ./test
 COPY LICENSE ./LICENSE
-RUN cabal build exe:c-plugin --enable-executable-static --disable-shared --ghc-options="-optl-static" && \
+# GHC's gold linker cannot handle glibc static TLS relocations on ARM64.
+# The Cabal flag scopes static/bfd options to the executable, not shared libraries.
+RUN cabal build exe:c-plugin -fstatic --enable-executable-static --disable-executable-dynamic --disable-shared && \
     mkdir -p /out && \
     cp "$(cabal list-bin exe:c-plugin)" /out/c-plugin
 
