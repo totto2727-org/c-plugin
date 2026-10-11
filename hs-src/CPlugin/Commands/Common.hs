@@ -22,7 +22,7 @@ loadCurrent paths global = do
 
 resolveLocalSource :: String -> FilePath -> FilePath -> IO (RelativePath, AbsolutePath)
 resolveLocalSource invalid lockPath raw = do
-    unless ("./" `isPrefixOf` raw) (failAs invalid "--local must begin with ./")
+    unless ("./" `isPrefixOf` raw) (failAs invalid "local source must begin with ./")
     source <- validateAs invalid (relativePath raw)
     let base = takeDirectory lockPath
     root <- absoluteIO (base </> relativeText source)

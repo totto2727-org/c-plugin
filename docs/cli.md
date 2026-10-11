@@ -7,9 +7,13 @@ See [README.md](../README.md) for setup and a minimal example.
 
 ```text
 c-plugin init [-g]
-c-plugin plugin add --local ./plugin [--skill alpha ... | --all | --none] [-g] [-f]
-c-plugin skill add --local ./solo [-g] [-f]
+c-plugin plugin add local:./plugin [--skill alpha ... | --all | --none] [-g] [-f]
+c-plugin skill add local:./solo [-g] [-f]
 c-plugin skill remove [--plugin demo ...] [--skill demo/alpha ...] [--skill solo ...] [-g]
+c-plugin sync [-g] [-r]
+c-plugin update [-g] [-r]
+c-plugin plugin add github:OWNER/REPO[/PATH] [--ref REF] [--skill alpha ... | --all | --none] [-g] [-f]
+c-plugin skill add github:OWNER/REPO[/PATH] [--ref REF] [-g] [-f]
 c-plugin skill sync [-g] [-r]
 c-plugin skill target add PATH [-g]
 c-plugin skill target remove [--target PATH ...] [-g]
@@ -21,13 +25,47 @@ c-plugin skill target remove [--target PATH ...] [-g]
 | `plugin add` | Load one explicit plugin root, set its enabled skills, save a changed lock, and reconcile links. |
 | `skill add` | Register one explicit skill directory containing `SKILL.md`, without requiring `plugin.json`, and reconcile links. |
 | `skill remove` | Remove whole plugins, qualified plugin skills, or standalone skills, then reconcile owned links. |
-| `skill sync` | Reconcile links from the existing lock without changing selections. |
+| `sync` | Reconcile plugin and standalone links from pinned sources without network access or changing selections. |
+| `update` | Refresh all GitHub plugin and standalone sources at their requested refs, validate the complete candidate, then reconcile links. |
+| `skill sync` | Compatibility alias for top-level `sync`. |
 | `skill target add` | Register an additional relative target and reconcile links. An already registered target is a no-op. |
 | `skill target remove` | Remove selected target registrations and their unchanged owned links. Unknown targets are a no-op. |
 
 Both add commands accept one directory, not a parent to scan or a list of roots.
 There is no collection discovery, recursive source search, or bulk `--plugins` or `--skills` option.
-Remote installation is not provided.
+Supply exactly one positional `SOURCE`: `local:./PATH` or `github:OWNER/REPO[/PATH]`.
+The prefixes are mandatory; raw paths, raw repository names, unknown prefixes, and retired `--local`, `--github`, or `--path` options are errors.
+`github:https://github.com/OWNER/REPO[/PATH]` is also accepted, with an optional `.git` suffix on the repository component.
+Other hosts, URL credentials, queries, fragments, and traversal components are rejected.
+`--ref` accepts a branch, tag, or commit; omission requests remote HEAD.
+`--ref` with a local source is an error.
+The path suffix identifies one explicit directory within the repository; `github:OWNER/REPO` means that repository's root.
+GitHub `tree/BRANCH` URLs are not interpreted: path components are literal directories, never inferred refs.
+There is no source-kind inference, collection scan, alternative directory fallback, or custom completion.
+Missing required source data, incompatible options, and missing source manifests or markers fail before configuration changes.
+Local paths resolve against the owning lock root; GitHub path suffixes resolve within the fetched snapshot.
+Git must be installed on PATH for Cabal-built executables.
+The Nix package includes its Git runtime dependency.
+Existing Git credential configuration is used without interactive authentication prompts.
+
+```sh
+c-plugin plugin add github:totto2727-org/agent/plugins/totto2727-coding --all
+c-plugin skill add github:totto2727-org/agent/plugins/totto2727-coding/skills/share-coding
+c-plugin sync
+c-plugin update
+```
+
+Do not install a standalone skill with the same name as an enabled plugin skill.
+GitHub sources are pinned to a full commit in the lock, with an immutable snapshot under `.agents/c-plugin/sources/OWNER/REPO/COMMIT/tree`.
+`sync` verifies the pinned cache offline; it does not fetch missing snapshots or update branches.
+Unavailable or modified caches produce a partial sync and preserve trusted source ownership.
+`update` refreshes both plugin and standalone registrations before saving a validated per-lock candidate.
+A failed refresh leaves that lock unchanged.
+An unchanged successful update still synchronizes links, but does not rewrite the lock.
+Re-adding the same repository, requested ref, and subpath can refresh the source and replace the plugin enabled set.
+Changing that source identity under an installed name is a conflict.
+Cancellation may leave a fetched cache snapshot, but does not save configuration or alter skill links.
+Cache garbage collection, submodules, and non-GitHub remotes are not supported.
 
 For `plugin add`, repeat `--skill` to enable specific skill names, use `--all` to enable all valid skills, or use `--none` to disable all skills while retaining the plugin registration.
 These choices are mutually exclusive.
@@ -45,6 +83,16 @@ A remove request that contains an unknown selector is a no-op for the entire req
 `--skill`, `--plugin`, and `--target` selectors can be repeated where shown.
 `-g` means `--global`, `-r` means `--recursive`, and `-f` means `--force`.
 Global and recursive mode cannot be combined.
+`sync -r` and `update -r` first find the nearest regular project lock between the working directory and HOME, then process that lock and descendant project locks in deterministic order.
+A missing nearest lock is an error even when descendant locks exist.
+Unignored hidden directories are included; symlink directories are never followed.
+Ignore behavior preserves the original Admiral 0.6.2 discovery library's limited directory-pattern rules, not full Git ignore semantics: whitespace is trimmed, leading/trailing slashes are removed, `*` matches within one path segment, multi-segment patterns can match contiguous segments, and comments and negation lines are ignored.
+Ignore rules prune directory traversal only; a discovered directory's own lock is included even if a rule names `c-plugin-lock.json`.
+As safety exclusions, `.git` and implementation-owned `.agents/c-plugin/sources` snapshots are not traversed.
+Each lock remains an independent persistence and reconciliation boundary.
+
+Missing commands, required arguments, and option values keep the standard parser error and nonzero exit status, followed by the complete help for that command context.
+`--help` itself exits successfully.
 
 ## Interactive selection
 
@@ -52,7 +100,7 @@ When stdin and stderr support terminal interaction, commands with no explicit se
 
 | Command | Choices |
 | --- | --- |
-| `plugin add --local ./plugin` | Available skills in that plugin, with enabled entries marked |
+| `plugin add local:./plugin` | Available skills in that plugin, with enabled entries marked |
 | `skill remove` | Installed plugins, enabled plugin skills, and standalone skills |
 | `skill target remove` | Registered additional targets, excluding the primary target |
 
@@ -73,9 +121,9 @@ Iris supplies the global `--no-input` option and terminal-input detection.
 Place `--no-input` before the subcommand:
 
 ```sh
-c-plugin --no-input plugin add --local ./plugin --all
-c-plugin --no-input plugin add --local ./plugin --none
-c-plugin --no-input skill add --local ./solo
+c-plugin --no-input plugin add local:./plugin --all
+c-plugin --no-input plugin add local:./plugin --none
+c-plugin --no-input skill add local:./solo
 c-plugin --no-input skill remove --skill solo
 c-plugin --no-input skill target remove --target extra-skills
 ```

@@ -19,9 +19,10 @@ module CPlugin.Paths (
 import CPlugin.Types.Name (ItemName, itemName)
 import CPlugin.Types.Ownership (OwnershipEntry (..))
 import CPlugin.Types.Path
-import Control.Exception (IOException, catch)
+import Control.Exception (IOException, catch, evaluate)
 import Control.Monad (forM, unless)
-import Data.List (isPrefixOf, sort)
+import Data.Char (isSpace)
+import Data.List (isPrefixOf, sort, tails)
 import System.Directory (canonicalizePath, createDirectoryIfMissing, getCurrentDirectory, listDirectory)
 import System.Environment (getEnv)
 import System.FilePath (joinPath, makeRelative, normalise, splitDirectories, takeDirectory, takeFileName, (</>))
@@ -133,7 +134,7 @@ discoverLocks paths global recursive
             cwd = absoluteText (cwdPath paths)
         unless (within home cwd) (notFound home)
         nearest <- findParent home cwd
-        if recursive then sort <$> walk (takeDirectory nearest) [] else pure [nearest]
+        if recursive then walk (takeDirectory nearest) [] else pure [nearest]
   where
     notFound p = ioError (userError ("totto2727/c-plugin.LockDiscoveryError.LockFileNotFound " ++ p))
     requireLock p = do
@@ -149,43 +150,62 @@ discoverLocks paths global recursive
     walk dir inherited = do
         localRules <- readIgnore dir
         let rules = inherited ++ [(dir, rule) | rule <- localRules]
+            localLock = dir </> "c-plugin-lock.json"
+        localKind <- pathKind localLock
         names <- sort <$> listDirectory dir
-        fmap concat $ forM names $ \name -> do
+        descendants <- fmap concat $ forM names $ \name -> do
             let p = dir </> name
             kind <- pathKind p
-            if name == ".git" || ignored rules p (kind == Just PhysicalDirectory)
-                then pure []
-                else case kind of
-                    Just PhysicalDirectory -> walk p rules
-                    Just RegularFile | name == "c-plugin-lock.json" -> pure [p]
-                    _ -> pure []
+            if kind == Just PhysicalDirectory && name /= ".git" && not (sourceCache p) && not (ignored rules p)
+                then walk p rules
+                else pure []
+        pure ([localLock | localKind == Just RegularFile] ++ descendants)
+    -- Snapshots are implementation-owned inputs, not projects. A cloned
+    -- repository's own lock must never enter recursive lock discovery.
+    sourceCache p = takeFileName p == "sources" && takeFileName (takeDirectory p) == "c-plugin" && takeFileName (takeDirectory (takeDirectory p)) == ".agents"
     readIgnore dir =
-        (lines <$> readFile (dir </> ".gitignore")) `catch` \e ->
-            if isDoesNotExistError e then pure [] else ioError (e :: IOException)
+        ( do
+            content <- readFile (dir </> ".gitignore")
+            _ <- evaluate (length content)
+            pure (parseIgnore (lines content))
+        )
+            `catch` ignoreReadFailure
+    ignoreReadFailure :: IOException -> IO [String]
+    ignoreReadFailure _ = pure []
 
--- Gitignore rules are scoped to their declaring directory and later rules win.
--- Do not follow symlink directories during recursive lock discovery.
-ignored :: [(FilePath, String)] -> FilePath -> Bool -> Bool
-ignored rules p isDir = foldl apply False rules
+-- Match the historical admiral 0.6.2 traversal-only rules. These are directory
+-- patterns, not full gitignore semantics: no negation, anchoring, ?, or escapes.
+parseIgnore :: [String] -> [String]
+parseIgnore = map stripSlashes . filter accepted . map trim
   where
-    apply old (_, "") = old
-    apply old (_, '#' : _) = old
-    apply old (base, raw) =
-        let negateRule = head raw == '!'
-            rule = if negateRule then tail raw else raw
-            dirOnly = not (null rule) && last rule == '/'
-            stripped = if dirOnly then init rule else rule
-            anchored = not (null stripped) && head stripped == '/'
-            patternText = if anchored then tail stripped else stripped
-            relative = makeRelative base p
-            candidate = if anchored || '/' `elem` patternText then relative else takeFileName relative
-         in if (not dirOnly || isDir) && glob patternText candidate then not negateRule else old
+    trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+    accepted line = not (null line) && head line `notElem` ['#', '!']
+    stripSlashes = reverse . dropWhile (== '/') . reverse . dropWhile (== '/')
 
-glob :: String -> String -> Bool
-glob [] s = null s
-glob ('*' : '*' : ps) s = glob ps s || (not (null s) && glob ('*' : '*' : ps) (tail s))
-glob ('*' : ps) s = glob ps s || (not (null s) && head s /= '/' && glob ('*' : ps) (tail s))
-glob ('?' : ps) (_ : s) = glob ps s
-glob ('\\' : p : ps) (c : s) = p == c && glob ps s
-glob (p : ps) (c : s) = p == c && glob ps s
-glob _ _ = False
+ignored :: [(FilePath, String)] -> FilePath -> Bool
+ignored rules path = any (\(base, patternText) -> matchesPath (makeRelative base path) patternText) rules
+
+matchesPath :: FilePath -> String -> Bool
+matchesPath relative patternText = case pathSegments patternText of
+    [] -> False
+    [segment] -> any (globSegment segment) segments
+    patterns -> any (\suffix -> length suffix >= length patterns && and (zipWith globSegment patterns suffix)) (tails segments)
+  where
+    segments = pathSegments relative
+
+pathSegments :: String -> [String]
+pathSegments [] = []
+pathSegments value = case break (== '/') value of
+    ("", _ : rest) -> pathSegments rest
+    (part, []) -> [part]
+    (part, _ : rest) -> part : pathSegments rest
+
+globSegment :: String -> String -> Bool
+globSegment patternText text = match patternText text Nothing
+  where
+    match patterns [] _ = all (== '*') patterns
+    match (patternChar : patterns) remaining@(textChar : rest) previousStar
+        | patternChar == textChar = match patterns rest previousStar
+        | patternChar == '*' = match patterns remaining (Just (patterns, remaining))
+    match _ _ (Just (afterStar, _ : retry)) = match afterStar retry (Just (afterStar, retry))
+    match _ _ _ = False

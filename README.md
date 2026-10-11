@@ -1,8 +1,8 @@
 # c-plugin
 
-c-plugin installs skills from local [Agent Plugins 1.0](https://agent-plugins.org/specification) packages into `.agents/skills` and optional additional targets.
+c-plugin installs skills from local or pinned GitHub [Agent Plugins 1.0](https://agent-plugins.org/specification) packages into `.agents/skills` and optional additional targets.
 It is a Haskell CLI built with Cabal and Iris.
-It supports skills only, not MCP servers, hooks, vendor-specific formats, marketplaces, or remote repository management.
+It supports skills only, not MCP servers, hooks, vendor-specific formats, marketplaces, or non-GitHub remotes.
 
 ## Usage
 
@@ -40,7 +40,7 @@ Run these commands from the project root:
 
 ```sh
 c-plugin init
-c-plugin plugin add --local ./plugins/demo
+c-plugin plugin add local:./plugins/demo
 ```
 
 The plugin command loads exactly the supplied root and offers a numbered skill selection in a terminal.
@@ -52,15 +52,15 @@ The command does not scan other plugin roots.
 For scripts, choose explicitly:
 
 ```sh
-c-plugin --no-input plugin add --local ./plugins/demo --skill alpha
-c-plugin --no-input plugin add --local ./plugins/demo --all
-c-plugin --no-input plugin add --local ./plugins/demo --none
+c-plugin --no-input plugin add local:./plugins/demo --skill alpha
+c-plugin --no-input plugin add local:./plugins/demo --all
+c-plugin --no-input plugin add local:./plugins/demo --none
 ```
 
 To install just one skill without a plugin manifest, supply its own directory:
 
 ```sh
-c-plugin skill add --local ./plugins/demo/skills/alpha
+c-plugin skill add local:./plugins/demo/skills/alpha
 ```
 
 Only a valid `SKILL.md` directly in that directory is required.
@@ -83,12 +83,44 @@ nix build .#c-plugin
 ```
 
 The CLI requires a POSIX filesystem with symlink support and write access to the lock and target directories.
+Git must be available on PATH for GitHub fetches and pinned-source verification.
+With GHC 9.4.8 and Cabal installed without Nix, build and run:
+
+```sh
+cabal build exe:c-plugin
+"$(cabal list-bin exe:c-plugin)" --help
+"$(cabal list-bin exe:c-plugin)" sync
+```
+
 No package registry release or hosted binary distribution is claimed.
 
 ## Reference
 
 See the [CLI reference](docs/cli.md) for commands, scopes, and safety behavior.
 Use `c-plugin --help` or `c-plugin plugin add --help` for command help.
+
+## GitHub sources
+
+Specify one repository and one explicit plugin directory:
+
+```sh
+c-plugin plugin add github:totto2727-org/agent/plugins/totto2727-coding --all
+c-plugin sync
+c-plugin update
+```
+
+The repository is `totto2727-org/agent`, not `totto2727-org/agents`.
+The standard-only agent migration must be available on the selected branch before importing it.
+Use `--ref chore/standard-agent-plugins-20261011` while that migration is pending merge.
+For an individual skill instead of the whole plugin, use `skill add github:OWNER/REPO/path/to/skill`.
+Do not enable the same skill through both a plugin and a standalone registration.
+A source prefix is mandatory: `github:OWNER/REPO/path/to/root` or `local:./path/to/root`.
+Raw repository names and paths are errors, not guessed sources.
+`--ref` selects a branch, tag, or commit, and defaults to remote HEAD.
+`sync` reconciles both plugins and standalone skills from pinned snapshots offline.
+`update` refreshes both kinds at their configured refs, then synchronizes links.
+Use `-r` to include descendant project locks, or `-g` for the independent HOME lock, but not both.
+See [CLI reference](docs/cli.md) for the original discovery-library ignore rules and cache safety constraints.
 
 ## Development
 

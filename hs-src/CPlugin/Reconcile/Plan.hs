@@ -2,11 +2,13 @@ module CPlugin.Reconcile.Plan (SyncPlan (..), planSync) where
 
 import CPlugin.Paths (absoluteIO, relativeLinkTarget, strictRealPath, validateManagedRoot, within)
 import CPlugin.Plugin (loadPlugin, loadStandaloneSkill)
+import CPlugin.Source.GitHub (verifyGitHub)
+import CPlugin.Types.GitHub (GitHubOrigin, githubSource)
 import CPlugin.Types.InstalledSkill
 import CPlugin.Types.Lock
 import CPlugin.Types.Name (ItemName, nameText)
 import CPlugin.Types.Ownership
-import CPlugin.Types.Path (AbsolutePath, absoluteText, relativeText)
+import CPlugin.Types.Path (AbsolutePath, RelativePath, absoluteText, relativeText)
 import CPlugin.Types.Plugin
 import CPlugin.Types.PluginManifest (manifestName)
 import CPlugin.Types.Skill
@@ -64,7 +66,7 @@ resolvePlugin :: FilePath -> Plugin -> IO PluginResolution
 resolvePlugin base plugin = do
     root <- absoluteIO (base </> relativeText (pluginSource plugin))
     result <- try $ do
-        validateSourceRoot base root
+        validateSource base (pluginSource plugin) root (pluginOrigin plugin)
         (manifest, skills, warnings) <- loadPlugin root
         unless (manifestName manifest == pluginName plugin) (ioError (userError "plugin name differs from lock"))
         pure (skills, warnings)
@@ -88,11 +90,19 @@ resolveStandalone :: FilePath -> InstalledSkill -> IO SkillResolution
 resolveStandalone base installed = do
     root <- absoluteIO (base </> relativeText (installedSkillSource installed))
     result <- try $ do
-        validateSourceRoot base root
+        validateSource base (installedSkillSource installed) root (installedSkillOrigin installed)
         skill <- loadStandaloneSkill root
         unless (resolvedSkillName skill == installedSkillName installed) (ioError (userError "skill name differs from lock"))
         pure skill
     pure (installed, result)
+
+validateSource :: FilePath -> RelativePath -> AbsolutePath -> Maybe GitHubOrigin -> IO ()
+validateSource base source root origin = case origin of
+    Nothing -> validateSourceRoot base root
+    Just value -> do
+        unless (source == githubSource value) (ioError (userError "source path differs from GitHub provenance"))
+        verified <- verifyGitHub base value
+        unless (root == verified) (ioError (userError "GitHub source root differs from locked selection"))
 
 validateSourceRoot :: FilePath -> AbsolutePath -> IO ()
 validateSourceRoot base root = do

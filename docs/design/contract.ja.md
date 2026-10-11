@@ -6,10 +6,37 @@
 
 ## 対象範囲
 
-c-pluginは、Agent Plugins 1.0パッケージ形式のスキルだけをローカルからインストールするツールです。
+c-pluginは、Agent Plugins 1.0パッケージ形式のスキルと単体skillをローカルまたは固定commitのGitHub sourceからインストールするツールです。
 Haskell、Cabal、Iris、固定したNix環境を使用します。
-マーケットプレイス、ベンダー固有パッケージ、Gitリモート、MCPサーバー、hookは管理しません。
+マーケットプレイス、ベンダー固有パッケージ、GitHub以外のリモート、MCPサーバー、hookは管理しません。
 これらの対象外機能のために、将来用のコマンドplaceholderを追加しません。
+
+## GitHub sourceと全体同期
+
+pluginと単体skillのsourceは`github:org/repo/...path`または`local:./...path`の単一位置引数とし、prefixなしはエラーにします。
+`--github`、`--local`、`--path`は廃止し、GitHubのbranch/tag/commitだけを任意の`--ref`で指定します。
+local sourceの`--ref`、不足・矛盾したsource、複数source、traversalはエラーにし、推測・補完・別ディレクトリへのfallbackは行いません。
+repositoryはowner/repoまたは固定GitHub HTTPS URLとして検証し、refとsubpathも専用型で検証します。
+plugin/standaloneのロックrecordは任意のtyped originを持ち、repository、要求ref、subpath、解決commitを保存します。
+ローカルrecordはoriginを省略し、既存のwire形式を維持します。
+sourceはoriginから導出した`.agents/c-plugin/sources`内の固定snapshotと一致しなければなりません。
+`CPlugin.Source.GitHub`はargvによるGit実行、専用staging、provenance、cache検証を担当します。
+既存のcacheは削除・上書き・adoptせず、cleanupはそのfetchが作成したstagingだけに限定します。
+Gitの対話認証、hook、submodule再帰、HTTPS以外のprotocolを無効にし、URL書き換えを拒否します。
+checkoutとoffline検証はGit設定を隔離し、cacheの実ディレクトリ、remote、HEAD、provenance、tracked内容hash、symlink containmentを確認します。
+Gitlibの公式APIと依存関係を検討した上で、限定的なsnapshot取得には標準`process`とGitを使用します。
+判断の根拠は[Git transport](git-transport.md)に記載します。
+Cabal版はPATH上のGitが必要で、Nix版はruntime依存を含みます。
+
+トップレベル`sync`はpluginと単体skillの両方を固定sourceからofflineで同期します。
+トップレベル`update`は両方のGitHub refを取得し、ロック単位で全candidateを検証してから保存・同期します。
+変更のない成功updateもlinkを同期しますが、同一ロックは書き直しません。
+取得失敗はそのロックを部分更新しません。
+既存`skill sync`は互換aliasとして残します。
+`-r`はGit cloneの再帰やref短縮ではなく、最近傍projectロックとその子孫ロックの探索です。
+Admiral 0.6.2の原仕様に合わせ、最近傍ロック必須、own lock常時包含、directory-onlyの限定ignore規則、未除外hidden包含、symlink非追跡を維持します。
+安全のため`.git`とsnapshot cacheは探索から除外します。
+不足引数・option・subcommandは標準エラーと非ゼロ終了を維持し、そのcontextの完全helpを標準rendererで表示します。
 
 ## モジュールの責務
 
@@ -19,6 +46,8 @@ filesystemやcommandモジュールにorphan JSON instanceを定義しません�
 
 | モジュール | 所有する規則 |
 | --- | --- |
+| `CPlugin.Types.Source` | 必須source schemeと型付きsourceへの純粋な解析 |
+| `CPlugin.Types.GitHub` | GitHub repository/ref/subpath/commit/originの型、検証、JSON変換 |
 | `CPlugin.Types.Path` | 相対・絶対パスの型、検証、JSON変換 |
 | `CPlugin.Types.Name` | 識別子の型、plugin/skill名の検証、JSON変換 |
 | `CPlugin.Types.Plugin` | インストール対象pluginの型、選択の検証、JSON変換 |
@@ -35,7 +64,7 @@ Iris CLI解析と対話modeの判定は`app/Main.hs`に置きます。
 `CPlugin.StateStore`はファイルIO、canonical JSON出力、耐久性を持つatomic writeを担当します。
 型固有のwire形式規則は定義しません。
 探索は`CPlugin.Plugin`、filesystem containmentは`CPlugin.Paths`、同期は`CPlugin.Reconcile`に置きます。
-`CPlugin.Commands`はcommand値を`Init`、`Sync`、`PluginAdd`、`SkillAdd`、`Remove`、`TargetAdd`、`TargetRemove`のhandlerモジュールへ振り分けるだけです。
+`CPlugin.Commands`はcommand値を`Init`、`Sync`、`Update`、`PluginAdd`、`PluginAddGitHub`、`SkillAdd`、`SkillAddGitHub`、`Remove`、`TargetAdd`、`TargetRemove`のhandlerモジュールへ振り分けるだけです。
 `CPlugin.Commands.Common`は共有のロック読み込み、candidate永続化、完了結果の報告を担当します。
 `syncLoadedLock`は計画と同期sessionを組み合わせるだけです。
 `CPlugin.Reconcile.Plan`はsourceと望ましいlinkの解決、`Session`は通知とdurable checkpoint、`Mutation`は名前付きlink操作、`Report`はユーザー向けの結果出力を担当します。

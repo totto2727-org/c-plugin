@@ -58,7 +58,7 @@ A zero-test run or a `no work to do` result is not product coverage.
 Read [the design contract](docs/design/contract.md) before changing path validation, parsing, lock persistence, or reconciliation.
 Keep CLI parsing in Iris and command policy in `CPlugin.Commands.*`.
 `CPlugin.Commands` owns only the command values and dispatch.
-Keep each handler in its own module: `Init`, `Sync`, `PluginAdd`, `SkillAdd`, `Remove`, `TargetAdd`, or `TargetRemove`.
+Keep each handler in its own module: `Init`, `Sync`, `Update`, `PluginAdd`, `PluginAddGitHub`, `SkillAdd`, `SkillAddGitHub`, `Remove`, `TargetAdd`, or `TargetRemove`.
 `CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
 Keep each domain type, its pure validation, and its serialization or deserialization in the same `CPlugin.Types.*` module.
 `CPlugin.Types` is only a re-export entrypoint, not a second implementation.
@@ -70,7 +70,9 @@ Do not add orphan JSON instances in unrelated modules.
 Validate CLI, JSON, and filesystem input into domain values at their boundaries.
 Keep the implementation small and use the existing Haskell modules rather than empty framework layers.
 
-- Accept one explicit local standard Agent Plugins 1.0 root or one explicit standalone Agent Skill directory. Do not scan plugin collections or infer the source kind. Do not add marketplaces, vendor-format detection, GitHub lifecycle, MCP execution, or hooks without explicit scope approval.
+- Accept one explicit local or GitHub standard Agent Plugins 1.0 root or one explicit standalone Agent Skill directory. Do not scan plugin collections or infer the source kind. Do not add marketplaces, vendor-format detection, non-GitHub remotes, MCP execution, or hooks without explicit scope approval.
+- Top-level `sync` reconciles both plugins and standalone skills offline from pinned sources. `update` refreshes both source kinds, validates a complete per-lock candidate, then reconciles even when the lock is unchanged. Keep `-r` compatible with the original Admiral 0.6.2 discovery rules, except documented `.git` and snapshot-cache safety exclusions.
+- Keep GitHub value validation/codecs in `CPlugin.Types.GitHub` and cache/transport effects in `CPlugin.Source.GitHub`. Use explicit argv, disable hooks and interactive authentication, and never delete an existing cache entry.
 - Preserve strict lock version `"3"`, canonical output, duplicate rejection, and isolated project/global scopes. No old lock conversion is provided.
 - Preserve ownership version `"1"`, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
 - Missing or corrupt ownership records do not authorize deletion or adoption of existing paths.

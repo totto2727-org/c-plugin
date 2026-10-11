@@ -2,7 +2,7 @@ cabal-version: 3.0
 name: c-plugin
 version: 0.1.0
 synopsis: Ownership-safe plugin skill manager
-description: Install Agent Plugins 1.0 skills from local plugin directories and safely reconcile owned symlinks.
+description: Install Agent Plugins 1.0 and standalone skills from local directories or pinned GitHub sources, and safely reconcile owned symlinks.
 category: Tools
 author: totto2727
 maintainer: totto2727
@@ -39,9 +39,12 @@ common settings
 library
   import: settings
   hs-source-dirs: hs-src
+  build-depends: process >=1.6 && <1.7
   exposed-modules:
       CPlugin.Types
       CPlugin.Types.Path
+      CPlugin.Types.GitHub
+      CPlugin.Types.Source
       CPlugin.Types.Name
       CPlugin.Types.Plugin
       CPlugin.Types.InstalledSkill
@@ -57,6 +60,7 @@ library
       CPlugin.Plugin
       CPlugin.Reconcile
       CPlugin.Commands
+      CPlugin.Source.GitHub
   other-modules:
       CPlugin.Reconcile.Plan
       CPlugin.Reconcile.Session
@@ -64,8 +68,11 @@ library
       CPlugin.Reconcile.Report
       CPlugin.Commands.Init
       CPlugin.Commands.Sync
+      CPlugin.Commands.Update
       CPlugin.Commands.PluginAdd
       CPlugin.Commands.SkillAdd
+      CPlugin.Commands.PluginAddGitHub
+      CPlugin.Commands.SkillAddGitHub
       CPlugin.Commands.Remove
       CPlugin.Commands.TargetAdd
       CPlugin.Commands.TargetRemove
@@ -92,7 +99,12 @@ test-suite product-tests
   hs-source-dirs: test
   main-is: Spec.hs
   other-modules:
+      CPlugin.PathsSpec
       CPlugin.TypesSpec
+      CPlugin.Types.GitHubSpec
+      CPlugin.Types.SourceSpec
+      CPlugin.GitHubSpec
+      CPlugin.GitHubTestSupport
       CPlugin.Types.SelectionSpec
       CPlugin.InteractionSpec
       CPlugin.CodecSpec

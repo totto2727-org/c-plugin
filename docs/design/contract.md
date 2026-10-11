@@ -6,9 +6,9 @@ The [Japanese translation](contract.ja.md) has the same scope and requirements.
 
 ## Scope
 
-c-plugin is a local, skills-only installer for the Agent Plugins 1.0 package format.
+c-plugin is a skills-only installer for local and pinned GitHub sources in the Agent Plugins 1.0 package format.
 It uses Haskell, Cabal, Iris, and a pinned Nix environment.
-It does not manage marketplaces, vendor-specific packages, Git remotes, MCP servers, or hooks.
+It does not manage marketplaces, vendor-specific packages, non-GitHub remotes, MCP servers, or hooks.
 Do not treat those exclusions as future command placeholders.
 
 ## Module ownership
@@ -19,6 +19,8 @@ Do not define orphan JSON instances in filesystem or command modules.
 
 | Module | Owned rules |
 | --- | --- |
+| `CPlugin.Types.Source` | Mandatory local/GitHub source schemes and pure parsing into typed source values |
+| `CPlugin.Types.GitHub` | GitHub repository, ref, subpath, commit, and origin values, validation, and JSON conversion |
 | `CPlugin.Types.Path` | Relative and absolute path values, validation, and JSON conversion |
 | `CPlugin.Types.Name` | Item names and plugin/skill name validation, with JSON conversion |
 | `CPlugin.Types.Plugin` | Installed plugin selections, validation, and JSON conversion |
@@ -35,7 +37,7 @@ Keep Iris CLI parsing and interactive-mode detection in `app/Main.hs`.
 `CPlugin.StateStore` owns file IO, canonical JSON rendering, and durable atomic writes.
 It does not define type-specific wire rules.
 Keep discovery in `CPlugin.Plugin`, filesystem containment in `CPlugin.Paths`, and reconciliation in `CPlugin.Reconcile`.
-`CPlugin.Commands` only dispatches command values to the `Init`, `Sync`, `PluginAdd`, `SkillAdd`, `Remove`, `TargetAdd`, and `TargetRemove` handler modules.
+`CPlugin.Commands` only dispatches command values to the `Init`, `Sync`, `Update`, `PluginAdd`, `PluginAddGitHub`, `SkillAdd`, `SkillAddGitHub`, `Remove`, `TargetAdd`, and `TargetRemove` handler modules.
 `CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
 `syncLoadedLock` only orchestrates a plan and reconciliation session.
 `CPlugin.Reconcile.Plan` resolves sources and desired links, `Session` owns notices and durable checkpoints, `Mutation` owns named link operations, and `Report` owns user-facing result text.
@@ -50,6 +52,8 @@ Reject parent traversal and physical containment escapes.
 Output roots and their ancestors must be physical directories inside the lock root, not symlink redirects.
 
 `plugin add` accepts one explicit plugin root, while `skill add` accepts one explicit standalone skill directory.
+Require a single `local:./PATH` or `github:OWNER/REPO[/PATH]` source argument; reject missing prefixes, multiple sources, deprecated source flags, and local sources combined with `--ref`.
+Do not infer source kinds, reconstruct missing data, or fall back to another path.
 Do not search a parent collection, infer the input kind, or accept a list of roots.
 Require `plugin.json` directly in a plugin root and `SKILL.md` directly in a standalone root.
 Keep sources inside their owning lock root after physical resolution.
@@ -112,6 +116,10 @@ The desired lock is `c-plugin-lock.json`:
 
 Require the exact string version `"3"` and all required fields.
 The optional top-level `skills` array stores standalone `{name, source}` registrations and is omitted from canonical output when empty.
+Plugin and standalone records can carry an optional typed `origin` with exactly `kind`, `repository`, `ref`, `subpath`, and `commit` fields.
+GitHub origins require `kind: "github"`, a validated repository/ref/subpath, and a full commit ID; the source must equal the derived cache path.
+Local records omit origin and keep their existing wire shape.
+Cache provenance stores only the repository and commit, because different requested refs and subpaths can share one immutable snapshot.
 Absent `skills` in existing version-3 locks means no standalone skills.
 Validate standalone name/source uniqueness and reject a standalone name that collides with an enabled plugin skill.
 Reject unsupported versions without conversion or mutation.
@@ -134,7 +142,11 @@ For a changed existing lock:
 2. Save the lock through a temporary sibling file and atomic rename.
 3. Reconcile exactly that persisted candidate.
 
-Rejected candidates and semantic no-ops do not rewrite the lock or trigger reconciliation.
+Rejected candidates and add/configuration semantic no-ops do not rewrite the lock or trigger reconciliation.
+Explicit `sync` reconciles both source kinds from pinned state without network access.
+Explicit `update` refreshes all remote plugin and standalone sources, validates the whole per-lock candidate before persistence, and reconciles even when the candidate is unchanged.
+An unchanged update does not rewrite the lock.
+Refresh failure must not partially persist one source before another source validates.
 Ordinary collisions and unavailable plugins can produce partial success.
 A terminal checkpoint, durability, or verification failure returns failure without pretending that the lock was rolled back.
 A later sync can retry the persisted desired state.
@@ -163,6 +175,20 @@ Do not promise automatic recovery or ownership adoption across that window.
 - Keep recursive lock ownership isolated and do not follow symlink directories during discovery.
 
 These checks reduce accidental scope escape. They are not a sandbox against a concurrent hostile filesystem writer.
+
+## GitHub transport
+
+`CPlugin.Source.GitHub` owns argv-based Git invocation, isolated staging directories, immutable snapshots, and pinned verification.
+Disable interactive authentication, hooks, submodule recursion, and non-HTTPS protocols.
+Reject installed URL rewrites and HTTP redirects away from the fixed GitHub endpoint.
+Use normal installed credentials only for network operations; isolate Git configuration during checkout and offline verification.
+Validate physical cache directories, provenance, remote URL, HEAD, Git metadata indirections, tracked content hashes, and contained tracked symlinks.
+Do not adopt, overwrite, or delete an existing corrupt cache entry.
+Cleanup is restricted to staging directories created by the current fetch.
+Caches are implementation-owned inputs, not descendant projects for `-r`.
+These checks are not a concurrent hostile-writer sandbox.
+
+The backend decision is documented in [Git transport](git-transport.md).
 
 ## Toolchain
 

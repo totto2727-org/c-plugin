@@ -4,6 +4,7 @@ module CPlugin.Types.Lock (Lock (..), emptyLock, makeLock, makeLockWithSkills) w
 
 import CPlugin.Internal.JSON (validated)
 import CPlugin.Internal.Validation (uniqueMap, uniqueSet)
+import CPlugin.Types.GitHub (GitHubOrigin (..))
 import CPlugin.Types.InstalledSkill
 import CPlugin.Types.Name (ItemName)
 import CPlugin.Types.Path (RelativePath)
@@ -27,16 +28,20 @@ makeLock ts ps = makeLockWithSkills ts ps []
 
 makeLockWithSkills :: [RelativePath] -> [Plugin] -> [InstalledSkill] -> Either String Lock
 makeLockWithSkills ts ps ss = do
-    mapM_ (\p -> makePlugin (pluginName p) (pluginSource p) (Set.toAscList (enabledSkills p))) ps
+    mapM_ (\p -> makePluginWithOrigin (pluginName p) (pluginSource p) (Set.toAscList (enabledSkills p)) (pluginOrigin p)) ps
     ts' <- uniqueSet "lock targets" ts
     ps' <- uniqueMap "plugin names" pluginName ps
     _ <- uniqueSet "plugin sources" (map pluginSource ps)
-    mapM_ (\s -> makeInstalledSkill (installedSkillName s) (installedSkillSource s)) ss
+    mapM_ (\s -> makeInstalledSkillWithOrigin (installedSkillName s) (installedSkillSource s) (installedSkillOrigin s)) ss
     ss' <- uniqueMap "standalone skill names" installedSkillName ss
     _ <- uniqueSet "standalone skill sources" (map installedSkillSource ss)
+    _ <- uniqueSet "plugin GitHub selections" [githubIdentity origin | p <- ps, Just origin <- [pluginOrigin p]]
+    _ <- uniqueSet "standalone GitHub selections" [githubIdentity origin | s <- ss, Just origin <- [installedSkillOrigin s]]
     let pluginSkills = Set.unions (map enabledSkills ps)
     unless (Set.null (Map.keysSet ss' `Set.intersection` pluginSkills)) (Left "standalone skill name conflicts with an enabled plugin skill")
     pure (Lock ts' ps' ss')
+  where
+    githubIdentity origin = (githubOriginRepository origin, githubOriginRef origin, githubOriginSubpath origin)
 
 instance FromJSON Lock where
     parseJSON = withObject "lock" $ \o -> do

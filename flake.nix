@@ -32,7 +32,19 @@
             iris = pkgs.haskell.lib.dontCheck (pkgs.haskell.lib.markUnbroken previous.iris);
           };
         };
-      mkProject = pkgs: (mkHaskell pkgs).callCabal2nix "c-plugin" (pkgs.lib.cleanSource ./.) { };
+      mkProject =
+        pkgs:
+        pkgs.haskell.lib.overrideCabal
+          ((mkHaskell pkgs).callCabal2nix "c-plugin" (pkgs.lib.cleanSource ./.) { })
+          (old: {
+            buildTools = (old.buildTools or [ ]) ++ [
+              pkgs.git
+              pkgs.makeWrapper
+            ];
+            postInstall = (old.postInstall or "") + ''
+              wrapProgram "$out/bin/c-plugin" --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git ]}
+            '';
+          });
     in
     {
       overlays.default = _final: previous: {
@@ -75,6 +87,7 @@
                 p.temporary
               ]))
               pkgs.cabal-install
+              pkgs.git
               pkgs.haskellPackages.fourmolu
               pkgs.haskellPackages.hlint
               pkgs.go
