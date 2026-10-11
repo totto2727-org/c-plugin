@@ -136,7 +136,7 @@ func interactiveSelectionScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "selection")
 	globalBefore := s.digest(s.home + "/c-plugin-lock.json")
-	added := s.runTerminal(project, []string{"1, 3"}, false, "plugin", "add", "--local", "./plugin")
+	added := s.runTerminal(project, []string{"1, 3"}, false, "plugin", "add", "local:./plugin")
 	s.requireTerminalSuccess(added)
 	s.requireContains(added.Stderr, "1) alpha [disabled]")
 	s.requireContains(added.Stderr, "2) beta [disabled]")
@@ -173,11 +173,11 @@ func interactiveSelectionScenario(t *testing.T, environment *cli.Environment) {
 func interactiveGlobalScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "global")
-	s.requireSuccess(s.run(project, "plugin", "add", "--local", "./plugin", "--all"))
+	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
 	lockBefore := s.digest(project + "/c-plugin-lock.json")
 	stateBefore := s.digest(project + "/.agents/c-plugin-state.json")
 	s.mkdirAll(project + "/nested")
-	added := s.runTerminal(project+"/nested", []string{"all"}, false, "plugin", "add", "--global", "--local", "./plugin")
+	added := s.runTerminal(project+"/nested", []string{"all"}, false, "plugin", "add", "--global", "local:./plugin")
 	s.requireTerminalSuccess(added)
 	s.requireJSON(s.home+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"alpha", "beta", "gamma"}))
 	s.requireSuccess(s.run(project, "skill", "target", "add", "--global", ".cursor/skills"))
@@ -199,14 +199,14 @@ func interactiveGlobalScenario(t *testing.T, environment *cli.Environment) {
 
 func interactiveNoOp(s *scenarioEnvironment, project string, actions ...string) {
 	s.t.Helper()
-	s.requireSuccess(s.run(project, "plugin", "add", "--local", "./plugin", "--all"))
+	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
 	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
 	s.remove(project+"/.agents/skills/alpha", project+"/.cursor/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
 	for _, action := range actions {
 		for _, arguments := range [][]string{
-			{"plugin", "add", "--local", "./plugin"}, {"skill", "remove"}, {"skill", "target", "remove"},
+			{"plugin", "add", "local:./plugin"}, {"skill", "remove"}, {"skill", "target", "remove"},
 		} {
 			result := s.runTerminal(project, []string{action}, false, arguments...)
 			s.requireTerminalSuccess(result)
@@ -241,7 +241,7 @@ func interactiveEmptyScenario(t *testing.T, environment *cli.Environment) {
 		s.requireMissing(project + "/.agents/skills/alpha")
 		s.requireMissing(project + "/.cursor/skills/alpha")
 	}
-	disabled := s.runTerminal(project, []string{"none"}, false, "plugin", "add", "--local", "./plugin")
+	disabled := s.runTerminal(project, []string{"none"}, false, "plugin", "add", "local:./plugin")
 	s.requireTerminalSuccess(disabled)
 	s.requireContains(disabled.Stderr, "1) alpha [enabled]")
 	s.requireContains(disabled.Stderr, "2) beta [enabled]")
@@ -253,11 +253,11 @@ func interactiveEmptyScenario(t *testing.T, environment *cli.Environment) {
 			s.requireMissing(project + "/" + root + "/" + skill)
 		}
 	}
-	enabled := s.runTerminal(project, []string{"2"}, false, "plugin", "add", "--local", "./plugin")
+	enabled := s.runTerminal(project, []string{"2"}, false, "plugin", "add", "local:./plugin")
 	s.requireTerminalSuccess(enabled)
 	s.requireContains(enabled.Stderr, "2) beta [disabled]")
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{".cursor/skills"}, "plugin", []string{"beta"}))
-	changed := s.runTerminal(project, []string{"1 3"}, false, "plugin", "add", "--local", "./plugin")
+	changed := s.runTerminal(project, []string{"1 3"}, false, "plugin", "add", "local:./plugin")
 	s.requireTerminalSuccess(changed)
 	s.requireContains(changed.Stderr, "1) alpha [disabled]")
 	s.requireContains(changed.Stderr, "2) beta [enabled]")
@@ -274,7 +274,7 @@ func interactiveEmptyScenario(t *testing.T, environment *cli.Environment) {
 func interactiveInvalidScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "invalid")
-	result := s.runTerminal(project, []string{"1,1", "99", "garbage", "1 2"}, false, "plugin", "add", "--local", "./plugin")
+	result := s.runTerminal(project, []string{"1,1", "99", "garbage", "1 2"}, false, "plugin", "add", "local:./plugin")
 	s.requireTerminalSuccess(result)
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"alpha", "beta"}))
 	s.requireSymlink(project+"/.agents/skills/alpha", project+"/plugin/skills/alpha")
@@ -285,13 +285,13 @@ func interactiveInvalidScenario(t *testing.T, environment *cli.Environment) {
 func interactiveNoInputScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "no-input")
-	s.requireSuccess(s.run(project, "plugin", "add", "--local", "./plugin", "--all"))
+	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
 	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
 	s.remove(project + "/.agents/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
 	for index, arguments := range [][]string{
-		{"--no-input", "plugin", "add", "--local", "./plugin"}, {"--no-input", "skill", "remove"}, {"--no-input", "skill", "target", "remove"},
+		{"--no-input", "plugin", "add", "local:./plugin"}, {"--no-input", "skill", "remove"}, {"--no-input", "skill", "target", "remove"},
 	} {
 		result := s.runTerminal(project, nil, false, arguments...)
 		s.requireTerminalFailure(result)
@@ -308,12 +308,12 @@ func interactiveNoInputScenario(t *testing.T, environment *cli.Environment) {
 func interactivePipeScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "pipe")
-	s.requireSuccess(s.run(project, "plugin", "add", "--local", "./plugin", "--all"))
+	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
 	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
 	s.remove(project + "/.agents/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
-	for index, arguments := range [][]string{{"plugin", "add", "--local", "./plugin"}, {"skill", "remove"}, {"skill", "target", "remove"}} {
+	for index, arguments := range [][]string{{"plugin", "add", "local:./plugin"}, {"skill", "remove"}, {"skill", "target", "remove"}} {
 		result := s.runTerminal(project, nil, true, arguments...)
 		s.requireTerminalFailure(result)
 		s.requireNotContains(result.Stderr, selectionPrompt)
@@ -332,7 +332,7 @@ func interactivePipeScenario(t *testing.T, environment *cli.Environment) {
 func interactiveInterruptScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "interrupt")
-	s.requireSuccess(s.run(project, "plugin", "add", "--local", "./plugin", "--all"))
+	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
 	s.remove(project + "/.agents/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))

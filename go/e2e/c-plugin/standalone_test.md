@@ -21,7 +21,7 @@ Verify direct standalone registration, same-source idempotency without implicit 
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./standalone/solo` | Resolve the skill root relative to the discovered lock. |
+| `local:./standalone/solo` | Resolve the skill root relative to the discovered lock. |
 | `--skill solo` | Remove the standalone skill without a plugin qualifier. |
 
 ### Preconditions and fixtures
@@ -33,8 +33,8 @@ The helper invokes `/sandbox/.local/bin/c-plugin` with direct argv and isolated 
 ### Execution flow
 
 1. Write solo and run `c-plugin init` from the project, then create `project/nested`.
-2. From `project/nested`, run `c-plugin skill add --local ./standalone/solo` and inspect lock and link.
-3. Save exact lock and ownership bytes, delete the managed solo link, and repeat `c-plugin skill add --local ./standalone/solo` from the nested directory.
+2. From `project/nested`, run `c-plugin skill add local:./standalone/solo` and inspect lock and link.
+3. Save exact lock and ownership bytes, delete the managed solo link, and repeat `c-plugin skill add local:./standalone/solo` from the nested directory.
 4. Check the successful no-op, exact persisted bytes, and still-missing link.
 5. Run `c-plugin skill sync` from the project and verify the restored link.
 6. Run `c-plugin skill remove --skill solo` from the nested directory and inspect empty state.
@@ -72,7 +72,7 @@ Verify global standalone add and removal from a nested project directory preserv
 | Argument or option | Purpose |
 | --- | --- |
 | `--global` | Select global lock and managed roots. |
-| `--local ./standalone/solo` | Resolve each source relative to its selected scope. |
+| `local:./standalone/solo` | Resolve each source relative to its selected scope. |
 | `--skill solo` | Select the bare standalone name. |
 
 ### Preconditions and fixtures
@@ -84,8 +84,8 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 ### Execution flow
 
 1. Initialize the project with `c-plugin init` and the global lock with `c-plugin init --global` from the project.
-2. Run `c-plugin skill add --local ./standalone/solo` from the project and save exact project lock/ownership bytes.
-3. Create `project/nested` and run `c-plugin skill add --global --local ./standalone/solo` there.
+2. Run `c-plugin skill add local:./standalone/solo` from the project and save exact project lock/ownership bytes.
+3. Create `project/nested` and run `c-plugin skill add --global local:./standalone/solo` there.
 4. Verify the global lock and source link, then run `c-plugin skill remove --global --skill solo` from the nested directory.
 5. Inspect global cleanup and compare project bytes and link.
 
@@ -118,8 +118,8 @@ Verify neither standalone add nor plugin add guesses a child root when the calle
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./standalone` | Select the parent of valid solo rather than solo itself. |
-| `--local ./plugins` | Select the parent of a valid plugin rather than its root. |
+| `local:./standalone` | Select the parent of valid solo rather than solo itself. |
+| `local:./plugins` | Select the parent of a valid plugin rather than its root. |
 | `--all` | Explicitly select plugin skills, isolating direct-root discovery. |
 
 ### Preconditions and fixtures
@@ -133,8 +133,8 @@ Initial lock bytes are saved; the CLI is `/sandbox/.local/bin/c-plugin` with iso
 
 1. Write solo, run `c-plugin init`, and write the nested demo plugin.
 2. Save the project lock bytes.
-3. Run `c-plugin skill add --local ./standalone` from the project.
-4. Run `c-plugin plugin add --local ./plugins --all` from the project.
+3. Run `c-plugin skill add local:./standalone` from the project.
+4. Run `c-plugin plugin add local:./plugins --all` from the project.
 5. After each rejection, inspect exact lock bytes and absent ownership/links.
 
 ### Expected results
@@ -164,8 +164,8 @@ Verify the same standalone name cannot silently switch to a different source roo
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./standalone/solo` | Register the original source. |
-| `--local ./other/solo` | Attempt a different valid source for solo. |
+| `local:./standalone/solo` | Register the original source. |
+| `local:./other/solo` | Attempt a different valid source for solo. |
 
 ### Preconditions and fixtures
 
@@ -176,9 +176,9 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 ### Execution flow
 
-1. Write solo, run `c-plugin init`, and run `c-plugin skill add --local ./standalone/solo` from the project.
+1. Write solo, run `c-plugin init`, and run `c-plugin skill add local:./standalone/solo` from the project.
 2. Write `other/solo/SKILL.md` and capture persisted bytes.
-3. Run `c-plugin skill add --local ./other/solo`.
+3. Run `c-plugin skill add local:./other/solo`.
 4. Compare exact bytes and the existing link target.
 
 ### Expected results
@@ -208,7 +208,7 @@ Verify synchronization preserves a trusted owned standalone link when its regist
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./standalone/solo` | Register the direct source root. |
+| `local:./standalone/solo` | Register the direct source root. |
 
 ### Preconditions and fixtures
 
@@ -219,7 +219,7 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 ### Execution flow
 
-1. Run `c-plugin init` and `c-plugin skill add --local ./standalone/solo` from the project.
+1. Run `c-plugin init` and `c-plugin skill add local:./standalone/solo` from the project.
 2. Save lock/ownership bytes and inspect the literal link with `readlink`.
 3. Remove `standalone/solo` and run `c-plugin skill sync`.
 4. Compare exact persisted bytes and literal link identity while checking the path remains a symlink.
@@ -251,7 +251,7 @@ Verify invalid standalone frontmatter rejects registration before any mutation a
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./standalone/solo` | Select the invalid direct skill root. |
+| `local:./standalone/solo` | Select the invalid direct skill root. |
 
 ### Preconditions and fixtures
 
@@ -264,7 +264,7 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 1. Write solo and run `c-plugin init` from the project.
 2. Replace its marker with invalid frontmatter, write foreign content, and save lock bytes.
-3. Run `c-plugin skill add --local ./standalone/solo`.
+3. Run `c-plugin skill add local:./standalone/solo`.
 4. Inspect failure, exact lock bytes, absent ownership/link, and foreign contents.
 
 ### Expected results
@@ -293,7 +293,7 @@ Verify a physically escaping standalone marker symlink is rejected without chang
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./standalone/solo` | Select the root containing the escaped marker. |
+| `local:./standalone/solo` | Select the root containing the escaped marker. |
 
 ### Preconditions and fixtures
 
@@ -306,7 +306,7 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 1. Write solo and run `c-plugin init` from the project.
 2. Write the outside marker, save its digest, and replace solo's marker with the escaping symlink.
-3. Save lock bytes and run `c-plugin skill add --local ./standalone/solo`.
+3. Save lock bytes and run `c-plugin skill add local:./standalone/solo`.
 4. Inspect rejection, exact lock bytes, outside digest, retained marker symlink, and absent state/link.
 
 ### Expected results
@@ -337,9 +337,9 @@ Verify a standalone skill cannot claim a basename already enabled by a plugin.
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select demo's direct plugin root. |
+| `local:./plugin` | Select demo's direct plugin root. |
 | `--all` | Enable plugin alpha explicitly. |
-| `--local ./standalone/alpha` | Select a valid but conflicting standalone root. |
+| `local:./standalone/alpha` | Select a valid but conflicting standalone root. |
 
 ### Preconditions and fixtures
 
@@ -350,9 +350,9 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 ### Execution flow
 
-1. Initialize the project, write demo, and run `c-plugin plugin add --local ./plugin --all`.
+1. Initialize the project, write demo, and run `c-plugin plugin add local:./plugin --all`.
 2. Write standalone alpha and save exact lock and ownership bytes.
-3. Run `c-plugin skill add --local ./standalone/alpha`.
+3. Run `c-plugin skill add local:./standalone/alpha`.
 4. Compare persisted bytes and the original alpha link target.
 
 ### Expected results
@@ -381,7 +381,7 @@ Verify same-source plugin registration replaces its enabled set, preserves an em
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the same direct demo root each time. |
+| `local:./plugin` | Select the same direct demo root each time. |
 | `--all` | Enable all discovered skills. |
 | `--skill beta` | Replace the enabled set with beta only. |
 | `--none` | Disable all skills while retaining the plugin. |
@@ -394,13 +394,13 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 ### Execution flow
 
-1. Run `c-plugin init` and `c-plugin plugin add --local ./plugin --all` from the project.
-2. Run `c-plugin plugin add --local ./plugin --skill beta` and inspect beta-only state.
-3. Run `c-plugin plugin add --local ./plugin --none` and inspect an empty enabled set with the registration retained.
-4. Save exact lock and ownership bytes and repeat `c-plugin plugin add --local ./plugin --none`.
+1. Run `c-plugin init` and `c-plugin plugin add local:./plugin --all` from the project.
+2. Run `c-plugin plugin add local:./plugin --skill beta` and inspect beta-only state.
+3. Run `c-plugin plugin add local:./plugin --none` and inspect an empty enabled set with the registration retained.
+4. Save exact lock and ownership bytes and repeat `c-plugin plugin add local:./plugin --none`.
 5. Compare no-op output and exact persisted bytes.
-6. Run `c-plugin plugin add --local ./plugin --all` and verify both links are restored.
-7. Save persisted bytes, then run `c-plugin plugin add --local ./plugin --all --skill alpha`, `c-plugin plugin add --local ./plugin --all --none`, and `c-plugin plugin add --local ./plugin --none --skill alpha`.
+6. Run `c-plugin plugin add local:./plugin --all` and verify both links are restored.
+7. Save persisted bytes, then run `c-plugin plugin add local:./plugin --all --skill alpha`, `c-plugin plugin add local:./plugin --all --none`, and `c-plugin plugin add local:./plugin --none --skill alpha`.
 8. After each selector conflict, compare exact bytes and both retained links.
 
 ### Expected results

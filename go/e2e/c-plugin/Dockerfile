@@ -5,13 +5,16 @@ FROM ${HASKELL_IMAGE} AS builder
 WORKDIR /build
 COPY c-plugin.cabal cabal.project cabal.project.freeze ./
 RUN cabal update
+# Cache dependency compilation independently of source changes and keep the
+# local OrbStack builder from consuming every available CPU.
+RUN cabal build all --only-dependencies -j2 -fstatic --enable-executable-static --disable-executable-dynamic --disable-shared
 COPY hs-src ./hs-src
 COPY app ./app
 COPY test ./test
 COPY LICENSE ./LICENSE
 # GHC's gold linker cannot handle glibc static TLS relocations on ARM64.
 # The Cabal flag scopes static/bfd options to the executable, not shared libraries.
-RUN cabal build exe:c-plugin -fstatic --enable-executable-static --disable-executable-dynamic --disable-shared && \
+RUN cabal build exe:c-plugin -j2 -fstatic --enable-executable-static --disable-executable-dynamic --disable-shared && \
     mkdir -p /out && \
     cp "$(cabal list-bin exe:c-plugin)" /out/c-plugin
 

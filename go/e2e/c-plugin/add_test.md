@@ -20,7 +20,7 @@ Verify standard local plugin registration, same-set idempotency, removal, and fo
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Resolve the direct plugin root relative to the discovered project lock. |
+| `local:./plugin` | Resolve the direct plugin root relative to the discovered project lock. |
 | `--skill alpha`, `--skill beta` | Select bare discovered skill names for add. |
 | `--skill demo/alpha`, `--skill demo/beta` | Select plugin-qualified identities for remove. |
 | `--force` | Replace only the exact eligible file collision. |
@@ -36,10 +36,10 @@ Verify standard local plugin registration, same-set idempotency, removal, and fo
 ### Execution flow
 
 1. From `project`, run `c-plugin init`, then create foreign alpha and `project/nested`.
-2. From `project/nested`, run `c-plugin plugin add --local ./plugin --skill alpha --skill beta` and inspect the lock, beta link, foreign alpha, and ownership state.
-3. Repeat `c-plugin plugin add --local ./plugin --skill alpha --skill beta` from the same directory and verify successful no-op output, unchanged lock/state digests, and unchanged links and foreign content.
+2. From `project/nested`, run `c-plugin plugin add local:./plugin --skill alpha --skill beta` and inspect the lock, beta link, foreign alpha, and ownership state.
+3. Repeat `c-plugin plugin add local:./plugin --skill alpha --skill beta` from the same directory and verify successful no-op output, unchanged lock/state digests, and unchanged links and foreign content.
 4. Run `c-plugin skill remove --skill demo/alpha --skill demo/beta` from `project/nested`. Alpha remains foreign and beta is removed.
-5. Create beta's real directory and `keep` plus the foreign neighbor. Run `c-plugin plugin add --local ./plugin --skill alpha --skill beta --force` from `project/nested`.
+5. Create beta's real directory and `keep` plus the foreign neighbor. Run `c-plugin plugin add local:./plugin --skill alpha --skill beta --force` from `project/nested`.
 6. Verify alpha replacement, beta directory contents, neighbor contents, and final ownership entries.
 
 ### Expected results

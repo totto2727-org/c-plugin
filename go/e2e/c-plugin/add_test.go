@@ -25,7 +25,7 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.mkdirAll(project + "/nested")
 
 	added := scenario.run(project+"/nested", "plugin", "add",
-		"--local", "./plugin",
+		"local:./plugin",
 		"--skill", "alpha",
 		"--skill", "beta",
 	)
@@ -42,7 +42,7 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	stateBeforeRepeat := scenario.digest(statePath)
 
 	repeat := scenario.run(project+"/nested", "plugin", "add",
-		"--local", "./plugin",
+		"local:./plugin",
 		"--skill", "alpha",
 		"--skill", "beta",
 	)
@@ -67,7 +67,7 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(neighbor, "neighbor\n")
 
 	forced := scenario.run(project+"/nested", "plugin", "add",
-		"--local", "./plugin",
+		"local:./plugin",
 		"--skill", "alpha",
 		"--skill", "beta",
 		"--force",
