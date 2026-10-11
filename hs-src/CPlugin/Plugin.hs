@@ -1,4 +1,4 @@
-module CPlugin.Plugin (loadPlugin) where
+module CPlugin.Plugin (loadPlugin, loadStandaloneSkill) where
 
 import CPlugin.Paths (absoluteIO, pathKind, strictRealPath, within)
 import CPlugin.Types.Path (AbsolutePath, absoluteText)
@@ -9,8 +9,25 @@ import Control.Monad (forM, unless)
 import qualified Data.ByteString as BS
 import Data.List (sort)
 import System.Directory (listDirectory)
-import System.FilePath ((</>))
+import System.FilePath (takeFileName, (</>))
 import System.Posix.Files (getFileStatus, isDirectory, isRegularFile)
+
+-- Standalone installation reads only this directory's SKILL.md. It never
+-- infers a plugin or searches for skill roots in surrounding directories.
+loadStandaloneSkill :: AbsolutePath -> IO ResolvedSkill
+loadStandaloneSkill root = do
+    let rootText = absoluteText root
+        marker = rootText </> "SKILL.md"
+    physicalRoot <- strictRealPath rootText
+    status <- getFileStatus rootText
+    unless (isDirectory status) (ioError (userError "skill root must resolve to a directory"))
+    physicalMarker <- strictRealPath marker
+    unless (within physicalRoot physicalMarker) (ioError (userError "SKILL.md resolves outside skill root"))
+    markerStatus <- getFileStatus marker
+    unless (isRegularFile markerStatus) (ioError (userError "SKILL.md must resolve to a regular file"))
+    name <- BS.readFile marker >>= either (ioError . userError) pure . decodeSkill (takeFileName rootText)
+    physical <- absoluteIO physicalRoot
+    pure (ResolvedSkill name physical)
 
 -- A plugin is one root manifest plus fixed, immediate skill directories.
 -- Manifest failure rejects the plugin. Component and skill failures are narrow

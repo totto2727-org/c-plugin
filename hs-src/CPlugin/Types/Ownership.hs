@@ -1,20 +1,32 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module CPlugin.Types.Ownership (OwnershipSource (..), OwnershipEntry (..), OwnershipState (..), PreviousOwnership (..), makeOwnership, makeEntry) where
+module CPlugin.Types.Ownership (OwnershipSource (..), sourcePath, sourcePlugin, sourceSkill, OwnershipEntry (..), OwnershipState (..), PreviousOwnership (..), makeOwnership, makeEntry) where
 
 import CPlugin.Internal.JSON (validated)
 import CPlugin.Internal.Validation (uniqueMap)
 import CPlugin.Types.Name
 import CPlugin.Types.Path
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Aeson
+import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (Parser)
 import qualified Data.Map.Strict as Map
 import System.FilePath (takeDirectory, takeFileName)
 
-data OwnershipSource = OwnershipSource
-    {sourcePath :: RelativePath, sourcePlugin :: ItemName, sourceSkill :: ItemName}
+data OwnershipSource = OwnershipSource RelativePath ItemName ItemName | StandaloneSource RelativePath ItemName
     deriving (Eq, Ord, Show)
+
+sourcePath :: OwnershipSource -> RelativePath
+sourcePath (OwnershipSource path _ _) = path
+sourcePath (StandaloneSource path _) = path
+
+sourcePlugin :: OwnershipSource -> Maybe ItemName
+sourcePlugin (OwnershipSource _ plugin _) = Just plugin
+sourcePlugin (StandaloneSource _ _) = Nothing
+
+sourceSkill :: OwnershipSource -> ItemName
+sourceSkill (OwnershipSource _ _ skill) = skill
+sourceSkill (StandaloneSource _ skill) = skill
 data OwnershipEntry = OwnershipEntry
     { entryLink :: AbsolutePath
     , symlinkTarget :: FilePath
@@ -29,7 +41,7 @@ data PreviousOwnership = Trusted OwnershipState | Missing | Corrupt String deriv
 
 makeEntry :: AbsolutePath -> FilePath -> AbsolutePath -> AbsolutePath -> OwnershipSource -> Either String OwnershipEntry
 makeEntry link literal resolved root source = do
-    _ <- pluginNameValue (nameText (sourcePlugin source))
+    mapM_ (pluginNameValue . nameText) (sourcePlugin source)
     _ <- skillNameValue (nameText (sourceSkill source))
     if takeDirectory (absoluteText link) /= absoluteText root
         then Left "ownership link must be a direct child of managed root"
@@ -46,11 +58,18 @@ makeOwnership es = OwnershipState <$> uniqueMap "ownership links" entryLink es
 instance FromJSON OwnershipSource where
     parseJSON = withObject "ownership source" $ \o -> do
         p <- o .: "path"
-        plugin <- o .: "plugin" >>= validated . pluginNameValue
         skill <- o .: "skill" >>= validated . skillNameValue
-        pure (OwnershipSource p plugin skill)
+        case KeyMap.lookup "kind" o of
+            Nothing -> do
+                plugin <- o .: "plugin" >>= validated . pluginNameValue
+                pure (OwnershipSource p plugin skill)
+            Just (String "standalone") -> do
+                when (KeyMap.member "plugin" o) (fail "standalone ownership source must not contain plugin")
+                pure (StandaloneSource p skill)
+            _ -> fail "unsupported ownership source kind"
 instance ToJSON OwnershipSource where
-    toJSON s = object ["path" .= sourcePath s, "plugin" .= sourcePlugin s, "skill" .= sourceSkill s]
+    toJSON (OwnershipSource path plugin skill) = object ["path" .= path, "plugin" .= plugin, "skill" .= skill]
+    toJSON (StandaloneSource path skill) = object ["kind" .= String "standalone", "path" .= path, "skill" .= skill]
 instance FromJSON OwnershipEntry where
     parseJSON = withObject "ownership entry" $ \o -> do
         link <- o .: "link"

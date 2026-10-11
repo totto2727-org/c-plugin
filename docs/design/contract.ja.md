@@ -8,7 +8,7 @@
 
 c-pluginは、Agent Plugins 1.0パッケージ形式のスキルだけをローカルからインストールするツールです。
 Haskell、Cabal、Iris、固定したNix環境を使用します。
-マーケットプレイス、ベンダー固有パッケージ、Gitリモート、MCPサーバー、hook、対話選択は管理しません。
+マーケットプレイス、ベンダー固有パッケージ、Gitリモート、MCPサーバー、hookは管理しません。
 これらの対象外機能のために、将来用のコマンドplaceholderを追加しません。
 
 ## モジュールの責務
@@ -22,17 +22,20 @@ filesystemやcommandモジュールにorphan JSON instanceを定義しません�
 | `CPlugin.Types.Path` | 相対・絶対パスの型、検証、JSON変換 |
 | `CPlugin.Types.Name` | 識別子の型、plugin/skill名の検証、JSON変換 |
 | `CPlugin.Types.Plugin` | インストール対象pluginの型、選択の検証、JSON変換 |
+| `CPlugin.Types.InstalledSkill` | 単独skill登録の型、検証、JSON変換 |
 | `CPlugin.Types.Lock` | 望ましい状態の型、versionと重複の検証、JSON変換 |
 | `CPlugin.Types.Ownership` | 関連する所有権記録の型、関係の検証、JSON変換 |
 | `CPlugin.Types.PluginManifest` | 標準plugin manifestの型、デコード、検証 |
 | `CPlugin.Types.Skill` | 探索済みskillの型、frontmatterのデコードと検証 |
 | `CPlugin.Types.Sync` | 同期結果と通知の型 |
+| `CPlugin.Types.Selection` | 選択要求、型付き選択結果、行入力の検証 |
 
-Iris CLI解析は`app/Main.hs`に置きます。
+Iris CLI解析と対話modeの判定は`app/Main.hs`に置きます。
+`CPlugin.Interaction`は型付き選択肢をterminal handleへ接続し、handlerはcandidateの構築前に型付き選択結果を受け取ります。
 `CPlugin.StateStore`はファイルIO、canonical JSON出力、耐久性を持つatomic writeを担当します。
 型固有のwire形式規則は定義しません。
 探索は`CPlugin.Plugin`、filesystem containmentは`CPlugin.Paths`、同期は`CPlugin.Reconcile`に置きます。
-`CPlugin.Commands`はcommand値を`Init`、`Sync`、`AddLocal`、`Remove`、`TargetAdd`、`TargetRemove`のhandlerモジュールへ振り分けるだけです。
+`CPlugin.Commands`はcommand値を`Init`、`Sync`、`PluginAdd`、`SkillAdd`、`Remove`、`TargetAdd`、`TargetRemove`のhandlerモジュールへ振り分けるだけです。
 `CPlugin.Commands.Common`は共有のロック読み込み、candidate永続化、完了結果の報告を担当します。
 `syncLoadedLock`は計画と同期sessionを組み合わせるだけです。
 `CPlugin.Reconcile.Plan`はsourceと望ましいlinkの解決、`Session`は通知とdurable checkpoint、`Mutation`は名前付きlink操作、`Report`はユーザー向けの結果出力を担当します。
@@ -45,6 +48,12 @@ CLI文字列、JSON、filesystem入力を解析した後は、検証済みのパ
 ローカルsourceと追加targetは、所有するロックのrootを基準に解決します。
 親ディレクトリへの移動と、物理的なcontainmentからの逸脱を拒否します。
 出力rootとその祖先はロックroot内の実ディレクトリでなければならず、symlinkによる転送を認めません。
+
+`plugin add`は単体の明示plugin root、`skill add`は単体の明示skillディレクトリを受け取ります。
+親collectionを探索せず、入力種別を推測せず、rootのリストも受け付けません。
+plugin root直下には`plugin.json`、単独skill root直下には`SKILL.md`を必須とします。
+物理的な解決後もsourceを所有するロックroot内に維持します。
+標準manifestにはskill一覧fieldがないため、plugin skillには固定の`skills/`直下だけを使用します。
 
 ローカルに実装したAgent Plugins 1.0 manifest規則を適用します。
 
@@ -63,6 +72,30 @@ skillは`skills/`の直下の子ディレクトリからだけ探索します。
 未対応component typeは、その内容を実行せず無視します。
 この契約は完全なconformance認証を示すものではありません。
 
+## 対話境界
+
+[Iris 0.1.0.0](https://hackage.haskell.org/package/iris-0.1.0.0)は`cliEnvInteractiveMode`とglobal optionの`--no-input`を提供します。
+[interactive module](https://hackage.haskell.org/package/iris-0.1.0.0/docs/Iris-Cli-Interactive.html)はterminal入力を判定しますが、選択widgetは提供しません。
+このmodeと、prompt出力handleのterminal判定を組み合わせて使用します。
+製品adapterは標準の行入力とstderr promptを使い、raw terminal状態やfull-screen UI依存を追加しません。
+
+選択型と応答検証は`CPlugin.Types.Selection`に置きます。
+入出力effectは`CPlugin.Interaction`、command policyは各handlerに置きます。
+選択では型付きplugin/skillとtarget値を渡し、表示labelからidentityを再構築しません。
+productionの選択policyを変更せず、testへ決定的なhandleベースの対話を提供します。
+
+対話modeでselectorが省略された場合、plugin設定、remove、target removeは選択を求めます。
+単独skill addはpathだけで1項目を指定するため、選択promptを必要としません。
+明示optionはpromptを省略します。
+非対話modeでは明示selector、またはplugin設定の`--all`か`--none`を必須とし、pipe入力を消費したり暗黙に全選択したりしません。
+無効な応答ではcandidateを書き込む前にpromptを繰り返します。
+cancel、空の入力行、入力終了では、設定を書き込まず同期もしません。
+plugin設定で確認した空集合（`none`または`--none`）は、plugin登録を維持したまま全skillを無効にします。
+有効集合が同じ場合は意味的なno-opとし、異なる場合は前の集合を置き換えます。
+removeの空選択はstateを変更しません。
+非同期の割り込みを通常の選択errorとして捕捉しません。
+removeではインストール済みskillを事前選択しません。
+
 ## 状態
 
 望ましい状態のロックは`c-plugin-lock.json`です。
@@ -72,12 +105,15 @@ skillは`skills/`の直下の子ディレクトリからだけ探索します。
   "version": "3",
   "targets": [],
   "plugins": [
-    {"source": "./demo", "name": "demo", "skills": ["alpha"]}
+    {"source": "./plugins/demo", "name": "demo", "skills": ["alpha"]}
   ]
 }
 ```
 
 厳密な文字列version `"3"`と、すべての必須fieldを要求します。
+任意の最上位`skills`配列には単独skillの`{name, source}`登録を保存し、空の場合はcanonical出力から省略します。
+既存version-3ロックで`skills`がない場合、単独skillはないものとします。
+単独skillのname/sourceの一意性を検証し、有効なplugin skillと同名の単独skillを拒否します。
 未対応versionは、変換や変更を行わず拒否します。
 source、plugin identity、選択skill、targetの重複を拒否します。
 正規化した相対パスと決定的な順序でencodeします。
@@ -87,6 +123,7 @@ machine-localな所有stateは`.agents/c-plugin-state.json`で、versionは`"1"`
 これは共有可能な望ましい状態の設定ではありません。
 各entryは、絶対link path、managed root、正確なliteral symlink target、resolved target、source/plugin/skill identityを記録します。
 literal targetはresolved pathと分離し、変更せずround-tripしなければなりません。
+単独skillの所有sourceには`{kind: "standalone", path, skill}`を使用し、既存plugin source記録の形式は維持します。
 
 ## 永続化と調整
 
@@ -136,6 +173,9 @@ GHC 9.4.8とIris 0.1を公開された依存関係のbounds内で使用します
 ## 検証
 
 native testは、分離した一時rootを使って実際の製品境界を検証します。
+応答解析、型付き選択mapping、cancel、byteを保つno-op、明示rootの拒否、単独skill登録、plugin有効集合の置換、非対話modeの拒否を扱います。
+既存Go/Testcontainers runnerのpseudo-terminalで、実CLIの選択、再入力、cancel、割り込みを実行します。
+prompt文字列だけでなく、terminal判定、exit status、stateの完全一致、最終link状態を検証します。
 Go/Testcontainers scenarioは、callerがbuildしたimageを使い、登録caseごとに独立した破棄可能containerを実行します。
 sourceに対応するscenario文書を実際のGoディレクトリに対して検証します。
 native test、実Docker E2E、Nix package buildの結果を分けて報告します。

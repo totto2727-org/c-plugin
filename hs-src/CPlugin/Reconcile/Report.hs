@@ -14,9 +14,14 @@ renderSyncResult result =
         ++ show (length (syncNotices result))
         ++ " notices, "
         ++ show (Map.size (unavailablePlugins result))
-        ++ " unavailable plugins)"
+        ++ " unavailable plugins"
+        ++ skillStatus
+        ++ ")"
   where
-    status = if null (syncNotices result) && Map.null (unavailablePlugins result) then "complete" else "partial"
+    status = if null (syncNotices result) && Map.null (unavailablePlugins result) && Map.null (unavailableSkills result) then "complete" else "partial"
+    skillStatus
+        | Map.null (unavailableSkills result) = ""
+        | otherwise = ", " ++ show (Map.size (unavailableSkills result)) ++ " unavailable skills"
 
 printWarnings :: SyncResult -> IO ()
 printWarnings result = do
@@ -28,3 +33,5 @@ printWarnings result = do
         _ -> pure ()
     forM_ (Map.toAscList (unavailablePlugins result)) $ \(name, reason) ->
         putStrLn ("Warning: unavailable plugin " ++ nameText name ++ ": " ++ reason)
+    forM_ (Map.toAscList (unavailableSkills result)) $ \(name, reason) ->
+        putStrLn ("Warning: unavailable skill " ++ nameText name ++ ": " ++ reason)

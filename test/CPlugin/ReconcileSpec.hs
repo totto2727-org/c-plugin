@@ -2,16 +2,17 @@
 
 module CPlugin.ReconcileSpec (spec) where
 
-import CPlugin.Paths (PathKind (SymbolicLink), pathKind)
+import CPlugin.Paths (PathKind (SymbolicLink), nameIO, pathKind, relativeIO)
 import CPlugin.Reconcile (syncLoadedLock)
-import CPlugin.StateStore (readOwnership)
-import CPlugin.TestSupport (withFixture, writeFixture)
-import CPlugin.Types.Lock (emptyLock)
+import CPlugin.StateStore (readOwnership, writeLock)
+import CPlugin.TestSupport (manifestBytes, skillBytes, withFixture, writeFixture)
+import CPlugin.Types.InstalledSkill (makeInstalledSkill)
+import CPlugin.Types.Lock (emptyLock, makeLockWithSkills)
 import CPlugin.Types.Ownership (OwnershipState (OwnershipState), PreviousOwnership (Trusted))
-import CPlugin.Types.Sync (Notice (ReplacedPreserved, UnmanagedPreserved), SyncCompletion (Finished, Interrupted), syncCompletion, syncNotices, unavailablePlugins)
+import CPlugin.Types.Sync (Notice (ReplacedPreserved, UnmanagedPreserved), SyncCompletion (Finished, Interrupted), syncCompletion, syncNotices, unavailablePlugins, unavailableSkills)
 import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
-import System.Directory (createDirectoryIfMissing, removeFile)
+import System.Directory (createDirectoryIfMissing, listDirectory, removeDirectoryRecursive, removeFile)
 import System.FilePath ((</>))
 import System.Posix.Files (createSymbolicLink, readSymbolicLink)
 import Test.Hspec (Spec, anyIOException, describe, it, shouldBe, shouldReturn, shouldSatisfy, shouldThrow)
@@ -109,6 +110,63 @@ spec = do
             createSymbolicLink "../outside" (base </> ".agents/skills")
             syncLoadedLock (base </> "c-plugin-lock.json") lock True `shouldThrow` anyIOException
             pathKind (base </> "outside/alpha") `shouldReturn` Nothing
+
+    describe "redirected installed source containment" $ do
+        it "marks a redirected plugin unavailable without recreating missing links or changing trusted state" $ withFixture ["alpha", "beta"] $ \base lock -> do
+            let project = base </> "project"
+                lockPath = project </> "c-plugin-lock.json"
+                statePath = project </> ".agents/c-plugin-state.json"
+            writeFixture (project </> "plugin/plugin.json") (manifestBytes "")
+            writeFixture (project </> "plugin/skills/alpha/SKILL.md") (skillBytes "alpha")
+            writeFixture (project </> "plugin/skills/beta/SKILL.md") (skillBytes "beta")
+            writeLock lockPath lock
+            _ <- syncLoadedLock lockPath lock False
+            beforeLock <- BS.readFile lockPath
+            beforeState <- BS.readFile statePath
+            betaLiteral <- readSymbolicLink (project </> ".agents/skills/beta")
+            removeFile (project </> ".agents/skills/alpha")
+            removeDirectoryRecursive (project </> "plugin")
+            createSymbolicLink "../plugin" (project </> "plugin")
+            result <- syncLoadedLock lockPath lock True
+            demo <- nameIO "demo"
+            syncCompletion result `shouldBe` Finished
+            Map.keys (unavailablePlugins result) `shouldBe` [demo]
+            pathKind (project </> ".agents/skills/alpha") `shouldReturn` Nothing
+            readSymbolicLink (project </> ".agents/skills/beta") `shouldReturn` betaLiteral
+            BS.readFile lockPath `shouldReturn` beforeLock
+            BS.readFile statePath `shouldReturn` beforeState
+            pathKind (base </> ".agents/skills/alpha") `shouldReturn` Nothing
+        it "preserves trusted standalone links and external source bytes without recreating missing targets after redirection" $ withFixture [] $ \base _ -> do
+            let project = base </> "project"
+                lockPath = project </> "c-plugin-lock.json"
+                statePath = project </> ".agents/c-plugin-state.json"
+            writeFixture (base </> "standalone/SKILL.md") (skillBytes "standalone")
+            writeFixture (project </> "standalone/SKILL.md") (skillBytes "standalone")
+            name <- nameIO "standalone"
+            source <- relativeIO "standalone"
+            target <- relativeIO "extra/skills"
+            skill <- either (ioError . userError) pure (makeInstalledSkill name source)
+            lock <- either (ioError . userError) pure (makeLockWithSkills [target] [] [skill])
+            writeLock lockPath lock
+            _ <- syncLoadedLock lockPath lock False
+            beforeLock <- BS.readFile lockPath
+            beforeState <- BS.readFile statePath
+            defaultLiteral <- readSymbolicLink (project </> ".agents/skills/standalone")
+            outsideBytes <- BS.readFile (base </> "standalone/SKILL.md")
+            outsideEntries <- listDirectory (base </> "standalone")
+            removeFile (project </> "extra/skills/standalone")
+            removeDirectoryRecursive (project </> "standalone")
+            createSymbolicLink "../standalone" (project </> "standalone")
+            result <- syncLoadedLock lockPath lock True
+            syncCompletion result `shouldBe` Finished
+            Map.keys (unavailableSkills result) `shouldBe` [name]
+            readSymbolicLink (project </> ".agents/skills/standalone") `shouldReturn` defaultLiteral
+            pathKind (project </> "extra/skills/standalone") `shouldReturn` Nothing
+            BS.readFile lockPath `shouldReturn` beforeLock
+            BS.readFile statePath `shouldReturn` beforeState
+            BS.readFile (base </> "standalone/SKILL.md") `shouldReturn` outsideBytes
+            listDirectory (base </> "standalone") `shouldReturn` outsideEntries
+            pathKind (base </> ".agents/skills/standalone") `shouldReturn` Nothing
 
 isTrusted :: PreviousOwnership -> Bool
 isTrusted (Trusted _) = True

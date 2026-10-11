@@ -8,8 +8,10 @@ module CPlugin.TestSupport (
     fixtureLock,
     withFixture,
     inEnvironment,
+    withInteractionInput,
 ) where
 
+import CPlugin.Interaction (Interaction (Interactive))
 import CPlugin.Paths (nameIO, relativeIO, strictRealPath)
 import CPlugin.StateStore (writeLock)
 import CPlugin.Types.Lock (Lock, makeLock)
@@ -23,6 +25,7 @@ import qualified Data.Text.Encoding as Text
 import System.Directory (createDirectoryIfMissing, withCurrentDirectory)
 import System.Environment (lookupEnv, setEnv, unsetEnv)
 import System.FilePath (takeDirectory, (</>))
+import System.IO (IOMode (ReadMode, WriteMode), withFile)
 import System.IO.Temp (withTempDirectory)
 
 manifestBytes :: BS.ByteString -> BS.ByteString
@@ -58,3 +61,15 @@ inEnvironment base action = bracket (lookupEnv "HOME") restore $ \_ -> do
   where
     restore Nothing = unsetEnv "HOME"
     restore (Just old) = setEnv "HOME" old
+
+withInteractionInput :: String -> (Interaction -> IO a) -> IO (a, String)
+withInteractionInput response action = do
+    createDirectoryIfMissing True "tmp"
+    withTempDirectory "tmp" "interaction-spec-" $ \base -> do
+        let input = base </> "input"
+            output = base </> "output"
+        writeFile input response
+        result <- withFile input ReadMode $ \reader ->
+            withFile output WriteMode $ \writer -> action (Interactive reader writer)
+        transcript <- Text.unpack . Text.decodeUtf8 <$> BS.readFile output
+        pure (result, transcript)

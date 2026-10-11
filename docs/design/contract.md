@@ -8,7 +8,7 @@ The [Japanese translation](contract.ja.md) has the same scope and requirements.
 
 c-plugin is a local, skills-only installer for the Agent Plugins 1.0 package format.
 It uses Haskell, Cabal, Iris, and a pinned Nix environment.
-It does not manage marketplaces, vendor-specific packages, Git remotes, MCP servers, hooks, or interactive selection.
+It does not manage marketplaces, vendor-specific packages, Git remotes, MCP servers, or hooks.
 Do not treat those exclusions as future command placeholders.
 
 ## Module ownership
@@ -22,17 +22,20 @@ Do not define orphan JSON instances in filesystem or command modules.
 | `CPlugin.Types.Path` | Relative and absolute path values, validation, and JSON conversion |
 | `CPlugin.Types.Name` | Item names and plugin/skill name validation, with JSON conversion |
 | `CPlugin.Types.Plugin` | Installed plugin selections, validation, and JSON conversion |
+| `CPlugin.Types.InstalledSkill` | Standalone skill registration, validation, and JSON conversion |
 | `CPlugin.Types.Lock` | Desired lock shape, version, uniqueness, and JSON conversion |
 | `CPlugin.Types.Ownership` | Related ownership records, relationship validation, and JSON conversion |
 | `CPlugin.Types.PluginManifest` | Standard plugin manifest type, decoding, and validation |
 | `CPlugin.Types.Skill` | Discovered skill type and frontmatter decoding/validation |
 | `CPlugin.Types.Sync` | Synchronization results and notices |
+| `CPlugin.Types.Selection` | Selection requests, typed results, and line-response validation |
 
-Keep Iris CLI parsing in `app/Main.hs`.
+Keep Iris CLI parsing and interactive-mode detection in `app/Main.hs`.
+`CPlugin.Interaction` adapts typed choices to terminal handles; handlers consume typed selection results before constructing a candidate.
 `CPlugin.StateStore` owns file IO, canonical JSON rendering, and durable atomic writes.
 It does not define type-specific wire rules.
 Keep discovery in `CPlugin.Plugin`, filesystem containment in `CPlugin.Paths`, and reconciliation in `CPlugin.Reconcile`.
-`CPlugin.Commands` only dispatches command values to the `Init`, `Sync`, `AddLocal`, `Remove`, `TargetAdd`, and `TargetRemove` handler modules.
+`CPlugin.Commands` only dispatches command values to the `Init`, `Sync`, `PluginAdd`, `SkillAdd`, `Remove`, `TargetAdd`, and `TargetRemove` handler modules.
 `CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
 `syncLoadedLock` only orchestrates a plan and reconciliation session.
 `CPlugin.Reconcile.Plan` resolves sources and desired links, `Session` owns notices and durable checkpoints, `Mutation` owns named link operations, and `Report` owns user-facing result text.
@@ -45,6 +48,12 @@ Use validated path and identity values after parsing CLI strings, JSON, and file
 Resolve local sources and additional targets against the owning lock root.
 Reject parent traversal and physical containment escapes.
 Output roots and their ancestors must be physical directories inside the lock root, not symlink redirects.
+
+`plugin add` accepts one explicit plugin root, while `skill add` accepts one explicit standalone skill directory.
+Do not search a parent collection, infer the input kind, or accept a list of roots.
+Require `plugin.json` directly in a plugin root and `SKILL.md` directly in a standalone root.
+Keep sources inside their owning lock root after physical resolution.
+The standard manifest has no skill-list field; use only the fixed `skills/` child location for plugin skills.
 
 Apply the locally supported Agent Plugins 1.0 manifest rules:
 
@@ -63,6 +72,30 @@ Reject an explicitly selected unavailable skill.
 Ignore unsupported component types without executing their content.
 This contract does not establish a complete conformance certification.
 
+## Interactive boundary
+
+[Iris 0.1.0.0](https://hackage.haskell.org/package/iris-0.1.0.0) provides `cliEnvInteractiveMode` and the global `--no-input` option.
+Its [interactive module](https://hackage.haskell.org/package/iris-0.1.0.0/docs/Iris-Cli-Interactive.html) detects terminal input; it does not provide selection widgets.
+Use that mode with a terminal check for the prompt output handle.
+The product adapter uses standard line input and stderr prompts, without raw-terminal state or a full-screen UI dependency.
+
+Keep selection types and response validation in `CPlugin.Types.Selection`.
+Keep input/output effects in `CPlugin.Interaction` and command policy in each handler.
+Pass typed plugin/skill and target values through selection; do not reconstruct identities from display labels.
+Expose deterministic handle-based interaction for tests without changing production selection policy.
+
+Missing selectors in interactive mode request a choice for plugin configuration, remove, and target removal.
+Standalone skill add already identifies one complete item by its path and does not need a selection prompt.
+Explicit options bypass prompts.
+Non-interactive mode requires explicit selectors, or `--all` or `--none` for plugin configuration, and must not consume pipe input or silently select everything.
+An invalid response repeats the prompt before any candidate write.
+Cancellation, an empty input line, and end-of-input neither write configuration nor run synchronization.
+For plugin configuration, a confirmed empty set (`none` or `--none`) disables all skills while retaining the plugin.
+An unchanged enabled set is a semantic no-op; a changed set replaces the previous set.
+Empty removal selections do not mutate state.
+Do not catch asynchronous interruption as an ordinary selection error.
+No installed skill is preselected for removal.
+
 ## State
 
 The desired lock is `c-plugin-lock.json`:
@@ -72,12 +105,15 @@ The desired lock is `c-plugin-lock.json`:
   "version": "3",
   "targets": [],
   "plugins": [
-    {"source": "./demo", "name": "demo", "skills": ["alpha"]}
+    {"source": "./plugins/demo", "name": "demo", "skills": ["alpha"]}
   ]
 }
 ```
 
 Require the exact string version `"3"` and all required fields.
+The optional top-level `skills` array stores standalone `{name, source}` registrations and is omitted from canonical output when empty.
+Absent `skills` in existing version-3 locks means no standalone skills.
+Validate standalone name/source uniqueness and reject a standalone name that collides with an enabled plugin skill.
 Reject unsupported versions without conversion or mutation.
 Reject duplicate sources, plugin identities, selected skills, and target entries.
 Encode normalized relative paths and deterministic ordering.
@@ -87,6 +123,7 @@ Machine-local ownership state is `.agents/c-plugin-state.json`, with version `"1
 It is not portable desired configuration.
 Each entry records the absolute link path, managed root, exact literal symlink target, resolved target, and source/plugin/skill identity.
 The literal target must round-trip unchanged, separately from the resolved path.
+Standalone ownership uses `{kind: "standalone", path, skill}`; existing plugin source records keep their original shape.
 
 ## Persistence and reconciliation
 
@@ -135,6 +172,9 @@ Do not substitute dependency probes for product tests.
 ## Validation
 
 Native tests must use isolated temporary roots and exercise real product boundaries.
+Cover response parsing, typed selection mapping, cancellation, byte-preserving no-ops, explicit-root rejection, standalone installation, plugin enabled-set replacement, and non-interactive rejection.
+Run actual CLI selection, retry, cancellation, and interruption through a pseudo-terminal in the existing Go/Testcontainers runner.
+Assert terminal detection, exit status, exact state preservation, and final link state rather than only prompt text.
 Go/Testcontainers scenarios must use a caller-built image and one disposable container per registered case.
 Check source-linked scenario documents against the real Go directory.
 Report native tests, real Docker E2E, and Nix package builds as separate results.

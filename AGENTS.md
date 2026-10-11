@@ -58,7 +58,7 @@ A zero-test run or a `no work to do` result is not product coverage.
 Read [the design contract](docs/design/contract.md) before changing path validation, parsing, lock persistence, or reconciliation.
 Keep CLI parsing in Iris and command policy in `CPlugin.Commands.*`.
 `CPlugin.Commands` owns only the command values and dispatch.
-Keep each handler in its own module: `Init`, `Sync`, `AddLocal`, `Remove`, `TargetAdd`, or `TargetRemove`.
+Keep each handler in its own module: `Init`, `Sync`, `PluginAdd`, `SkillAdd`, `Remove`, `TargetAdd`, or `TargetRemove`.
 `CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
 Keep each domain type, its pure validation, and its serialization or deserialization in the same `CPlugin.Types.*` module.
 `CPlugin.Types` is only a re-export entrypoint, not a second implementation.
@@ -70,7 +70,7 @@ Do not add orphan JSON instances in unrelated modules.
 Validate CLI, JSON, and filesystem input into domain values at their boundaries.
 Keep the implementation small and use the existing Haskell modules rather than empty framework layers.
 
-- Accept local standard Agent Plugins 1.0 skills only. Do not add marketplaces, vendor-format detection, GitHub lifecycle, MCP execution, or hooks without explicit scope approval.
+- Accept one explicit local standard Agent Plugins 1.0 root or one explicit standalone Agent Skill directory. Do not scan plugin collections or infer the source kind. Do not add marketplaces, vendor-format detection, GitHub lifecycle, MCP execution, or hooks without explicit scope approval.
 - Preserve strict lock version `"3"`, canonical output, duplicate rejection, and isolated project/global scopes. No old lock conversion is provided.
 - Preserve ownership version `"1"`, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
 - Missing or corrupt ownership records do not authorize deletion or adoption of existing paths.
@@ -81,6 +81,8 @@ Keep the implementation small and use the existing Haskell modules rather than e
 ## Tests and documentation
 
 Test c-plugin behavior, not upstream library conformance.
+Use Iris interactive mode and `--no-input`; keep typed selection parsing with its type and prompt effects in `CPlugin.Interaction`.
+Exercise CLI terminal detection, retry, cancellation, interruption, and explicit non-terminal options through real pseudo-terminals in the existing Go/Testcontainers runner.
 Use temporary roots with synthetic `HOME`, working directory, plugin sources, targets, and ownership state.
 Never use real user state in tests.
 Keep dependency probes and temporary reports outside tracked artifacts.

@@ -44,11 +44,14 @@ library
       CPlugin.Types.Path
       CPlugin.Types.Name
       CPlugin.Types.Plugin
+      CPlugin.Types.InstalledSkill
       CPlugin.Types.Lock
       CPlugin.Types.Ownership
       CPlugin.Types.PluginManifest
       CPlugin.Types.Skill
       CPlugin.Types.Sync
+      CPlugin.Types.Selection
+      CPlugin.Interaction
       CPlugin.StateStore
       CPlugin.Paths
       CPlugin.Plugin
@@ -61,7 +64,8 @@ library
       CPlugin.Reconcile.Report
       CPlugin.Commands.Init
       CPlugin.Commands.Sync
-      CPlugin.Commands.AddLocal
+      CPlugin.Commands.PluginAdd
+      CPlugin.Commands.SkillAdd
       CPlugin.Commands.Remove
       CPlugin.Commands.TargetAdd
       CPlugin.Commands.TargetRemove
@@ -89,6 +93,8 @@ test-suite product-tests
   main-is: Spec.hs
   other-modules:
       CPlugin.TypesSpec
+      CPlugin.Types.SelectionSpec
+      CPlugin.InteractionSpec
       CPlugin.CodecSpec
       CPlugin.PluginSpec
       CPlugin.ReconcileSpec

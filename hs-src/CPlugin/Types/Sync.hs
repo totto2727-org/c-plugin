@@ -16,5 +16,9 @@ data Notice
     deriving (Eq, Show)
 data SyncCompletion = Finished | Interrupted deriving (Eq, Show)
 data SyncResult = SyncResult
-    {syncNotices :: [Notice], unavailablePlugins :: Map.Map ItemName String, syncCompletion :: SyncCompletion}
+    { syncNotices :: [Notice]
+    , unavailablePlugins :: Map.Map ItemName String
+    , unavailableSkills :: Map.Map ItemName String
+    , syncCompletion :: SyncCompletion
+    }
     deriving (Eq, Show)

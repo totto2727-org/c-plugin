@@ -6,17 +6,18 @@ It supports skills only, not MCP servers, hooks, vendor-specific formats, market
 
 ## Usage
 
-Given a local plugin with this layout:
+Given a local directory with this layout:
 
 ```text
-demo/
-├── plugin.json
-└── skills/
-    └── alpha/
-        └── SKILL.md
+plugins/
+└── demo/
+    ├── plugin.json
+    └── skills/
+        └── alpha/
+            └── SKILL.md
 ```
 
-`plugin.json`:
+`plugins/demo/plugin.json`:
 
 ```json
 {
@@ -25,7 +26,7 @@ demo/
 }
 ```
 
-`skills/alpha/SKILL.md`:
+`plugins/demo/skills/alpha/SKILL.md`:
 
 ```markdown
 ---
@@ -39,13 +40,34 @@ Run these commands from the project root:
 
 ```sh
 c-plugin init
-c-plugin skill add --local ./demo
+c-plugin plugin add --local ./plugins/demo
 ```
 
+The plugin command loads exactly the supplied root and offers a numbered skill selection in a terminal.
+Enter a number such as `1`, several numbers separated by spaces or commas, or `all`.
+An empty line or `q` cancels without changing the configuration.
+Repeating `plugin add` configures that plugin's enabled skill set; `none` disables all its skills.
+The command does not scan other plugin roots.
+
+For scripts, choose explicitly:
+
+```sh
+c-plugin --no-input plugin add --local ./plugins/demo --skill alpha
+c-plugin --no-input plugin add --local ./plugins/demo --all
+c-plugin --no-input plugin add --local ./plugins/demo --none
+```
+
+To install just one skill without a plugin manifest, supply its own directory:
+
+```sh
+c-plugin skill add --local ./plugins/demo/skills/alpha
+```
+
+Only a valid `SKILL.md` directly in that directory is required.
+Use either the plugin workflow or the standalone workflow for a given enabled skill name, not both.
 The commands create `c-plugin-lock.json` and link `.agents/skills/alpha` to the skill directory.
-Add `--skill alpha` to install only that skill, or repeat `--skill` to select several skills.
-Without a selection, add installs all valid skills.
 Use `-g` for the lock and skill links in `HOME`.
+See [interactive selection](docs/cli.md#interactive-selection) for removal, cancellation, and non-terminal behavior.
 
 > [!IMPORTANT]
 > Lock version `"3"` is required. Other versions are rejected without conversion.
@@ -66,7 +88,7 @@ No package registry release or hosted binary distribution is claimed.
 ## Reference
 
 See the [CLI reference](docs/cli.md) for commands, scopes, and safety behavior.
-Use `c-plugin --help` or `c-plugin skill add --help` for command help.
+Use `c-plugin --help` or `c-plugin plugin add --help` for command help.
 
 ## Development
 

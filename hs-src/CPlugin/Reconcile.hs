@@ -18,7 +18,7 @@ syncLoadedLock lockPath lock force = do
         mapM_ (desiredStep session force) (Map.elems (planDesired plan))
         finishOwnership session plan previous
     notices <- readNotices session
-    pure (SyncResult notices (planUnavailable plan) completion)
+    pure (SyncResult notices (planUnavailable plan) (planUnavailableSkills plan) completion)
 
 finishOwnership :: Session -> SyncPlan -> PreviousOwnership -> IO ()
 finishOwnership session plan (Trusted _) = do
@@ -26,9 +26,14 @@ finishOwnership session plan (Trusted _) = do
     forM_ (Map.elems current) $ \old ->
         unless
             ( Map.member (entryLink old) (planDesired plan)
-                || Map.member (sourcePlugin (entrySource old)) (planUnavailable plan)
+                || sourceUnavailable plan (entrySource old)
             )
             (staleStep session old)
 finishOwnership session _ _ = do
     current <- readState session
     when (Map.null current) (checkpoint session current)
+
+sourceUnavailable :: SyncPlan -> OwnershipSource -> Bool
+sourceUnavailable plan source = case sourcePlugin source of
+    Just plugin -> Map.member plugin (planUnavailable plan)
+    Nothing -> Map.member (sourceSkill source) (planUnavailableSkills plan)
