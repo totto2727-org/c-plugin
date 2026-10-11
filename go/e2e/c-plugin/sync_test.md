@@ -1,8 +1,8 @@
 # Synchronize desired skills and reconcile stale links
 
-Source: [sync_test.go](https://github.com/totto2727-org/c-plugin/blob/5d6f66a83be6ed23d16d3c8535722970e028a003/go/e2e/c-plugin/sync_test.go)
+Source: [sync_test.go](./sync_test.go)
 
-The Source link identifies the implementation described below. Until the owning feature layer introduces Go source, it points to the immutable saved snapshot.
+The relative Source link identifies the sibling Go implementation described below.
 
 ## `syncScenario`
 
@@ -25,7 +25,7 @@ This scenario uses no command options. It relies on project lock discovery from 
 - Each case uses a separate `c-plugin-e2e:local` container. `HOME=/tmp/c-plugin-v2-sync-e2e/home` and `project=$HOME/project`.
 - `c-plugin` in the commands below is the exact executable `/sandbox/.local/bin/c-plugin`; the helper passes argv directly, not through a scenario shell script.
 - `HOME` is isolated under `/tmp/c-plugin-v2-sync-e2e/home`.
-- The local marketplace provides alpha and beta.
+- The local plugin provides alpha and beta.
 - The project lock selects both skills and adds `.cursor/skills` to the default `.agents/skills` target.
 
 ### Execution flow
@@ -34,23 +34,23 @@ This scenario uses no command options. It relies on project lock discovery from 
 2. Verify the output substring, unchanged lock digest, four symlinks, and alpha/beta ownership records.
 3. Replace the primary beta symlink with a foreign file, add the foreign neighbor, and rewrite the lock fixture with no selected skills. Record this edited lock digest.
 4. Run `c-plugin skill sync` again from `project`.
-5. Verify the same asserted partial-output substring, unchanged edited lock digest, removal of safely owned links, preservation of foreign beta/neighbor contents, and empty version-1 ownership state.
+5. Verify the asserted partial action/lock/status substring, unchanged edited lock digest, removal of safely owned links, preservation of foreign beta/neighbor contents, and empty version-1 ownership state.
 
 ### Expected results
 
 | Phase           | Expected result                                                                                                               |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Initial sync    | Exit 0; stdout contains `partial (1 notices, 0 unavailable repositories)`; four desired symlinks point to marketplace skills. |
+| Initial sync    | Exit 0; stdout contains `Synced <lock>: partial`; four desired symlinks point to plugin skills. |
 | Lock integrity  | Neither sync rewrites the lock; its digest equals the value recorded before that invocation.                                  |
 | Edited sync     | Owned alpha links and cursor beta are removed; replacement beta and neighbor remain regular files.                            |
 | Ownership state | State is reduced to `{"version":"1","entries":[]}` after all safe owned links are gone.                                       |
 
 
-The edited sync also asserts exit 0 and `Synced <lock>: partial (1 notices, 0 unavailable repositories)`.
+The edited sync also asserts exit 0 and `Synced <lock>: partial`.
 
 ### Notes
 
-- The notice count reflects target-root creation/reconciliation details; the test intentionally asserts the stable output substring rather than the entire line.
+- The test asserts the action/lock/status substring, without incidental notice counts. The initial sync is partial because ownership state is missing; the edited sync is partial because beta has become foreign.
 
 - Output expectations refer to the helper's captured `cli.Result.Stdout`; these tests do not assert a separate stderr stream.
-- These are assertions in the pinned source, not execution results from this documentation-only layer.
+- These are assertions in the sibling Go source, not evidence that this workflow has been executed successfully.
