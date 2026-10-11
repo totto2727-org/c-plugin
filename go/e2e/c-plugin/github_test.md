@@ -3,7 +3,8 @@
 Source: [github_test.go](./github_test.go)
 
 All scenarios use the existing Go/Testcontainers runner and `/sandbox/.local/bin/c-plugin` inside a separate disposable container.
-The hosted repository is `totto2727-org/c-plugin`, initially fetched at `haskell/iris-port`, not the legacy manifests on `main`.
+The hosted repository is `totto2727-org/c-plugin`.
+Scenarios explicitly select their fixture ref.
 The caller must publish the maintained `test/fixtures/github` fixtures at that ref before running these scenarios.
 Successful installation scenarios require real public HTTPS GitHub access and Git in the container.
 They do not use local remotes, transport stubs, marketplaces, or vendor manifests.

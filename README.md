@@ -110,8 +110,6 @@ c-plugin update
 ```
 
 The repository is `totto2727-org/agent`, not `totto2727-org/agents`.
-The standard-only agent migration must be available on the selected branch before importing it.
-Use `--ref chore/standard-agent-plugins-20261011` while that migration is pending merge.
 For an individual skill instead of the whole plugin, use `skill add github:OWNER/REPO/path/to/skill`.
 Do not enable the same skill through both a plugin and a standalone registration.
 A source prefix is mandatory: `github:OWNER/REPO/path/to/root` or `local:./path/to/root`.
