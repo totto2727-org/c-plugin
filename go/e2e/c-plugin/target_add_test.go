@@ -18,7 +18,7 @@ func targetAddScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writePlugin(project, "alpha")
 	scenario.writeFile(projectLock, localLock([]string{}, "plugin", []string{"alpha"}))
 
-	projectResult := scenario.run(project, "skill", "target", "add", ".cursor/skills")
+	projectResult := scenario.run(project, "target", "add", ".cursor/skills")
 	scenario.requireSuccess(projectResult)
 	scenario.requireContains(projectResult.Stdout, "Added target .cursor/skills to "+projectLock+": partial")
 	scenario.requireJSON(projectLock, localLock([]string{".cursor/skills"}, "plugin", []string{"alpha"}))
@@ -31,7 +31,7 @@ func targetAddScenario(t *testing.T, environment *cli.Environment) {
 	lockDigest := scenario.digest(projectLock)
 	stateDigest := scenario.digest(projectState)
 
-	repeat := scenario.run(project, "skill", "target", "add", ".cursor/./skills")
+	repeat := scenario.run(project, "target", "add", ".cursor/./skills")
 	scenario.requireSuccess(repeat)
 	scenario.requireOutput(repeat, "Target .cursor/skills already registered in "+projectLock+"\n")
 	scenario.requireDigest(projectLock, lockDigest)
@@ -46,7 +46,7 @@ func targetAddScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(globalLock, localLock([]string{}, "plugin", []string{"beta"}))
 	scenario.mkdirAll(project + "/nested")
 
-	global := scenario.run(project+"/nested", "skill", "target", "add", ".claude/skills", "--global")
+	global := scenario.run(project+"/nested", "target", "add", ".claude/skills", "--global")
 	scenario.requireSuccess(global)
 	scenario.requireContains(global.Stdout, "Added target .claude/skills to "+globalLock+": partial")
 	for _, targetRoot := range []string{home + "/.agents/skills", home + "/.claude/skills"} {

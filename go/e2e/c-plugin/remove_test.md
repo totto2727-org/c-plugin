@@ -8,14 +8,15 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Scope
 
-`removeScenario` verifies nonterminal missing-selection rejection and unknown-selection no-ops, plugin-qualified selection, plugin pruning, foreign-path preservation, repeat idempotency, and global removal.
+`removeScenario` verifies nonterminal missing-selection rejection and unknown-selection no-ops, plugin-qualified selection, disabled-plugin retention, foreign-path preservation, repeat idempotency, and global removal.
 
 ### Commands under test
 
 | Command path | Purpose |
 | --- | --- |
-| `c-plugin skill sync` | Reconcile desired links without rewriting the lock. |
+| `c-plugin sync` | Reconcile desired links without rewriting the lock. |
 | `c-plugin skill remove` | Remove selected skills while preserving foreign paths. |
+| `c-plugin plugin remove` | Delete only the retained global whole-plugin registration. |
 
 ### Arguments and options
 
@@ -23,8 +24,9 @@ The relative Source link identifies the sibling Go implementation described belo
 | ------------------------------------------------ | -------------------------------------------------------------- |
 | `--skill demo/unknown`               | Confirm an unknown selection is an atomic no-op.               |
 | `--skill demo/./alpha`               | Confirm normalization of plugin-qualified selection.           |
-| `--skill demo/beta`                  | Remove the final project skill and prune the empty plugin. |
+| `--skill demo/beta`                  | Disable the final project skill while retaining the plugin record. |
 | `--global --skill demo/gamma` | Select and mutate only the global lock and managed root.       |
+| `--global --plugin demo` | Delete the global plugin after disabling its last skill. |
 
 ### Preconditions and fixtures
 
@@ -36,13 +38,14 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Execution flow
 
-1. Write the project fixture lock and run `c-plugin skill sync` from `project`; replace alpha with a foreign file and add the neighbor, then record lock/state digests.
+1. Write the project fixture lock and run `c-plugin sync` from `project`; replace alpha with a foreign file and add the neighbor, then record lock/state digests.
 2. Run `c-plugin skill remove`, then `c-plugin skill remove --skill demo/unknown` from `project`; compare lock and state digests.
 3. Run `c-plugin skill remove --skill demo/./alpha` from `project`; verify plugin-qualified selection and foreign-path preservation, then record new digests.
 4. Run `c-plugin skill remove --skill demo/alpha` from `project` and confirm the no-op output and unchanged digests.
-5. Run `c-plugin skill remove --skill demo/beta` from `project`; verify the empty lock, removed beta link, and preserved foreign paths.
-6. Create the separate global plugin/lock and `project/nested`; from that directory run `c-plugin skill sync --global`, then `c-plugin skill remove --global --skill demo/gamma`.
-7. Verify the global empty lock, absent gamma link, and removal of gamma from global ownership state.
+5. Run `c-plugin skill remove --skill demo/beta` from `project`; verify the retained plugin with an empty enabled set, removed beta link, and preserved foreign paths.
+6. Create the separate global plugin/lock and `project/nested`; from that directory run `c-plugin sync --global`, then `c-plugin skill remove --global --skill demo/gamma`.
+7. Verify the global retained disabled plugin, absent gamma link, and removal of gamma from global ownership state.
+8. From `project/nested`, run `c-plugin plugin remove --global --plugin demo`; verify global empty desired state, whole-plugin completion, and unchanged project lock digest.
 
 ### Expected results
 
@@ -50,12 +53,12 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Phase         | Expected result                                                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Missing selection | Nonzero exit with actionable `--plugin` and `--skill` options; lock and ownership bytes, foreign files, and beta link do not change. |
+| Missing selection | Nonzero exit with actionable `--skill` guidance without `--plugin`; lock and ownership bytes, foreign files, and beta link do not change. |
 | Unknown selection | Exit 0 with `No skill changes for <lock>`; lock and state digests do not change. |
 | Alpha         | Exit 0 with output containing `Removed skills demo/alpha from <lock>: partial`; the replacement file and neighbor remain, beta stays linked and owned, and alpha leaves state. |
 | Repeat alpha  | Exit 0 no-op with unchanged lock and state digests.                                                                             |
-| Beta          | Exit 0 with output containing `Removed skills demo/beta from <lock>: complete`; project lock becomes empty, beta link is removed, and foreign paths remain.                                   |
-| Global gamma  | Exit 0 with output containing `Removed skills demo/gamma from <global-lock>: complete`; the global lock becomes empty and the global gamma link/state entry is removed.                               |
+| Beta          | Exit 0 with output containing `Removed skills demo/beta from <lock>: complete`; project plugin remains registered with skills `[]`, beta link is removed, and foreign paths remain.                                   |
+| Global gamma  | Exit 0 with output containing `Removed skills demo/gamma from <global-lock>: complete`; the global plugin remains registered with skills `[]` and the global gamma link/state entry is removed.                               |
 
 ### Notes
 

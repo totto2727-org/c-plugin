@@ -22,4 +22,5 @@ USER sandbox
 WORKDIR /sandbox
 COPY --from=builder --chown=sandbox:sandbox /out/c-plugin /sandbox/.local/bin/c-plugin
 RUN /sandbox/.local/bin/c-plugin --numeric-version
-ENTRYPOINT ["sleep", "infinity"]
+# PID 1 must handle TERM so disposable cases do not wait for Docker's kill timeout.
+ENTRYPOINT ["/bin/sh", "-c", "trap 'exit 0' TERM INT; while :; do sleep 3600 & wait \"$!\"; done"]

@@ -27,7 +27,7 @@ func standardMinimalScenario(t *testing.T, environment *cli.Environment) {
 		s.requireSymlink(project+"/.agents/skills/"+skill, project+"/plugin/skills/"+skill)
 		s.requireContains(string(s.readFile(project+"/.agents/c-plugin-state.json")), `"skill": "`+skill+`"`)
 	}
-	removed := s.run(project, "skill", "remove", "--plugin", "demo")
+	removed := s.run(project, "plugin", "remove", "--plugin", "demo")
 	s.requireSuccess(removed)
 	s.requireContains(removed.Stdout, "Removed plugins demo from "+project+"/c-plugin-lock.json:")
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)

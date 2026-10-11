@@ -26,10 +26,10 @@ func errorHelpScenario(t *testing.T, environment *cli.Environment) {
 		{name: "root command", errorText: "Missing: COMMAND"},
 		{name: "plugin command", arguments: []string{"plugin"}, context: []string{"plugin"}, errorText: "Missing: COMMAND"},
 		{name: "skill command", arguments: []string{"skill"}, context: []string{"skill"}, errorText: "Missing: COMMAND"},
-		{name: "target command", arguments: []string{"skill", "target"}, context: []string{"skill", "target"}, errorText: "Missing: COMMAND"},
+		{name: "target command", arguments: []string{"target"}, context: []string{"target"}, errorText: "Missing: COMMAND"},
 		{name: "plugin source option", arguments: []string{"plugin", "add"}, context: []string{"plugin", "add"}, errorText: "Missing:"},
 		{name: "standalone source option", arguments: []string{"skill", "add"}, context: []string{"skill", "add"}, errorText: "Missing:"},
-		{name: "target argument", arguments: []string{"skill", "target", "add"}, context: []string{"skill", "target", "add"}, errorText: "Missing: PATH"},
+		{name: "target argument", arguments: []string{"target", "add"}, context: []string{"target", "add"}, errorText: "Missing: PATH"},
 		{name: "ref option value", arguments: []string{"plugin", "add", "github:owner/repo", "--ref"}, context: []string{"plugin", "add"}, errorText: "The option `--ref` expects an argument."},
 		{name: "skill option value", arguments: []string{"plugin", "add", "local:./plugin", "--skill"}, context: []string{"plugin", "add"}, errorText: "The option `--skill` expects an argument."},
 	}

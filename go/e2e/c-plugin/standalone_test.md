@@ -14,7 +14,7 @@ Verify direct standalone registration, same-source idempotency without implicit 
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
 | `c-plugin skill add` | Register a direct standalone skill root. |
-| `c-plugin skill sync` | Restore an externally removed owned link. |
+| `c-plugin sync` | Restore an externally removed owned link. |
 | `c-plugin skill remove` | Remove a bare standalone skill identity. |
 
 ### Arguments and options
@@ -36,7 +36,7 @@ The helper invokes `/sandbox/.local/bin/c-plugin` with direct argv and isolated 
 2. From `project/nested`, run `c-plugin skill add local:./standalone/solo` and inspect lock and link.
 3. Save exact lock and ownership bytes, delete the managed solo link, and repeat `c-plugin skill add local:./standalone/solo` from the nested directory.
 4. Check the successful no-op, exact persisted bytes, and still-missing link.
-5. Run `c-plugin skill sync` from the project and verify the restored link.
+5. Run `c-plugin sync` from the project and verify the restored link.
 6. Run `c-plugin skill remove --skill solo` from the nested directory and inspect empty state.
 
 ### Expected results
@@ -202,7 +202,7 @@ Verify synchronization preserves a trusted owned standalone link when its regist
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
 | `c-plugin skill add` | Register and own the standalone link. |
-| `c-plugin skill sync` | Reconcile after source loss. |
+| `c-plugin sync` | Reconcile after source loss. |
 
 ### Arguments and options
 
@@ -221,7 +221,7 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 1. Run `c-plugin init` and `c-plugin skill add local:./standalone/solo` from the project.
 2. Save lock/ownership bytes and inspect the literal link with `readlink`.
-3. Remove `standalone/solo` and run `c-plugin skill sync`.
+3. Remove `standalone/solo` and run `c-plugin sync`.
 4. Compare exact persisted bytes and literal link identity while checking the path remains a symlink.
 
 ### Expected results

@@ -15,8 +15,8 @@ Verify project add, skill removal, and target removal as an ordered numbered-sel
 | `c-plugin init` | Initialize project and global locks. |
 | `c-plugin plugin add` | Select discovered skills. |
 | `c-plugin skill remove` | Remove one registered skill. |
-| `c-plugin skill target add` | Register additional roots. |
-| `c-plugin skill target remove` | Select one additional root. |
+| `c-plugin target add` | Register additional roots. |
+| `c-plugin target remove` | Select one additional root. |
 
 ### Arguments and options
 
@@ -37,9 +37,9 @@ Verify project add, skill removal, and target removal as an ordered numbered-sel
 
 1. Run `c-plugin init` and `c-plugin init --global` from the project, then record the global lock digest.
 2. Run `c-plugin plugin add local:./plugin` from the project and enter `1, 3` at the prompt.
-3. Check alpha and gamma selection, then run `c-plugin skill remove` and enter `3`, the gamma row after the entire-plugin and alpha rows.
-4. Run `c-plugin skill target add .claude/skills`, then `c-plugin skill target add .cursor/skills`.
-5. Run `c-plugin skill target remove` and enter `2`, the cursor row.
+3. Check alpha and gamma selection, then run `c-plugin skill remove` and enter `2`, the gamma row after alpha, with no entire-plugin row.
+4. Run `c-plugin target add .claude/skills`, then `c-plugin target add .cursor/skills`.
+5. Run `c-plugin target remove` and enter `2`, the cursor row.
 6. Inspect final project links, ownership, and lock, then compare independent global state.
 
 ### Expected results
@@ -68,8 +68,8 @@ Verify interactive global operations from a nested project directory preserve al
 | `c-plugin init` | Initialize both scopes. |
 | `c-plugin plugin add` | Populate project and select global skills. |
 | `c-plugin skill remove` | Remove a global subset. |
-| `c-plugin skill target add` | Register a global additional root. |
-| `c-plugin skill target remove` | Remove the global additional root. |
+| `c-plugin target add` | Register a global additional root. |
+| `c-plugin target remove` | Remove the global additional root. |
 
 ### Arguments and options
 
@@ -91,9 +91,9 @@ Verify interactive global operations from a nested project directory preserve al
 1. Run `c-plugin init`, `c-plugin init --global`, and `c-plugin plugin add local:./plugin --all` from the project.
 2. Record project lock and ownership digests and create `project/nested`.
 3. From `project/nested`, run `c-plugin plugin add --global local:./plugin` and enter `all`.
-4. From the project, run `c-plugin skill target add --global .cursor/skills`.
-5. From `project/nested`, run `c-plugin skill target remove --global` and enter `all`.
-6. Run `c-plugin skill remove --global` from the same directory and enter `2 4`, selecting alpha and gamma after the entire-plugin row.
+4. From the project, run `c-plugin target add --global .cursor/skills`.
+5. From `project/nested`, run `c-plugin target remove --global` and enter `all`.
+6. Run `c-plugin skill remove --global` from the same directory and enter `1 3`, selecting alpha and gamma from skill-only rows.
 7. Inspect global beta and all project state.
 
 ### Expected results
@@ -120,9 +120,9 @@ Verify both cancellation words preserve exact persisted bytes and do not synchro
 | --- | --- |
 | `c-plugin init` | Initialize both independent locks. |
 | `c-plugin plugin add` | Populate fixture skills and cancel a later selection. |
-| `c-plugin skill target add` | Populate an additional root. |
+| `c-plugin target add` | Populate an additional root. |
 | `c-plugin skill remove` | Cancel skill removal. |
-| `c-plugin skill target remove` | Cancel target removal. |
+| `c-plugin target remove` | Cancel target removal. |
 
 ### Arguments and options
 
@@ -143,9 +143,9 @@ Verify both cancellation words preserve exact persisted bytes and do not synchro
 
 ### Execution flow
 
-1. Initialize both scopes, run `c-plugin plugin add local:./plugin --all`, and run `c-plugin skill target add .cursor/skills` from the project.
+1. Initialize both scopes, run `c-plugin plugin add local:./plugin --all`, and run `c-plugin target add .cursor/skills` from the project.
 2. Delete both alpha links and capture lock and ownership bytes.
-3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin skill target remove` in order, entering `q` for each prompt.
+3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove` in order, entering `q` for each prompt.
 4. Repeat those three invocations, entering `cancel` for each prompt.
 5. After every invocation, compare exact lock and ownership bytes, absent alpha links, and the retained beta link.
 
@@ -172,9 +172,9 @@ Verify blank input keeps the current state, removal `none` is a no-op, and plugi
 | --- | --- |
 | `c-plugin init` | Initialize both locks. |
 | `c-plugin plugin add` | Keep or replace the plugin's enabled set. |
-| `c-plugin skill target add` | Populate the cursor root. |
+| `c-plugin target add` | Populate the cursor root. |
 | `c-plugin skill remove` | Choose no skill rows. |
-| `c-plugin skill target remove` | Choose no target rows. |
+| `c-plugin target remove` | Choose no target rows. |
 
 ### Arguments and options
 
@@ -194,10 +194,10 @@ Verify blank input keeps the current state, removal `none` is a no-op, and plugi
 
 ### Execution flow
 
-1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, then `c-plugin skill target add .cursor/skills` from the project.
+1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, then `c-plugin target add .cursor/skills` from the project.
 2. Delete primary and cursor alpha links and capture persisted bytes.
-3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin skill target remove`, sending a blank line at each prompt.
-4. Run `c-plugin skill remove` and `c-plugin skill target remove` with `none`; compare exact persisted bytes and missing alpha links after each.
+3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove`, sending a blank line at each prompt.
+4. Run `c-plugin skill remove` and `c-plugin target remove` with `none`; compare exact persisted bytes and missing alpha links after each.
 5. Run `c-plugin plugin add local:./plugin` with `none`; inspect enabled row markers, the retained empty plugin registration, empty ownership, and absent links.
 6. Run `c-plugin plugin add local:./plugin` with `2` and verify beta-only registration with a disabled beta menu marker before selection.
 7. Run `c-plugin plugin add local:./plugin` with `1 3`; inspect alpha/gamma disabled markers and beta enabled marker before selection.
@@ -272,9 +272,9 @@ Verify global `--no-input` prevents prompting on an actual terminal and rejects 
 | --- | --- |
 | `c-plugin init` | Initialize both locks. |
 | `c-plugin plugin add` | Populate fixtures and reject missing selection. |
-| `c-plugin skill target add` | Populate additional roots. |
+| `c-plugin target add` | Populate additional roots. |
 | `c-plugin skill remove` | Reject missing removal selection. |
-| `c-plugin skill target remove` | Reject missing target selection. |
+| `c-plugin target remove` | Reject missing target selection. |
 
 ### Arguments and options
 
@@ -294,16 +294,16 @@ Verify global `--no-input` prevents prompting on an actual terminal and rejects 
 
 ### Execution flow
 
-1. Initialize both locks, add all project skills explicitly, and register cursor with `c-plugin skill target add .cursor/skills`.
+1. Initialize both locks, add all project skills explicitly, and register cursor with `c-plugin target add .cursor/skills`.
 2. Delete primary alpha and save lock and ownership bytes.
 3. Run `c-plugin --no-input plugin add local:./plugin` on a PTY.
-4. Run `c-plugin --no-input skill remove` and `c-plugin --no-input skill target remove` on separate PTYs.
+4. Run `c-plugin --no-input skill remove` and `c-plugin --no-input target remove` on separate PTYs.
 5. Inspect each result and persisted state immediately.
 
 ### Expected results
 
 - Each omitted-selection command exits nonzero without printing the selection prompt on either stream.
-- Stdout diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--plugin` and `--skill` for removal, and `--target` for target removal.
+- Stdout diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--skill` for skill removal, and `--target` for target removal.
 - Lock and ownership bytes remain identical, and primary alpha remains absent.
 
 ### Notes
@@ -323,9 +323,9 @@ Verify piped stdin disables interactive selection even when stderr is a terminal
 | --- | --- |
 | `c-plugin init` | Initialize both scopes. |
 | `c-plugin plugin add` | Populate skills and reject omitted selection. |
-| `c-plugin skill target add` | Populate cursor roots. |
+| `c-plugin target add` | Populate cursor roots. |
 | `c-plugin skill remove` | Reject omitted removal selection. |
-| `c-plugin skill target remove` | Reject omitted target selection. |
+| `c-plugin target remove` | Reject omitted target selection. |
 
 ### Arguments and options
 
@@ -345,15 +345,15 @@ Verify piped stdin disables interactive selection even when stderr is a terminal
 
 ### Execution flow
 
-1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, and run `c-plugin skill target add .cursor/skills`.
+1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, and run `c-plugin target add .cursor/skills`.
 2. Delete primary alpha and save persisted bytes.
-3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin skill target remove` with a fresh input pipe each time.
+3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove` with a fresh input pipe each time.
 4. Check each exit, captured streams, unread pipe bytes, exact persisted bytes, and absent alpha.
 
 ### Expected results
 
 - Every missing-selection invocation exits nonzero without a selection prompt on stdout or stderr.
-- Stdout diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--plugin` and `--skill` for removal, and `--target` for target removal.
+- Stdout diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--skill` for skill removal, and `--target` for target removal.
 - The pipe retains exactly `unconsumed-input\n` after each child exits.
 - Lock and ownership bytes do not change, and missing alpha is not recreated.
 
@@ -420,9 +420,9 @@ Verify canonical-terminal EOF cancels each selection successfully without writes
 | --- | --- |
 | `c-plugin init` | Initialize both scopes. |
 | `c-plugin plugin add` | Populate skills and cancel add selection with EOF. |
-| `c-plugin skill target add` | Populate cursor links. |
+| `c-plugin target add` | Populate cursor links. |
 | `c-plugin skill remove` | Cancel skill selection with EOF. |
-| `c-plugin skill target remove` | Cancel target selection with EOF. |
+| `c-plugin target remove` | Cancel target selection with EOF. |
 
 ### Arguments and options
 
@@ -441,9 +441,9 @@ Verify canonical-terminal EOF cancels each selection successfully without writes
 
 ### Execution flow
 
-1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, then `c-plugin skill target add .cursor/skills` from the project.
+1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, then `c-plugin target add .cursor/skills` from the project.
 2. Remove primary and cursor alpha links and capture persisted bytes.
-3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin skill target remove` on separate PTYs.
+3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove` on separate PTYs.
 4. At each observed prompt, write canonical EOF byte `0x04` without a preceding line.
 5. After each child exits, compare persisted bytes, both missing alpha links, and the retained beta link.
 

@@ -10,6 +10,12 @@ func TestCLI(t *testing.T) {
 	const imageName = "c-plugin-e2e:local"
 	t.Logf("image=%s", imageName)
 	cli.Run(t, imageName, []cli.Case{
+		{Name: "unified_help_hierarchy", Run: unifiedHelpHierarchyScenario},
+		{Name: "separated_removal", Run: separatedRemovalScenario},
+		{Name: "list_read_only", Run: listReadOnlyScenario},
+		{Name: "list_missing_corrupt", Run: listMissingCorruptScenario},
+		{Name: "github_list_unavailable", Run: githubListUnavailableScenario},
+		{Name: "plugin_toggle", Run: pluginToggleScenario},
 		{Name: "top_level_sync_update_recursive", Run: topLevelSyncUpdateRecursiveScenario},
 		{Name: "github_parser_invalid", Run: githubParserInvalidScenario},
 		{Name: "github_source_failure", Run: githubSourceFailureScenario},

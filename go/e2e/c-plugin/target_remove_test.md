@@ -14,8 +14,8 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Command path | Purpose |
 | --- | --- |
-| `c-plugin skill sync` | Reconcile desired links without rewriting the lock. |
-| `c-plugin skill target remove` | Remove additional target registrations and safely owned links. |
+| `c-plugin sync` | Reconcile desired links without rewriting the lock. |
+| `c-plugin target remove` | Remove additional target registrations and safely owned links. |
 
 ### Arguments and options
 
@@ -36,12 +36,12 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Execution flow
 
-1. Write the project plugin and lock with cursor/Claude targets. Run `c-plugin skill sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
-2. Run `c-plugin skill target remove --target .vscode/skills`, then `c-plugin skill target remove` from `project`; verify the explicit unknown-target no-op, the missing-selection failure with actionable `--target`, unchanged digests, unchanged links in all three roots, and preserved neighbor contents.
-3. Run `c-plugin skill target remove --target .cursor/./skills` from `project`; verify normalized removal, preserved neighbor, remaining roots, and ownership updates.
-4. Run `c-plugin skill target remove --target .claude/skills` from `project`; verify the last additional target is removed while primary alpha and the foreign neighbor remain.
-5. Create a separate global plugin/lock and `project/nested`. From that directory, run `c-plugin skill sync --global`.
-6. Run `c-plugin skill target remove --global --target .cursor/skills` from `project/nested`; verify cursor removal, preserved primary beta, the global lock, and ownership cleanup.
+1. Write the project plugin and lock with cursor/Claude targets. Run `c-plugin sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
+2. Run `c-plugin target remove --target .vscode/skills`, then `c-plugin target remove` from `project`; verify the explicit unknown-target no-op, the missing-selection failure with actionable `--target`, unchanged digests, unchanged links in all three roots, and preserved neighbor contents.
+3. Run `c-plugin target remove --target .cursor/./skills` from `project`; verify normalized removal, preserved neighbor, remaining roots, and ownership updates.
+4. Run `c-plugin target remove --target .claude/skills` from `project`; verify the last additional target is removed while primary alpha and the foreign neighbor remain.
+5. Create a separate global plugin/lock and `project/nested`. From that directory, run `c-plugin sync --global`.
+6. Run `c-plugin target remove --global --target .cursor/skills` from `project/nested`; verify cursor removal, preserved primary beta, the global lock, and ownership cleanup.
 
 ### Expected results
 

@@ -14,7 +14,7 @@ Verify that a minimal standard manifest discovers all valid immediate skills whe
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
 | `c-plugin plugin add` | Add all discovered skills. |
-| `c-plugin skill remove` | Remove the plugin. |
+| `c-plugin plugin remove` | Remove the plugin. |
 
 ### Arguments and options
 
@@ -34,7 +34,7 @@ Verify that a minimal standard manifest discovers all valid immediate skills whe
 
 1. Write fixtures and run `c-plugin init` from `project`.
 2. Run `c-plugin plugin add local:./plugin --all` from `project` with no `--skill` selections.
-3. Inspect lock, links, and ownership, then run `c-plugin skill remove --plugin demo` from `project`.
+3. Inspect lock, links, and ownership, then run `c-plugin plugin remove --plugin demo` from `project`.
 4. Inspect empty lock, missing links, and empty ownership state.
 
 ### Expected results

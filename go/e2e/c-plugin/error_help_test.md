@@ -16,10 +16,10 @@ Verify that missing commands, required arguments, and option values retain stand
 | `c-plugin` | Check a missing top-level command. |
 | `c-plugin plugin` | Check a missing plugin command. |
 | `c-plugin skill` | Check a missing skill command. |
-| `c-plugin skill target` | Check a missing target command. |
+| `c-plugin target` | Check a missing target command. |
 | `c-plugin plugin add` | Check a missing source and source or selection option values. |
 | `c-plugin skill add` | Check a missing standalone source. |
-| `c-plugin skill target add` | Check a missing positional target. |
+| `c-plugin target add` | Check a missing positional target. |
 
 ### Arguments and options
 

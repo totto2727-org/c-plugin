@@ -14,7 +14,7 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Command path | Purpose |
 | --- | --- |
-| `c-plugin skill sync` | Reconcile desired links without rewriting the lock. |
+| `c-plugin sync` | Reconcile desired links without rewriting the lock. |
 
 ### Arguments and options
 
@@ -34,11 +34,11 @@ The relative Source link identifies the sibling Go implementation described belo
 ### Execution flow
 
 1. Write parent/child locks and plugins, the ignored malformed lock, `.gitignore`, and foreign parent file. Record both valid lock digests.
-2. Run `c-plugin skill sync -r` from `project`.
+2. Run `c-plugin sync -r` from `project`.
 3. Verify exactly two `Synced` lines, parent/child links and state, omission of the ignored lock, foreign-file contents, and unchanged digests.
-4. Rewrite only the parent lock to select no skills and record its new digest. Run `c-plugin skill sync --recursive` from `project`.
+4. Rewrite only the parent lock to select no skills and record its new digest. Run `c-plugin sync --recursive` from `project`.
 5. Verify two synchronized locks, removed parent alpha, preserved child beta and ownership, preserved foreign file, and unchanged digests relative to each current lock input.
-6. Run `c-plugin skill sync -g -r` from `project`; require nonzero status and `totto2727/c-plugin.SyncError.Planning`.
+6. Run `c-plugin sync -g -r` from `project`; require nonzero status and `totto2727/c-plugin.SyncError.Planning`.
 
 ### Expected results
 
