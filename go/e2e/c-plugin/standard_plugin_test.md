@@ -6,21 +6,21 @@ Source: [standard_plugin_test.go](./standard_plugin_test.go)
 
 ### Scope
 
-Verify that a minimal standard manifest discovers all valid immediate skills when add has no selections, and plugin removal cleans up their owned links.
+Verify that a minimal standard manifest discovers all valid immediate skills when add explicitly uses `--all`, and plugin removal cleans up their owned links.
 
 ### Commands under test
 
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
-| `c-plugin skill add` | Add all discovered skills. |
+| `c-plugin plugin add` | Add all discovered skills. |
 | `c-plugin skill remove` | Remove the plugin. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Load the local standard plugin. |
+| `--local ./plugin --all` | Load the local standard plugin. |
 | `--plugin demo` | Remove the manifest-named plugin. |
 
 ### Preconditions and fixtures
@@ -33,7 +33,7 @@ Verify that a minimal standard manifest discovers all valid immediate skills whe
 ### Execution flow
 
 1. Write fixtures and run `c-plugin init` from `project`.
-2. Run `c-plugin skill add --local ./plugin` from `project` with no `--skill` selections.
+2. Run `c-plugin plugin add --local ./plugin --all` from `project` with no `--skill` selections.
 3. Inspect lock, links, and ownership, then run `c-plugin skill remove --plugin demo` from `project`.
 4. Inspect empty lock, missing links, and empty ownership state.
 
@@ -61,13 +61,13 @@ Verify that a plugin without a skills location is valid and can be registered wi
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Register an empty plugin. |
+| `c-plugin plugin add` | Register an empty plugin. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the local plugin. |
+| `--local ./plugin --all` | Select the local plugin. |
 
 ### Preconditions and fixtures
 
@@ -78,7 +78,7 @@ Verify that a plugin without a skills location is valid and can be registered wi
 ### Execution flow
 
 1. Write the manifest and run `c-plugin init` from `project`.
-2. Run `c-plugin skill add --local ./plugin` from `project`.
+2. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 3. Inspect the lock and missing skill links.
 
 ### Expected results
@@ -104,13 +104,13 @@ Verify every unknown top-level manifest field is reported and ignored, without r
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Load a manifest with unknown fields. |
+| `c-plugin plugin add` | Load a manifest with unknown fields. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the local plugin. |
+| `--local ./plugin --all` | Select the local plugin. |
 
 ### Preconditions and fixtures
 
@@ -123,7 +123,7 @@ Verify every unknown top-level manifest field is reported and ignored, without r
 
 1. Write the minimal fixture and run `c-plugin init` from `project`.
 2. Replace the manifest with unknown fields and write the alternative beta fixture.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Inspect both warnings, the selected alpha, and absent beta.
 
 ### Expected results
@@ -149,13 +149,13 @@ Verify an unsupported schema rejects the plugin before persisting or managing sk
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Attempt invalid schema loading. |
+| `c-plugin plugin add` | Attempt invalid schema loading. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the invalid local plugin. |
+| `--local ./plugin --all` | Select the invalid local plugin. |
 
 ### Preconditions and fixtures
 
@@ -168,14 +168,14 @@ Verify an unsupported schema rejects the plugin before persisting or managing sk
 
 1. Write the valid fixture and run `c-plugin init` from `project`.
 2. Replace the schema, write the foreign target file, and record the lock digest.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Compare the lock digest, missing state/link, and foreign content.
 
 ### Expected results
 
 | Observation | Expected result |
 | --- | --- |
-| Exit/output | Nonzero exit containing `totto2727/c-plugin.AddLocalError.InvalidInput`. |
+| Exit/output | Nonzero exit containing `totto2727/c-plugin.PluginAddError.InvalidInput`. |
 | Non-mutation | Lock digest is unchanged; no ownership state or alpha link is created; foreign contents stay `foreign\n`. |
 
 ### Notes
@@ -193,13 +193,13 @@ Verify an invalid skill is skipped without preventing a valid sibling from loadi
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Discover valid and invalid siblings. |
+| `c-plugin plugin add` | Discover valid and invalid siblings. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the local plugin. |
+| `--local ./plugin --all` | Select the local plugin. |
 
 ### Preconditions and fixtures
 
@@ -211,7 +211,7 @@ Verify an invalid skill is skipped without preventing a valid sibling from loadi
 
 1. Write valid alpha and run `c-plugin init` from `project`.
 2. Write beta's invalid `SKILL.md`.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Inspect the warning, selected alpha, skipped beta, and ownership state.
 
 ### Expected results
@@ -237,13 +237,13 @@ Verify fixed skill discovery examines immediate directories only, not deep desce
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Discover immediate skills. |
+| `c-plugin plugin add` | Discover immediate skills. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the local plugin. |
+| `--local ./plugin --all` | Select the local plugin. |
 
 ### Preconditions and fixtures
 
@@ -255,7 +255,7 @@ Verify fixed skill discovery examines immediate directories only, not deep desce
 
 1. Write alpha and run `c-plugin init` from `project`.
 2. Write the nested beta fixture.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Inspect the exact selection and missing deep-discovery links.
 
 ### Expected results
@@ -280,13 +280,13 @@ Verify a physically escaping root manifest rejects the entire plugin without cha
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Attempt loading an escaping manifest. |
+| `c-plugin plugin add` | Attempt loading an escaping manifest. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the plugin with an escaping manifest symlink. |
+| `--local ./plugin --all` | Select the plugin with an escaping manifest symlink. |
 
 ### Preconditions and fixtures
 
@@ -299,7 +299,7 @@ Verify a physically escaping root manifest rejects the entire plugin without cha
 
 1. Write valid alpha and run `c-plugin init` from `project`.
 2. Write the outside manifest, replace the root manifest with its symlink, write foreign content, and record digests.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Inspect rejection, both digests, absent state/alpha, and foreign content.
 
 ### Expected results
@@ -324,13 +324,13 @@ Verify physically escaping fixed skills location is rejected as a component, whi
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Load the manifest and reject the escaping component. |
+| `c-plugin plugin add` | Load the manifest and reject the escaping component. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the plugin with an escaping skills symlink. |
+| `--local ./plugin --all` | Select the plugin with an escaping skills symlink. |
 
 ### Preconditions and fixtures
 
@@ -343,7 +343,7 @@ Verify physically escaping fixed skills location is rejected as a component, whi
 
 1. Write the minimal empty plugin and run `c-plugin init` from `project`.
 2. Write outside alpha, record its digest, and create the escaping skills symlink.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Inspect containment output, empty plugin selection, missing alpha link, and outside digest.
 
 ### Expected results
@@ -369,13 +369,13 @@ Verify a physically escaping discovered `SKILL.md` is skipped while a valid imme
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize the lock. |
-| `c-plugin skill add` | Discover skills and reject the escaping file. |
+| `c-plugin plugin add` | Discover skills and reject the escaping file. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `--local ./plugin` | Select the local plugin. |
+| `--local ./plugin --all` | Select the local plugin. |
 
 ### Preconditions and fixtures
 
@@ -388,7 +388,7 @@ Verify a physically escaping discovered `SKILL.md` is skipped while a valid imme
 
 1. Write alpha and run `c-plugin init` from `project`.
 2. Write outside beta, record its digest, and create beta's escaping `SKILL.md` symlink.
-3. Run `c-plugin skill add --local ./plugin` from `project`.
+3. Run `c-plugin plugin add --local ./plugin --all` from `project`.
 4. Inspect the invalid-skill warning, containment reason, selected alpha, skipped beta, and outside digest.
 
 ### Expected results

@@ -8,7 +8,7 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Scope
 
-`targetRemoveScenario` verifies empty and unknown no-ops, normalized project removals, last-additional-target cleanup, foreign-neighbor preservation, primary-target isolation, and global removal.
+`targetRemoveScenario` verifies nonterminal missing-selection rejection and unknown-target no-ops, normalized project removals, last-additional-target cleanup, foreign-neighbor preservation, primary-target isolation, and global removal.
 
 ### Commands under test
 
@@ -37,7 +37,7 @@ The relative Source link identifies the sibling Go implementation described belo
 ### Execution flow
 
 1. Write the project plugin and lock with cursor/Claude targets. Run `c-plugin skill sync` from `project`, add the foreign cursor neighbor, and record lock/state digests.
-2. Run `c-plugin skill target remove --target .vscode/skills`, then `c-plugin skill target remove` from `project`; verify no-op output and unchanged digests.
+2. Run `c-plugin skill target remove --target .vscode/skills`, then `c-plugin skill target remove` from `project`; verify the explicit unknown-target no-op, the missing-selection failure with actionable `--target`, unchanged digests, unchanged links in all three roots, and preserved neighbor contents.
 3. Run `c-plugin skill target remove --target .cursor/./skills` from `project`; verify normalized removal, preserved neighbor, remaining roots, and ownership updates.
 4. Run `c-plugin skill target remove --target .claude/skills` from `project`; verify the last additional target is removed while primary alpha and the foreign neighbor remain.
 5. Create a separate global plugin/lock and `project/nested`. From that directory, run `c-plugin skill sync --global`.
@@ -49,7 +49,8 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Phase          | Expected result                                                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Unknown/empty  | Exit 0 with `No target changes for <lock>`; lock and state digests remain unchanged.                                                     |
+| Missing selection | Nonzero exit with actionable `--target`; lock and state digests, all three alpha links, and neighbor content remain unchanged. |
+| Unknown target | Exit 0 with `No target changes for <lock>`; lock and state digests remain unchanged. |
 | Cursor removal | Exit 0 with output containing `Removed targets .cursor/skills from <lock>: complete`; cursor alpha is removed, foreign neighbor remains, and default/Claude alpha links and state remain.                    |
 | Claude removal | Exit 0 with output containing `Removed targets .claude/skills from <lock>: complete`; project lock has no additional targets, Claude alpha is removed, default alpha remains, and removed roots leave state. |
 | Global removal | Exit 0 with output containing `Removed targets .cursor/skills from <global-lock>: complete`; global cursor beta is removed, default global beta remains, and the global cursor root leaves ownership state.         |

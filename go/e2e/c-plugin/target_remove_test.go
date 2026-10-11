@@ -26,8 +26,12 @@ func targetRemoveScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireSuccess(unknown)
 	scenario.requireOutput(unknown, "No target changes for "+projectLock+"\n")
 	empty := scenario.run(project, "skill", "target", "remove")
-	scenario.requireSuccess(empty)
-	scenario.requireOutput(empty, "No target changes for "+projectLock+"\n")
+	scenario.requireFailure(empty)
+	scenario.requireContains(empty.Stdout, "--target")
+	for _, target := range []string{".agents/skills", ".cursor/skills", ".claude/skills"} {
+		scenario.requireSymlink(project+"/"+target+"/alpha", projectPlugin+"/skills/alpha")
+	}
+	scenario.requireFile(project+"/.cursor/skills/neighbor", "foreign\n")
 	scenario.requireDigest(projectLock, lockDigest)
 	scenario.requireDigest(projectState, stateDigest)
 

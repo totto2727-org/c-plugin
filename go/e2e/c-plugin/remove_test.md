@@ -8,7 +8,7 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Scope
 
-`removeScenario` verifies empty and unknown no-ops, plugin-qualified selection, plugin pruning, foreign-path preservation, repeat idempotency, and global removal.
+`removeScenario` verifies nonterminal missing-selection rejection and unknown-selection no-ops, plugin-qualified selection, plugin pruning, foreign-path preservation, repeat idempotency, and global removal.
 
 ### Commands under test
 
@@ -50,7 +50,8 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Phase         | Expected result                                                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Empty/unknown | Exit 0 with `No skill changes for <lock>`; lock and state digests do not change.                                                |
+| Missing selection | Nonzero exit with actionable `--plugin` and `--skill` options; lock and ownership bytes, foreign files, and beta link do not change. |
+| Unknown selection | Exit 0 with `No skill changes for <lock>`; lock and state digests do not change. |
 | Alpha         | Exit 0 with output containing `Removed skills demo/alpha from <lock>: partial`; the replacement file and neighbor remain, beta stays linked and owned, and alpha leaves state. |
 | Repeat alpha  | Exit 0 no-op with unchanged lock and state digests.                                                                             |
 | Beta          | Exit 0 with output containing `Removed skills demo/beta from <lock>: complete`; project lock becomes empty, beta link is removed, and foreign paths remain.                                   |

@@ -24,7 +24,7 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(foreign, "foreign\n")
 	scenario.mkdirAll(project + "/nested")
 
-	added := scenario.run(project+"/nested", "skill", "add",
+	added := scenario.run(project+"/nested", "plugin", "add",
 		"--local", "./plugin",
 		"--skill", "alpha",
 		"--skill", "beta",
@@ -41,13 +41,13 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	beforeRepeat := scenario.digest(lockPath)
 	stateBeforeRepeat := scenario.digest(statePath)
 
-	repeat := scenario.run(project+"/nested", "skill", "add",
+	repeat := scenario.run(project+"/nested", "plugin", "add",
 		"--local", "./plugin",
 		"--skill", "alpha",
 		"--skill", "beta",
 	)
-	scenario.requireFailure(repeat)
-	scenario.requireContains(repeat.Stdout, "totto2727/c-plugin.AddLocalError.InvalidInput")
+	scenario.requireSuccess(repeat)
+	scenario.requireOutput(repeat, "No skill changes for "+lockPath+"\n")
 	scenario.requireDigest(lockPath, beforeRepeat)
 	scenario.requireDigest(statePath, stateBeforeRepeat)
 	scenario.requireRegularFile(foreign)
@@ -66,7 +66,7 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	neighbor := project + "/.agents/skills/neighbor"
 	scenario.writeFile(neighbor, "neighbor\n")
 
-	forced := scenario.run(project+"/nested", "skill", "add",
+	forced := scenario.run(project+"/nested", "plugin", "add",
 		"--local", "./plugin",
 		"--skill", "alpha",
 		"--skill", "beta",
