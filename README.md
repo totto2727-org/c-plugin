@@ -49,6 +49,24 @@ An empty line or `q` cancels without changing the configuration.
 Repeating `plugin add` configures that plugin's enabled skill set; `none` disables all its skills.
 The command does not scan other plugin roots.
 
+Inspect registrations and control an installed plugin:
+
+```sh
+c-plugin list
+c-plugin plugin list
+c-plugin skill list
+c-plugin plugin skill disable demo --skill alpha
+c-plugin plugin skill enable demo --skill alpha
+```
+
+Listing is read-only and does not fetch sources or repair links.
+Enable and disable preserve the plugin registration and its pinned source.
+Omit the plugin name to choose a registered plugin interactively, then choose its skills.
+Outside a terminal, supply the plugin name and an explicit `--skill` or `--all` selection.
+Use `--all` to control every skill, or omit the selector for terminal selection.
+Use `c-plugin plugin remove --plugin demo` to unregister the plugin and remove its owned skill links.
+Additional link roots use top-level `c-plugin target add PATH` and `c-plugin target remove --target PATH`.
+
 For scripts, choose explicitly:
 
 ```sh

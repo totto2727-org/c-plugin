@@ -7,29 +7,39 @@ See [README.md](../README.md) for setup and a minimal example.
 
 ```text
 c-plugin init [-g]
+c-plugin list [-g]
 c-plugin plugin add local:./plugin [--skill alpha ... | --all | --none] [-g] [-f]
+c-plugin plugin list [-g]
+c-plugin plugin remove [--plugin demo ...] [-g]
+c-plugin plugin skill enable [PLUGIN] [--skill alpha ... | --all] [-g]
+c-plugin plugin skill disable [PLUGIN] [--skill alpha ... | --all] [-g]
 c-plugin skill add local:./solo [-g] [-f]
-c-plugin skill remove [--plugin demo ...] [--skill demo/alpha ...] [--skill solo ...] [-g]
+c-plugin skill list [-g]
+c-plugin skill remove [--skill demo/alpha ...] [--skill solo ...] [-g]
 c-plugin sync [-g] [-r]
 c-plugin update [-g] [-r]
 c-plugin plugin add github:OWNER/REPO[/PATH] [--ref REF] [--skill alpha ... | --all | --none] [-g] [-f]
 c-plugin skill add github:OWNER/REPO[/PATH] [--ref REF] [-g] [-f]
-c-plugin skill sync [-g] [-r]
-c-plugin skill target add PATH [-g]
-c-plugin skill target remove [--target PATH ...] [-g]
+c-plugin target add PATH [-g]
+c-plugin target remove [--target PATH ...] [-g]
 ```
 
 | Command | Behavior |
 | --- | --- |
 | `init` | Create an empty version-3 lock exclusively. Reject an existing path without overwriting it. |
+| `list` | Show registered plugins and enabled plugin or standalone skills without changing state. |
 | `plugin add` | Load one explicit plugin root, set its enabled skills, save a changed lock, and reconcile links. |
+| `plugin list` | Show registered plugins, their sources, and their enabled skill sets, including disabled plugins. |
+| `plugin remove` | Remove selected plugin registrations and reconcile their owned skill links. |
+| `plugin skill enable` | Add selected available skills to a registered plugin's enabled set and reconcile links. |
+| `plugin skill disable` | Remove selected skills from that enabled set and reconcile links, keeping the plugin registered. |
 | `skill add` | Register one explicit skill directory containing `SKILL.md`, without requiring `plugin.json`, and reconcile links. |
-| `skill remove` | Remove whole plugins, qualified plugin skills, or standalone skills, then reconcile owned links. |
+| `skill list` | Show enabled plugin skills and registered standalone skills with their owner and source. |
+| `skill remove` | Disable qualified plugin skills or remove standalone registrations, then reconcile owned links. |
 | `sync` | Reconcile plugin and standalone links from pinned sources without network access or changing selections. |
 | `update` | Refresh all GitHub plugin and standalone sources at their requested refs, validate the complete candidate, then reconcile links. |
-| `skill sync` | Compatibility alias for top-level `sync`. |
-| `skill target add` | Register an additional relative target and reconcile links. An already registered target is a no-op. |
-| `skill target remove` | Remove selected target registrations and their unchanged owned links. Unknown targets are a no-op. |
+| `target add` | Register an additional relative target and reconcile links. An already registered target is a no-op. |
+| `target remove` | Remove selected target registrations and their unchanged owned links. Unknown targets are a no-op. |
 
 Both add commands accept one directory, not a parent to scan or a list of roots.
 There is no collection discovery, recursive source search, or bulk `--plugins` or `--skills` option.
@@ -78,7 +88,9 @@ Its name comes from the validated `SKILL.md` frontmatter and must agree with the
 Adding the same standalone name and source is a no-op.
 A standalone name cannot refer to two sources or collide with an enabled plugin skill.
 
-Removal uses `--plugin demo` for a whole plugin, `--skill demo/alpha` for a plugin skill, and `--skill solo` for a standalone skill.
+Use `plugin remove --plugin demo` for a whole plugin.
+Use `skill remove --skill demo/alpha` for a plugin skill and `skill remove --skill solo` for a standalone skill.
+Removing a plugin's last enabled skill keeps its registration with an empty enabled set.
 A remove request that contains an unknown selector is a no-op for the entire request.
 `--skill`, `--plugin`, and `--target` selectors can be repeated where shown.
 `-g` means `--global`, `-r` means `--recursive`, and `-f` means `--force`.
@@ -94,6 +106,48 @@ Each lock remains an independent persistence and reconciliation boundary.
 Missing commands, required arguments, and option values keep the standard parser error and nonzero exit status, followed by the complete help for that command context.
 `--help` itself exits successfully.
 
+## Lists
+
+```sh
+c-plugin list
+c-plugin plugin list
+c-plugin skill list
+c-plugin list -g
+```
+
+`list` prints both plugin and skill sections.
+`plugin list` includes registrations with no enabled skills.
+`skill list` includes enabled plugin skills and standalone registrations, with each skill's owner.
+Sections use headings and tab-separated columns in deterministic order.
+An empty section still prints its heading and column names.
+Sources use `local:./PATH` or `github:OWNER/REPO[/PATH]@COMMIT`, not internal cache paths.
+These commands read only the selected lock.
+They do not fetch sources, verify or repair links, save state, or synchronize.
+Unavailable sources and missing links do not prevent listing valid registrations.
+A missing or invalid lock is an error, not an empty list or implicit initialization.
+
+## Registered plugin skills
+
+```sh
+c-plugin plugin skill disable demo --skill alpha
+c-plugin plugin skill enable demo --skill alpha
+c-plugin plugin skill disable demo --all
+c-plugin plugin skill enable demo --all
+```
+
+These commands require an existing plugin registration and a valid available source.
+They control the selected plugin only and preserve its identity, source, and pinned GitHub commit.
+They do not fetch or refresh a GitHub source.
+Enable adds selected names to the enabled set; disable removes selected names.
+Disabling every skill keeps the plugin registered with an empty enabled set.
+An unknown plugin, unavailable source, unknown skill, or enabled-name collision fails before state changes.
+`--skill` and `--all` are mutually exclusive.
+Without either option, a terminal offers skill selection.
+When `PLUGIN` is omitted, select one registered plugin first, then select its skills.
+The explicit source operand for `plugin add` remains required.
+Cancellation and an unchanged enabled set do not save or synchronize.
+Use `plugin remove` to unregister the plugin itself.
+
 ## Interactive selection
 
 When stdin and stderr support terminal interaction, commands with no explicit selectors show a numbered list:
@@ -101,12 +155,17 @@ When stdin and stderr support terminal interaction, commands with no explicit se
 | Command | Choices |
 | --- | --- |
 | `plugin add local:./plugin` | Available skills in that plugin, with enabled entries marked |
-| `skill remove` | Installed plugins, enabled plugin skills, and standalone skills |
-| `skill target remove` | Registered additional targets, excluding the primary target |
+| `plugin remove` | Registered plugins only |
+| `skill remove` | Enabled plugin skills and standalone skills only |
+| `plugin skill enable [PLUGIN]` | One registered plugin if omitted, then valid skills in that plugin |
+| `plugin skill disable [PLUGIN]` | One registered plugin if omitted, then valid skills in that plugin |
+| `target remove` | Registered additional targets, excluding the primary target |
 
 Enter one or more 1-based numbers separated by spaces or commas, or enter `all`.
-For plugin configuration, the selected set replaces the enabled set rather than adding to it.
-Enter `none` to configure a plugin with no enabled skills.
+For `plugin add`, the selected set replaces the enabled set rather than adding to it.
+For `plugin skill enable` and `disable`, it adds or removes only the selected skills.
+For `plugin add`, enter `none` to configure the plugin with no enabled skills.
+For `plugin skill enable` and `plugin skill disable`, `none` selects no skills and leaves the enabled set unchanged.
 For removal, `none` removes nothing.
 Invalid text, duplicate numbers, and out-of-range numbers produce an error message and another prompt before any write.
 An empty line, `q`, `cancel`, or end-of-input cancels without changing the lock, ownership state, or links.
@@ -125,13 +184,18 @@ c-plugin --no-input plugin add local:./plugin --all
 c-plugin --no-input plugin add local:./plugin --none
 c-plugin --no-input skill add local:./solo
 c-plugin --no-input skill remove --skill solo
-c-plugin --no-input skill target remove --target extra-skills
+c-plugin --no-input plugin remove --plugin demo
+c-plugin --no-input plugin skill enable demo --skill alpha
+c-plugin --no-input plugin skill disable demo --all
+c-plugin --no-input target remove --target extra-skills
 ```
 
 Non-terminal input and `--no-input` disable prompts.
-In that mode, plugin add requires `--skill`, `--all`, or `--none`, remove requires `--plugin` or `--skill`, and target removal requires `--target`.
+In that mode, plugin add requires `--skill`, `--all`, or `--none`.
+Plugin skill enable and disable require a plugin name and `--skill` or `--all`.
+Plugin removal requires `--plugin`, skill removal requires `--skill`, and target removal requires `--target`.
 Missing selectors fail without changing configuration; pipe input is not interpreted as a selection.
-Explicit options bypass the prompt in both terminal and script execution.
+Explicit skill options bypass skill selection, but an omitted plugin name still requires terminal plugin selection.
 
 ## Scope and paths
 
@@ -147,7 +211,7 @@ Local source arguments must begin with `./`.
 Parent traversal and physical containment escapes are rejected.
 Additional target roots must remain inside that lock root.
 
-`skill sync -r` starts at the nearest project lock root and includes descendant locks.
+`sync -r` starts at the nearest project lock root and includes descendant locks.
 It skips `.git`, applies supported `.gitignore` patterns, and does not traverse symlink directories.
 It is not a complete Git ignore engine.
 
@@ -206,6 +270,6 @@ Ordinary collisions and unavailable sources produce a partial result while prese
 Unavailable plugin or standalone sources retain their owned links rather than authorizing cleanup.
 A terminal checkpoint, durability, or verification failure stops reconciliation and fails the command.
 The saved lock remains the desired state.
-After fixing the reported cause, run `c-plugin skill sync` in the same scope.
+After fixing the reported cause, run `c-plugin sync` in the same scope.
 Each filesystem mutation has an ownership checkpoint.
 A crash between a mutation and its checkpoint can leave an unowned link. Automatic adoption is not guaranteed.

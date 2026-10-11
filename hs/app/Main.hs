@@ -54,22 +54,44 @@ pluginAdd = PluginRequest <$> global <*> addSource <*> requestedRef <*> addSelec
 skillAdd :: Parser Request
 skillAdd = SkillRequest <$> global <*> addSource <*> requestedRef <*> forceOption
 
+changeSelection :: Parser (SelectionRequest String)
+changeSelection =
+    flag' SelectAll (long "all" <> help "Select every skill in the registered plugin")
+        <|> (SelectItems <$> some (strOption (long "skill" <> metavar "SKILL" <> help "Skill name to enable or disable")))
+        <|> pure PromptSelection
+
+pluginSkillCommand :: (Bool -> Maybe String -> SelectionRequest String -> Command) -> Parser Request
+pluginSkillCommand command = Execute <$> (command <$> global <*> optional (strArgument (metavar "PLUGIN")) <*> changeSelection)
+
 commandParser :: Parser Request
 commandParser =
     hsubparser
         ( command "init" (info (Execute . Init <$> global <**> helper) (progDesc "Create a version 3 lock without linking skills"))
+            <> command "list" (info (Execute . List <$> global <**> helper) (progDesc "List registered plugins and skills without changing state"))
             <> command "sync" (info (Execute <$> (Sync <$> global <*> recursive) <**> helper) (progDesc "Reconcile all plugin and standalone skill links from pinned sources"))
             <> command "update" (info (Execute <$> (Update <$> global <*> recursive) <**> helper) (progDesc "Refresh GitHub plugins and standalone skills, then reconcile links"))
-            <> command "plugin" (info (hsubparser (command "add" (info (pluginAdd <**> helper) (progDesc "Add a plugin or replace its enabled skill selection"))) <**> helper) (progDesc "Manage standard plugins"))
+            <> command "plugin" (info (plugins <**> helper) (progDesc "Manage standard plugins"))
             <> command "skill" (info (skills <**> helper) (progDesc "Manage plugin and standalone skills"))
+            <> command "target" (info (targets <**> helper) (progDesc "Manage additional link targets"))
         )
   where
+    plugins =
+        hsubparser
+            ( command "add" (info (pluginAdd <**> helper) (progDesc "Add a plugin or replace its enabled skill selection"))
+                <> command "list" (info (Execute . PluginList <$> global <**> helper) (progDesc "List registered plugins without changing state"))
+                <> command "remove" (info (Execute <$> (PluginRemove <$> global <*> selector "plugin" "Plugin name to remove") <**> helper) (progDesc "Remove registered plugins and their owned skill links"))
+                <> command "skill" (info (pluginSkills <**> helper) (progDesc "Enable or disable skills in a registered plugin"))
+            )
+    pluginSkills =
+        hsubparser
+            ( command "enable" (info (pluginSkillCommand PluginSkillEnable <**> helper) (progDesc "Enable selected skills without reinstalling the plugin"))
+                <> command "disable" (info (pluginSkillCommand PluginSkillDisable <**> helper) (progDesc "Disable selected skills while keeping the plugin registered"))
+            )
     skills =
         hsubparser
-            ( command "sync" (info (Execute <$> (Sync <$> global <*> recursive) <**> helper) (progDesc "Compatibility alias for top-level sync"))
-                <> command "add" (info (skillAdd <**> helper) (progDesc "Add a standalone directory containing SKILL.md"))
-                <> command "remove" (info (Execute <$> (Remove <$> global <*> selector "plugin" "Plugin name to remove" <*> selector "skill" "Standalone skill name or plugin/skill to remove") <**> helper) (progDesc "Remove registered plugins or skills"))
-                <> command "target" (info (targets <**> helper) (progDesc "Manage additional link targets"))
+            ( command "add" (info (skillAdd <**> helper) (progDesc "Add a standalone directory containing SKILL.md"))
+                <> command "list" (info (Execute . SkillList <$> global <**> helper) (progDesc "List enabled plugin skills and standalone skills without changing state"))
+                <> command "remove" (info (Execute <$> (SkillRemove <$> global <*> selector "skill" "Standalone skill name or plugin/skill to remove") <**> helper) (progDesc "Remove standalone skills or disable plugin skills"))
             )
     targets =
         hsubparser

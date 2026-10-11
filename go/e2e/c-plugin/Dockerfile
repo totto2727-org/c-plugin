@@ -8,9 +8,7 @@ RUN cabal update
 # Cache dependency compilation independently of source changes and keep the
 # local OrbStack builder from consuming every available CPU.
 RUN cabal build all --only-dependencies -j2 -fstatic --enable-executable-static --disable-executable-dynamic --disable-shared
-COPY hs-src ./hs-src
-COPY app ./app
-COPY test ./test
+COPY hs ./hs
 COPY LICENSE ./LICENSE
 # GHC's gold linker cannot handle glibc static TLS relocations on ARM64.
 # The Cabal flag scopes static/bfd options to the executable, not shared libraries.

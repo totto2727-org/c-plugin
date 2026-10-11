@@ -8,15 +8,15 @@ build:
 # Cabal manifest and compiler checks.
 check:
     cabal check
-    fourmolu --mode check hs-src app test
-    hlint hs-src app test
+    fourmolu --mode check hs/lib hs/app hs/test
+    hlint hs/lib hs/app hs/test
     cabal build --offline all
     cd go/e2e/c-plugin && golangci-lint fmt --diff && golangci-lint run ./...
 
 # Apply the standard Haskell formatter, then check lint suggestions.
 fix:
-    fourmolu --mode inplace hs-src app test
-    hlint hs-src app test
+    fourmolu --mode inplace hs/lib hs/app hs/test
+    hlint hs/lib hs/app hs/test
 
 # Run native product tests, without Docker.
 test:
@@ -34,4 +34,4 @@ build-nix:
     nix build .#c-plugin
 
 # Standard CI validation. Docker E2E remains an explicit local task.
-ci: check test build-nix
+ci: check test

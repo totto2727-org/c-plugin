@@ -38,7 +38,7 @@ common settings
 
 library
   import: settings
-  hs-source-dirs: hs-src
+  hs-source-dirs: hs/lib
   build-depends: process >=1.6 && <1.7
   exposed-modules:
       CPlugin.Types
@@ -74,6 +74,15 @@ library
       CPlugin.Commands.PluginAddGitHub
       CPlugin.Commands.SkillAddGitHub
       CPlugin.Commands.Remove
+      CPlugin.Commands.PluginRemove
+      CPlugin.Commands.SkillRemove
+      CPlugin.Commands.List
+      CPlugin.Commands.PluginList
+      CPlugin.Commands.SkillList
+      CPlugin.Commands.Listing
+      CPlugin.Commands.PluginSkillEnable
+      CPlugin.Commands.PluginSkillDisable
+      CPlugin.Commands.PluginSkills
       CPlugin.Commands.TargetAdd
       CPlugin.Commands.TargetRemove
       CPlugin.Commands.Common
@@ -82,7 +91,7 @@ library
 
 executable c-plugin
   import: settings
-  hs-source-dirs: app
+  hs-source-dirs: hs/app
   main-is: Main.hs
   ghc-options: -threaded -rtsopts
   if flag(static) && os(linux)
@@ -96,7 +105,7 @@ executable c-plugin
 test-suite product-tests
   import: settings
   type: exitcode-stdio-1.0
-  hs-source-dirs: test
+  hs-source-dirs: hs/test
   main-is: Spec.hs
   other-modules:
       CPlugin.PathsSpec

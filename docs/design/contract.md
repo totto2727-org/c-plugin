@@ -32,12 +32,13 @@ Do not define orphan JSON instances in filesystem or command modules.
 | `CPlugin.Types.Sync` | Synchronization results and notices |
 | `CPlugin.Types.Selection` | Selection requests, typed results, and line-response validation |
 
-Keep Iris CLI parsing and interactive-mode detection in `app/Main.hs`.
+Keep Iris CLI parsing and interactive-mode detection in `hs/app/Main.hs`.
 `CPlugin.Interaction` adapts typed choices to terminal handles; handlers consume typed selection results before constructing a candidate.
 `CPlugin.StateStore` owns file IO, canonical JSON rendering, and durable atomic writes.
 It does not define type-specific wire rules.
 Keep discovery in `CPlugin.Plugin`, filesystem containment in `CPlugin.Paths`, and reconciliation in `CPlugin.Reconcile`.
-`CPlugin.Commands` only dispatches command values to the `Init`, `Sync`, `Update`, `PluginAdd`, `PluginAddGitHub`, `SkillAdd`, `SkillAddGitHub`, `Remove`, `TargetAdd`, and `TargetRemove` handler modules.
+`CPlugin.Commands` only dispatches command values to per-operation handler modules.
+List rendering and related plugin/skill mutations can use small shared helpers.
 `CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
 `syncLoadedLock` only orchestrates a plan and reconciliation session.
 `CPlugin.Reconcile.Plan` resolves sources and desired links, `Session` owns notices and durable checkpoints, `Mutation` owns named link operations, and `Report` owns user-facing result text.
@@ -99,6 +100,19 @@ An unchanged enabled set is a semantic no-op; a changed set replaces the previou
 Empty removal selections do not mutate state.
 Do not catch asynchronous interruption as an ordinary selection error.
 No installed skill is preselected for removal.
+
+## Operation boundaries
+
+Keep `target`, `sync`, and `update` at the top level.
+Plugin removal offers whole plugins only; skill removal offers enabled plugin skills and standalone skills only.
+Removing or disabling the final plugin skill retains its plugin registration.
+Registered-plugin skill enable/disable adds or subtracts selected available names without replacing source identity or fetching GitHub refs.
+Validate the registered source and complete candidate before saving a changed enabled set.
+Cancellation and semantic no-ops do not save or reconcile.
+
+The three list commands read the selected lock without source loading, cache verification, network access, state writes, or reconciliation.
+Include disabled plugin registrations in plugin lists, and include only enabled plugin skills and standalone registrations in skill lists.
+Missing or corrupt locks remain errors; unavailable sources or missing links do not change list behavior.
 
 ## State
 
@@ -203,7 +217,8 @@ Run actual CLI selection, retry, cancellation, and interruption through a pseudo
 Assert terminal detection, exit status, exact state preservation, and final link state rather than only prompt text.
 Go/Testcontainers scenarios must use a caller-built image and one disposable container per registered case.
 Check source-linked scenario documents against the real Go directory.
-Report native tests, real Docker E2E, and Nix package builds as separate results.
+Validate the ordinary Cabal build and native tests, and report real Docker E2E separately.
+Independent Nix package builds are optional, not required by `just ci`.
 Documentation examples describe expected behavior, not evidence that a test passed.
 
 ## Sources
