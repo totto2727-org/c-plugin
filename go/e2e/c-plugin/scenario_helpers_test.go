@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 const cPlugin = "/sandbox/.local/bin/c-plugin"
@@ -63,7 +63,7 @@ func (s *scenarioEnvironment) remove(paths ...string) {
 func (s *scenarioEnvironment) writeFile(filePath string, content string) {
 	s.t.Helper()
 	s.mkdirAll(path.Dir(filePath))
-	if err := s.environment.WriteFile(cli.File{Path: filePath, Content: []byte(content)}); err != nil {
+	if err := s.environment.WriteFile(filePath, []byte(content)); err != nil {
 		s.t.Fatal(err)
 	}
 }
@@ -85,7 +85,7 @@ func (s *scenarioEnvironment) digest(filePath string) [sha256.Size]byte {
 func (s *scenarioEnvironment) requireExit(result cli.Result, expected int) {
 	s.t.Helper()
 	if result.ExitCode != expected {
-		s.t.Fatalf("exit_code=%d want=%d output=%q", result.ExitCode, expected, result.Stdout)
+		s.t.Fatalf("exit_code=%d want=%d stdout=%q stderr=%q", result.ExitCode, expected, result.Stdout, result.Stderr)
 	}
 }
 
@@ -97,7 +97,7 @@ func (s *scenarioEnvironment) requireSuccess(result cli.Result) {
 func (s *scenarioEnvironment) requireFailure(result cli.Result) {
 	s.t.Helper()
 	if result.ExitCode == 0 {
-		s.t.Fatalf("expected failure, output=%q", result.Stdout)
+		s.t.Fatalf("expected failure, stdout=%q stderr=%q", result.Stdout, result.Stderr)
 	}
 }
 

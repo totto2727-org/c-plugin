@@ -40,14 +40,14 @@ The project contains an initialized lock, without any plugin registration or man
 
 1. Create HOME and project directories, initialize the project lock, and save its digest.
 2. For each of nine missing-command, argument, or option-value cases, invoke the matching command context with `--help`.
-3. Invoke the malformed command and compare its output with the entire successful help output.
+3. Invoke the malformed command and compare its stderr with the entire successful help stdout.
 4. Confirm the standard error text, nonzero exit status, and unchanged lock digest after every case.
 5. Confirm that neither project nor HOME gained an ownership directory or global lock.
 
 ### Expected results
 
-Every `--help` invocation exits 0 and contains `Available options:`.
-Each malformed invocation exits 1, retains its standard missing-command, missing-argument, or option-value error, and contains the entire context-specific help output.
+Every `--help` invocation exits 0 and its stdout contains `Available options:`.
+Each malformed invocation exits 1, retains its standard missing-command, missing-argument, or option-value error on stderr, and its stderr contains the entire context-specific help stdout.
 The project lock digest stays unchanged throughout the nine cases.
 No global lock or project/global `.agents` directory is created.
 

@@ -303,7 +303,7 @@ Verify global `--no-input` prevents prompting on an actual terminal and rejects 
 ### Expected results
 
 - Each omitted-selection command exits nonzero without printing the selection prompt on either stream.
-- Diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--plugin` and `--skill` for removal, and `--target` for target removal.
+- Stdout diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--plugin` and `--skill` for removal, and `--target` for target removal.
 - Lock and ownership bytes remain identical, and primary alpha remains absent.
 
 ### Notes
@@ -353,7 +353,7 @@ Verify piped stdin disables interactive selection even when stderr is a terminal
 ### Expected results
 
 - Every missing-selection invocation exits nonzero without a selection prompt on stdout or stderr.
-- Diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--plugin` and `--skill` for removal, and `--target` for target removal.
+- Stdout diagnostics contain `--all`, `--none`, and `--skill` for plugin add, `--plugin` and `--skill` for removal, and `--target` for target removal.
 - The pipe retains exactly `unconsumed-input\n` after each child exits.
 - Lock and ownership bytes do not change, and missing alpha is not recreated.
 

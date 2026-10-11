@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 // The fixture is invoked through the existing container runner, not a separate test runner.
@@ -297,7 +297,7 @@ func interactiveNoInputScenario(t *testing.T, environment *cli.Environment) {
 		s.requireTerminalFailure(result)
 		s.requireNotContains(result.Stderr, selectionPrompt)
 		for _, option := range [][]string{{"--all", "--none", "--skill"}, {"--plugin", "--skill"}, {"--target"}}[index] {
-			s.requireContains(result.Stdout+result.Stderr, option)
+			s.requireContains(result.Stdout, option)
 		}
 		s.requireFile(project+"/c-plugin-lock.json", lock)
 		s.requireFile(project+"/.agents/c-plugin-state.json", state)
@@ -318,7 +318,7 @@ func interactivePipeScenario(t *testing.T, environment *cli.Environment) {
 		s.requireTerminalFailure(result)
 		s.requireNotContains(result.Stderr, selectionPrompt)
 		for _, option := range [][]string{{"--all", "--none", "--skill"}, {"--plugin", "--skill"}, {"--target"}}[index] {
-			s.requireContains(result.Stdout+result.Stderr, option)
+			s.requireContains(result.Stdout, option)
 		}
 		if result.Unread != "unconsumed-input\n" {
 			t.Fatalf("pipe input consumed: %+v", result)

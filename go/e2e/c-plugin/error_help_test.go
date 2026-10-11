@@ -3,7 +3,7 @@ package cplugine2e
 import (
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func errorHelpScenario(t *testing.T, environment *cli.Environment) {
@@ -40,8 +40,8 @@ func errorHelpScenario(t *testing.T, environment *cli.Environment) {
 		scenario.requireContains(help.Stdout, "Available options:")
 		failure := scenario.run(project, test.arguments...)
 		scenario.requireExit(failure, 1)
-		scenario.requireContains(failure.Stdout, test.errorText)
-		scenario.requireContains(failure.Stdout, help.Stdout)
+		scenario.requireContains(failure.Stderr, test.errorText)
+		scenario.requireContains(failure.Stderr, help.Stdout)
 		scenario.requireDigest(lock, before)
 	}
 	scenario.requireMissing(home + "/c-plugin-lock.json")

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func syncRecursiveScenario(t *testing.T, environment *cli.Environment) {
