@@ -3,7 +3,7 @@ package cplugine2e
 import (
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func removeScenario(t *testing.T, environment *cli.Environment) {
@@ -17,7 +17,7 @@ func removeScenario(t *testing.T, environment *cli.Environment) {
 	scenario := newScenarioEnvironment(t, environment, home)
 	scenario.writePlugin(project, "alpha", "beta")
 	scenario.writeFile(lockPath, localLock([]string{}, "plugin", []string{"alpha", "beta"}))
-	scenario.requireSuccess(scenario.run(project, "skill", "sync"))
+	scenario.requireSuccess(scenario.run(project, "sync"))
 	scenario.remove(skillsRoot + "/alpha")
 	scenario.writeFile(skillsRoot+"/alpha", "replacement\n")
 	scenario.writeFile(skillsRoot+"/neighbor", "foreign\n")
@@ -26,7 +26,7 @@ func removeScenario(t *testing.T, environment *cli.Environment) {
 
 	empty := scenario.run(project, "skill", "remove")
 	scenario.requireFailure(empty)
-	scenario.requireContains(empty.Stdout, "--plugin")
+	scenario.requireNotContains(empty.Stdout, "--plugin")
 	scenario.requireContains(empty.Stdout, "--skill")
 	scenario.requireDigest(lockPath, lockDigest)
 	scenario.requireDigest(statePath, stateDigest)
@@ -61,7 +61,7 @@ func removeScenario(t *testing.T, environment *cli.Environment) {
 	beta := scenario.run(project, "skill", "remove", "--skill", "demo/beta")
 	scenario.requireSuccess(beta)
 	scenario.requireContains(beta.Stdout, "Removed skills demo/beta from "+lockPath+": complete")
-	scenario.requireJSON(lockPath, emptyLock)
+	scenario.requireJSON(lockPath, localLock([]string{}, "plugin", []string{}))
 	scenario.requireMissing(skillsRoot + "/beta")
 	scenario.requireFile(skillsRoot+"/alpha", "replacement\n")
 	scenario.requireFile(skillsRoot+"/neighbor", "foreign\n")
@@ -73,11 +73,17 @@ func removeScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(globalRepository+"/skills/gamma/SKILL.md", skillMarkdown("gamma"))
 	scenario.writeFile(globalLock, localLock([]string{}, "plugin", []string{"gamma"}))
 	scenario.mkdirAll(project + "/nested")
-	scenario.requireSuccess(scenario.run(project+"/nested", "skill", "sync", "--global"))
+	scenario.requireSuccess(scenario.run(project+"/nested", "sync", "--global"))
 	global := scenario.run(project+"/nested", "skill", "remove", "--global", "--skill", "demo/gamma")
 	scenario.requireSuccess(global)
 	scenario.requireContains(global.Stdout, "Removed skills demo/gamma from "+globalLock+": complete")
-	scenario.requireJSON(globalLock, emptyLock)
+	scenario.requireJSON(globalLock, localLock([]string{}, "plugin", []string{}))
 	scenario.requireMissing(home + "/.agents/skills/gamma")
 	scenario.requireNotContains(string(scenario.readFile(globalState)), `"skill": "gamma"`)
+	projectDisabled := scenario.digest(lockPath)
+	deleted := scenario.run(project+"/nested", "plugin", "remove", "--global", "--plugin", "demo")
+	scenario.requireSuccess(deleted)
+	scenario.requireContains(deleted.Stdout, "Removed plugins demo from "+globalLock+": complete")
+	scenario.requireJSON(globalLock, emptyLock)
+	scenario.requireDigest(lockPath, projectDisabled)
 }

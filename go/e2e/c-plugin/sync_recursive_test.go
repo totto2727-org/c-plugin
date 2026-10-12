@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func syncRecursiveScenario(t *testing.T, environment *cli.Environment) {
@@ -25,7 +25,7 @@ func syncRecursiveScenario(t *testing.T, environment *cli.Environment) {
 	parentDigest := scenario.digest(project + "/c-plugin-lock.json")
 	childDigest := scenario.digest(child + "/c-plugin-lock.json")
 
-	initial := scenario.run(project, "skill", "sync", "-r")
+	initial := scenario.run(project, "sync", "-r")
 	scenario.requireSuccess(initial)
 	if count := strings.Count(initial.Stdout, "Synced "); count != 2 {
 		t.Fatalf("synced_count=%d output=%q", count, initial.Stdout)
@@ -44,7 +44,7 @@ func syncRecursiveScenario(t *testing.T, environment *cli.Environment) {
 
 	scenario.writeFile(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{}))
 	editedParentDigest := scenario.digest(project + "/c-plugin-lock.json")
-	edited := scenario.run(project, "skill", "sync", "--recursive")
+	edited := scenario.run(project, "sync", "--recursive")
 	scenario.requireSuccess(edited)
 	if count := strings.Count(edited.Stdout, "Synced "); count != 2 {
 		t.Fatalf("synced_count=%d output=%q", count, edited.Stdout)
@@ -56,7 +56,7 @@ func syncRecursiveScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireDigest(project+"/c-plugin-lock.json", editedParentDigest)
 	scenario.requireDigest(child+"/c-plugin-lock.json", childDigest)
 
-	invalid := scenario.run(project, "skill", "sync", "-g", "-r")
+	invalid := scenario.run(project, "sync", "-g", "-r")
 	scenario.requireFailure(invalid)
 	scenario.requireContains(invalid.Stdout, "totto2727/c-plugin.SyncError.Planning")
 }

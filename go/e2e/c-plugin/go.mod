@@ -2,7 +2,7 @@ module github.com/totto2727-org/c-plugin/go/e2e/c-plugin
 
 go 1.25.0
 
-require github.com/totto2727-org/e2e v0.0.0-20260819165055-0a256480ff0d
+require github.com/totto2727-org/e2e/go v0.0.0-20261012094111-3e0144675565
 
 require (
 	dario.cat/mergo v1.0.2 // indirect

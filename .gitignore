@@ -9,9 +9,5 @@ trace.json
 result
 tmp/
 
-# Local caches left by earlier checkouts are not part of the Haskell package.
-_build/
-.moon/
-.mooncakes/
 node_modules/
 .vite/

@@ -32,7 +32,6 @@ Cabal版はPATH上のGitが必要で、Nix版はruntime依存を含みます。
 トップレベル`update`は両方のGitHub refを取得し、ロック単位で全candidateを検証してから保存・同期します。
 変更のない成功updateもlinkを同期しますが、同一ロックは書き直しません。
 取得失敗はそのロックを部分更新しません。
-既存`skill sync`は互換aliasとして残します。
 `-r`はGit cloneの再帰やref短縮ではなく、最近傍projectロックとその子孫ロックの探索です。
 Admiral 0.6.2の原仕様に合わせ、最近傍ロック必須、own lock常時包含、directory-onlyの限定ignore規則、未除外hidden包含、symlink非追跡を維持します。
 安全のため`.git`とsnapshot cacheは探索から除外します。
@@ -59,12 +58,13 @@ filesystemやcommandモジュールにorphan JSON instanceを定義しません�
 | `CPlugin.Types.Sync` | 同期結果と通知の型 |
 | `CPlugin.Types.Selection` | 選択要求、型付き選択結果、行入力の検証 |
 
-Iris CLI解析と対話modeの判定は`app/Main.hs`に置きます。
+Iris CLI解析と対話modeの判定は`hs/app/Main.hs`に置きます。
 `CPlugin.Interaction`は型付き選択肢をterminal handleへ接続し、handlerはcandidateの構築前に型付き選択結果を受け取ります。
 `CPlugin.StateStore`はファイルIO、canonical JSON出力、耐久性を持つatomic writeを担当します。
 型固有のwire形式規則は定義しません。
 探索は`CPlugin.Plugin`、filesystem containmentは`CPlugin.Paths`、同期は`CPlugin.Reconcile`に置きます。
-`CPlugin.Commands`はcommand値を`Init`、`Sync`、`Update`、`PluginAdd`、`PluginAddGitHub`、`SkillAdd`、`SkillAddGitHub`、`Remove`、`TargetAdd`、`TargetRemove`のhandlerモジュールへ振り分けるだけです。
+`CPlugin.Commands`はcommand値を操作ごとのhandlerモジュールへ振り分けるだけです。
+一覧の表示や関連するplugin/skill変更には、小さい共有helperを使用できます。
 `CPlugin.Commands.Common`は共有のロック読み込み、candidate永続化、完了結果の報告を担当します。
 `syncLoadedLock`は計画と同期sessionを組み合わせるだけです。
 `CPlugin.Reconcile.Plan`はsourceと望ましいlinkの解決、`Session`は通知とdurable checkpoint、`Mutation`は名前付きlink操作、`Report`はユーザー向けの結果出力を担当します。
@@ -124,6 +124,19 @@ plugin設定で確認した空集合（`none`または`--none`）は、plugin登
 removeの空選択はstateを変更しません。
 非同期の割り込みを通常の選択errorとして捕捉しません。
 removeではインストール済みskillを事前選択しません。
+
+## 操作境界
+
+`target`、`sync`、`update`はトップレベルに置きます。
+plugin removeはplugin全体だけを選択肢にし、skill removeは有効なplugin skillと単独skillだけを選択肢にします。
+最後のplugin skillを削除・無効化しても、plugin登録は維持します。
+登録済みpluginのskill enable/disableは、利用できるskill名を有効集合へ追加・除去し、source identityの置き換えやGitHub refの取得は行いません。
+登録済みsourceと完全なcandidateを検証してから、変更した有効集合を保存します。
+cancelと意味的なno-opは保存も同期も行いません。
+
+3種類のlistは選択scopeのロックだけを読み、source読込、cache検証、networkアクセス、state書込み、同期を行いません。
+plugin一覧には無効化した登録も含め、skill一覧には有効なplugin skillと単独skillを含めます。
+ロック欠落・破損はエラーとし、sourceが利用できない場合やlinkが欠落した場合も一覧表示の動作を変えません。
 
 ## 状態
 
@@ -207,7 +220,8 @@ native testは、分離した一時rootを使って実際の製品境界を検�
 prompt文字列だけでなく、terminal判定、exit status、stateの完全一致、最終link状態を検証します。
 Go/Testcontainers scenarioは、callerがbuildしたimageを使い、登録caseごとに独立した破棄可能containerを実行します。
 sourceに対応するscenario文書を実際のGoディレクトリに対して検証します。
-native test、実Docker E2E、Nix package buildの結果を分けて報告します。
+通常のCabal buildとnative testを検証し、実Docker E2Eの結果を分けて報告します。
+独立したNix package buildは任意であり、`just ci`の必須検証には含めません。
 文書例は期待する動作を示すものであり、テストが通過した証拠ではありません。
 
 ## 一次資料

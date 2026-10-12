@@ -14,7 +14,7 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Command path | Purpose |
 | --- | --- |
-| `c-plugin skill sync` | Reconcile desired links without rewriting the lock. |
+| `c-plugin sync` | Reconcile desired links without rewriting the lock. |
 
 ### Arguments and options
 
@@ -30,10 +30,10 @@ This scenario uses no command options. It relies on project lock discovery from 
 
 ### Execution flow
 
-1. Write the two-skill project lock with additional `.cursor/skills`, record its digest, and run `c-plugin skill sync` from `project`.
+1. Write the two-skill project lock with additional `.cursor/skills`, record its digest, and run `c-plugin sync` from `project`.
 2. Verify the output substring, unchanged lock digest, four symlinks, and alpha/beta ownership records.
 3. Replace the primary beta symlink with a foreign file, add the foreign neighbor, and rewrite the lock fixture with no selected skills. Record this edited lock digest.
-4. Run `c-plugin skill sync` again from `project`.
+4. Run `c-plugin sync` again from `project`.
 5. Verify the asserted partial action/lock/status substring, unchanged edited lock digest, removal of safely owned links, preservation of foreign beta/neighbor contents, and empty version-1 ownership state.
 
 ### Expected results

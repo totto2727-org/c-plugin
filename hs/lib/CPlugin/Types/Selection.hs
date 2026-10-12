@@ -2,6 +2,7 @@ module CPlugin.Types.Selection (
     SelectionRequest (..),
     Selection (..),
     RemovalChoice (..),
+    RemovalScope (..),
     traverseSelectionRequest,
     parseSelectionResponse,
     parseRemovalSkill,
@@ -27,6 +28,9 @@ data Selection a = Cancelled | Selected (Set.Set a)
 
 data RemovalChoice = RemovePlugin ItemName | RemoveSkill ItemName ItemName | RemoveStandalone ItemName
     deriving (Eq, Ord, Show)
+
+data RemovalScope = PluginRemoval | SkillRemoval
+    deriving (Eq, Show)
 
 traverseSelectionRequest :: (Applicative f) => (a -> f b) -> SelectionRequest a -> f (SelectionRequest b)
 traverseSelectionRequest _ PromptSelection = pure PromptSelection

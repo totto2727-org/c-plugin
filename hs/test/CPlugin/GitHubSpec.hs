@@ -5,7 +5,7 @@
 -- These synthetic transport checks are not real GitHub CLI acceptance coverage.
 module CPlugin.GitHubSpec (spec) where
 
-import CPlugin.Commands (Command (..), runCommandWithGit)
+import CPlugin.Commands (Command (..), runCommand, runCommandWithGit)
 import CPlugin.GitHubTestSupport (gitCommit, withGitFixture, writeRemotePlugin, writeWideFixture)
 import CPlugin.Interaction (Interaction (NonInteractive))
 import CPlugin.Paths (PathKind (SymbolicLink), nameIO, pathKind)
@@ -16,6 +16,7 @@ import CPlugin.TestSupport (skillBytes, withInteractionInput, writeFixture)
 import CPlugin.Types.GitHub (GitHubOrigin (..), GitHubRef, GitHubRepository, GitHubSubpath, commitText, githubRef, githubRepository, githubSource, githubSubpath)
 import CPlugin.Types.InstalledSkill (installedSkillOrigin)
 import CPlugin.Types.Lock (Lock (..), emptyLock, makeLock)
+import CPlugin.Types.Name (nameText)
 import CPlugin.Types.Ownership (OwnershipState (OwnershipState), PreviousOwnership (Trusted))
 import CPlugin.Types.Path (AbsolutePath, absoluteText, relativeText)
 import CPlugin.Types.Plugin (Plugin (..), makePluginWithOrigin)
@@ -250,6 +251,55 @@ spec = do
             map (fmap (commitText . githubOriginCommit) . installedSkillOrigin) (Map.elems (standaloneSkills current)) `shouldBe` [Just commit]
             assertStateUnchanged base $ runRemote repository command
 
+    describe "offline incremental pinned GitHub plugin skills" $
+        forM_ [False, True] $ \global -> describe (if global then "global scope" else "project scope") $ do
+            it "uses the existing pin after the remote advances and becomes unavailable" $ withPinnedSkillScope global $ \root repository commit -> do
+                writeRemotePlugin repository "renamed-upstream" ["gamma"]
+                _ <- gitCommit repository "advance remote without refreshing the pin"
+                removeDirectoryRecursive repository
+                before <- readRemotePlugin root
+                runCommand (PluginSkillEnable global (Just "remote") (SelectItems ["beta"]))
+                afterEnable <- readRemotePlugin root
+                pluginOrigin afterEnable `shouldBe` pluginOrigin before
+                fmap (commitText . githubOriginCommit) (pluginOrigin afterEnable) `shouldBe` Just commit
+                map nameText (Set.toAscList (enabledSkills afterEnable)) `shouldBe` ["alpha", "beta"]
+                runCommand (PluginSkillDisable global (Just "remote") SelectAll)
+                afterDisable <- readRemotePlugin root
+                pluginOrigin afterDisable `shouldBe` pluginOrigin before
+                enabledSkills afterDisable `shouldBe` Set.empty
+                pathKind (root </> ".agents/skills/alpha") `shouldReturn` Nothing
+                pathKind (root </> ".agents/skills/beta") `shouldReturn` Nothing
+                pathKind (root </> ".agents/skills/standalone") `shouldReturn` Just SymbolicLink
+            forM_ [("enable", PluginSkillEnable global, "alpha"), ("disable", PluginSkillDisable global, "beta")] $ \(label, command, unchangedSkill) -> do
+                it (label ++ " semantic no-op retains exact bytes and never repairs a missing link") $ withPinnedSkillScope global $ \root _ _ -> do
+                    removeFile (root </> ".agents/skills/alpha")
+                    BS.appendFile (root </> "c-plugin-lock.json") "\n \t"
+                    BS.appendFile (root </> ".agents/c-plugin-state.json") "\n \t"
+                    assertStateUnchanged root $ runCommand (command (Just "remote") (SelectItems [unchangedSkill]))
+                    pathKind (root </> ".agents/skills/alpha") `shouldReturn` Nothing
+                it (label ++ " rejects an unknown pinned skill before changing state") $ withPinnedSkillScope global $ \root _ _ ->
+                    assertStateUnchanged root (runCommand (command (Just "remote") (SelectItems ["unknown"])) `shouldThrow` anyIOException)
+                forM_ ["missing snapshot", "corrupt provenance", "dirty manifest"] $ \corruption ->
+                    it (label ++ " rejects " ++ corruption ++ " without replacing or fetching the pin") $ withPinnedSkillScope global $ \root repository _ -> do
+                        plugin <- readRemotePlugin root
+                        origin <- maybe (ioError (userError "missing fixture origin")) pure (pluginOrigin plugin)
+                        let snapshot = snapshotPath root origin
+                            manifest = root </> relativeText (pluginSource plugin) </> "plugin.json"
+                        case corruption of
+                            "missing snapshot" -> removeDirectoryRecursive snapshot
+                            "corrupt provenance" -> BS.writeFile (snapshot </> "origin.json") "corrupt provenance sentinel"
+                            _ -> BS.writeFile manifest "dirty manifest sentinel"
+                        removeDirectoryRecursive repository
+                        assertStateUnchanged root (runCommand (command (Just "remote") SelectAll) `shouldThrow` anyIOException)
+                        case corruption of
+                            "missing snapshot" -> pathKind snapshot `shouldReturn` Nothing
+                            "corrupt provenance" -> BS.readFile (snapshot </> "origin.json") `shouldReturn` "corrupt provenance sentinel"
+                            _ -> BS.readFile manifest `shouldReturn` "dirty manifest sentinel"
+            it "rejects a standalone name collision without modifying the pinned plugin" $ withPinnedSkillScope global $ \root _ _ -> do
+                writeFixture (root </> "beta/SKILL.md") (skillBytes "beta")
+                runCommand (SkillAdd global "./beta" False)
+                assertStateUnchanged root (runCommand (PluginSkillEnable global (Just "remote") (SelectItems ["beta"])) `shouldThrow` anyIOException)
+
     describe "top-level update and historical recursive parity with synthetic local Git" $ do
         it "updates both remote domains while retaining local plugin and standalone registrations" $ withGitFixture $ \base repository _ _ -> do
             registerRemotePair repository
@@ -369,6 +419,16 @@ spec = do
             remotePins current `shouldBe` [next, next]
             remote <- readRemotePlugin project
             BS.readFile (project </> relativeText (pluginSource remote) </> "nested/c-plugin-lock.json") `shouldReturn` "cached nested lock must not be discovered"
+
+withPinnedSkillScope :: Bool -> (FilePath -> FilePath -> String -> IO ()) -> IO ()
+withPinnedSkillScope global action = withGitFixture $ \base repository commit _ -> do
+    let project = base </> "project"
+        root = if global then base else project
+        other = if global then project else base
+    initializeProject project
+    registerRemotePair repository
+    withCurrentDirectory project $ registerRemotePair repository
+    assertStateUnchanged other $ withCurrentDirectory project (action root repository commit)
 
 corruptHashOutput :: String -> String -> String
 corruptHashOutput corruption output = unlines $ case corruption of

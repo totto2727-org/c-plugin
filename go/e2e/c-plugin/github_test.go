@@ -7,15 +7,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 const (
 	githubFixtureRepository = "totto2727-org/c-plugin"
 	githubFixtureURL        = "https://github.com/" + githubFixtureRepository
-	githubFixtureRef        = "haskell/iris-port"
-	githubPluginPath        = "test/fixtures/github/plugin"
-	githubSoloPath          = "test/fixtures/github/solo"
+	githubFixtureRef        = "test/e2e-unified-api"
+	githubPluginPath        = "hs/test/fixtures/github/plugin"
+	githubSoloPath          = "hs/test/fixtures/github/solo"
 	githubRootSource        = "github:" + githubFixtureRepository
 	githubPluginSource      = githubRootSource + "/" + githubPluginPath
 	githubSoloSource        = githubRootSource + "/" + githubSoloPath
@@ -140,8 +140,8 @@ func githubSourceFailureScenario(t *testing.T, environment *cli.Environment) {
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	for _, arguments := range [][]string{
 		{"plugin", "add", githubRootSource, "--ref", githubFixtureRef, "--all"},
-		{"skill", "add", githubRootSource + "/test/fixtures/github", "--ref", githubFixtureRef},
-		{"plugin", "add", githubRootSource + "/test/fixtures/github/missing", "--ref", githubFixtureRef, "--all"},
+		{"skill", "add", githubRootSource + "/hs/test/fixtures/github", "--ref", githubFixtureRef},
+		{"plugin", "add", githubRootSource + "/hs/test/fixtures/github/missing", "--ref", githubFixtureRef, "--all"},
 		{"plugin", "add", githubPluginSource, "--ref", "c-plugin-e2e-ref-that-does-not-exist", "--all"},
 		{"skill", "add", "github:totto2727-org/c-plugin-e2e-repository-that-does-not-exist/" + githubSoloPath},
 	} {
@@ -175,7 +175,7 @@ func githubPluginLifecycleScenario(t *testing.T, environment *cli.Environment) {
 	s.requireFile(project+"/c-plugin-lock.json", lock)
 	s.requireFile(project+"/.agents/c-plugin-state.json", state)
 	s.requireMissing(project + "/.agents/skills/alpha")
-	s.requireSuccess(s.run(project, "skill", "sync"))
+	s.requireSuccess(s.run(project, "sync"))
 	s.requireSymlink(project+"/.agents/skills/alpha", source+"/skills/alpha")
 	s.requireSuccess(s.run(project, "plugin", "add", githubPluginSource,
 		"--ref", githubFixtureRef, "--skill", "beta"))
@@ -192,7 +192,7 @@ func githubPluginLifecycleScenario(t *testing.T, environment *cli.Environment) {
 		t.Fatalf("disabled skills=%v want=[]", disabled.Skills)
 	}
 	s.requireMissing(project + "/.agents/skills/beta")
-	s.requireSuccess(s.run(project, "skill", "remove", "--plugin", "github-demo"))
+	s.requireSuccess(s.run(project, "plugin", "remove", "--plugin", "github-demo"))
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)
 	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
 	s.requireRegularFile(source + "/plugin.json")
@@ -233,7 +233,7 @@ func githubStandaloneOfflineScenario(t *testing.T, environment *cli.Environment)
 	}
 	s.requireFailure(probe)
 	offline, err := environment.Run(cli.Command{
-		Args:       []string{cPlugin, "skill", "sync"},
+		Args:       []string{cPlugin, "sync"},
 		WorkingDir: project,
 		Env:        offlineEnv,
 	})
@@ -270,7 +270,7 @@ func githubGlobalScenario(t *testing.T, environment *cli.Environment) {
 		t.Fatalf("global source=%s project source=%s are not isolated", globalSource, projectSource)
 	}
 	s.requireSymlink(s.home+"/.agents/skills/solo", globalSource)
-	s.requireSuccess(s.run(project+"/nested", "skill", "sync", "--global"))
+	s.requireSuccess(s.run(project+"/nested", "sync", "--global"))
 	s.requireSuccess(s.run(project+"/nested", "skill", "remove", "--global", "--skill", "solo"))
 	s.requireJSON(s.home+"/c-plugin-lock.json", emptyLock)
 	s.requireMissing(s.home + "/.agents/skills/solo")
@@ -309,7 +309,7 @@ func githubCacheSafetyScenario(t *testing.T, environment *cli.Environment) {
 	digest := s.digest(source + "/SKILL.md")
 	s.writeFile(cache+"/origin.json", `{"version":"1","repository":"foreign/repository","commit":"`+commit+`"}`)
 	foreignOrigin := string(s.readFile(cache + "/origin.json"))
-	partial := s.run(project, "skill", "sync")
+	partial := s.run(project, "sync")
 	s.requireSuccess(partial)
 	s.requireContains(partial.Stdout, "partial")
 	s.requireFile(project+"/c-plugin-lock.json", lock)
@@ -319,7 +319,7 @@ func githubCacheSafetyScenario(t *testing.T, environment *cli.Environment) {
 	s.requireDigest(source+"/SKILL.md", digest)
 	s.writeFile(cache+"/origin.json", origin)
 	s.requireSuccess(s.runInfrastructure("", "git", "-C", cache+"/tree", "remote", "set-url", "origin", "https://github.com/foreign/repository.git"))
-	partial = s.run(project, "skill", "sync")
+	partial = s.run(project, "sync")
 	s.requireSuccess(partial)
 	s.requireContains(partial.Stdout, "partial")
 	s.requireFile(project+"/c-plugin-lock.json", lock)
@@ -347,7 +347,7 @@ func githubForceSafetyScenario(t *testing.T, environment *cli.Environment) {
 	s.requireFile(project+"/.agents/skills/alpha/keep", "foreign directory\n")
 	s.requireFile(project+"/.agents/skills/neighbor", "foreign neighbor\n")
 	s.requireSymlink(project+"/.agents/skills/beta", source+"/skills/beta")
-	s.requireSuccess(s.run(project, "skill", "remove", "--plugin", "github-demo"))
+	s.requireSuccess(s.run(project, "plugin", "remove", "--plugin", "github-demo"))
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)
 	s.requireMissing(project + "/.agents/skills/beta")
 	s.requireFile(project+"/.agents/skills/alpha/keep", "foreign directory\n")

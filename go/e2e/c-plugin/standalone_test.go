@@ -3,7 +3,7 @@ package cplugine2e
 import (
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func standaloneFixture(t *testing.T, environment *cli.Environment, name string) (*scenarioEnvironment, string) {
@@ -37,7 +37,7 @@ func standaloneLifecycleScenario(t *testing.T, environment *cli.Environment) {
 	s.requireFile(project+"/c-plugin-lock.json", lock)
 	s.requireFile(project+"/.agents/c-plugin-state.json", state)
 	s.requireMissing(project + "/.agents/skills/solo")
-	s.requireSuccess(s.run(project, "skill", "sync"))
+	s.requireSuccess(s.run(project, "sync"))
 	s.requireSymlink(project+"/.agents/skills/solo", project+"/standalone/solo")
 	removed := s.run(project+"/nested", "skill", "remove", "--skill", "solo")
 	s.requireSuccess(removed)
@@ -107,7 +107,7 @@ func standaloneUnavailableScenario(t *testing.T, environment *cli.Environment) {
 	literal := s.runInfrastructure("", "readlink", project+"/.agents/skills/solo")
 	s.requireSuccess(literal)
 	s.remove(project + "/standalone/solo")
-	result := s.run(project, "skill", "sync")
+	result := s.run(project, "sync")
 	s.requireSuccess(result)
 	s.requireContains(result.Stdout, "partial")
 	s.requireFile(project+"/c-plugin-lock.json", lock)

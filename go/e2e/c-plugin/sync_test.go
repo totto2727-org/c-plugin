@@ -3,7 +3,7 @@ package cplugine2e
 import (
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func syncScenario(t *testing.T, environment *cli.Environment) {
@@ -20,7 +20,7 @@ func syncScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(lockPath, localLock([]string{".cursor/skills"}, "plugin", []string{"alpha", "beta"}))
 	initialDigest := scenario.digest(lockPath)
 
-	initial := scenario.run(project, "skill", "sync")
+	initial := scenario.run(project, "sync")
 	scenario.requireSuccess(initial)
 	scenario.requireContains(initial.Stdout, "Synced "+lockPath+": partial")
 	scenario.requireDigest(lockPath, initialDigest)
@@ -40,7 +40,7 @@ func syncScenario(t *testing.T, environment *cli.Environment) {
 	scenario.writeFile(lockPath, localLock([]string{".cursor/skills"}, "plugin", []string{}))
 	editedDigest := scenario.digest(lockPath)
 
-	edited := scenario.run(project, "skill", "sync")
+	edited := scenario.run(project, "sync")
 	scenario.requireSuccess(edited)
 	scenario.requireContains(edited.Stdout, "Synced "+lockPath+": partial")
 	scenario.requireDigest(lockPath, editedDigest)

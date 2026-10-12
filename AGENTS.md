@@ -8,18 +8,17 @@ For consumer setup and usage, read [README.md](README.md).
 ```text
 README.md              Canonical consumer entrypoint, a physical file
 AGENTS.md              Maintenance instructions
-CLAUDE.md              Relative symlink to AGENTS.md
-app/Main.hs            Iris CLI entrypoint
-hs-src/CPlugin/        Command policy, discovery, paths, reconciliation, state IO
-hs-src/CPlugin/Commands/ Per-command handlers and shared command support
-hs-src/CPlugin/Reconcile/ Planning, session state, mutations, and reporting
-hs-src/CPlugin/Types/  Type definitions with their validation and wire codecs
+hs/app/Main.hs            Iris CLI entrypoint
+hs/lib/CPlugin/        Command policy, discovery, paths, reconciliation, state IO
+hs/lib/CPlugin/Commands/ Per-command handlers and shared command support
+hs/lib/CPlugin/Reconcile/ Planning, session state, mutations, and reporting
+hs/lib/CPlugin/Types/  Type definitions with their validation and wire codecs
 c-plugin.cabal         Cabal library, executable, and test definitions
 cabal.project          Cabal project configuration
 flake.nix, flake.lock  Pinned development environment and CLI package
 Justfile               Shared task entrypoints
-test/Spec.hs            Hspec suite entrypoint
-test/CPlugin/          Domain, codec, plugin, reconciliation, and command specs
+hs/test/Spec.hs            Hspec suite entrypoint
+hs/test/CPlugin/          Domain, codec, plugin, reconciliation, and command specs
 go/e2e/c-plugin/       Go/Testcontainers cases and sibling scenario documents
 docs/                  CLI reference and English/Japanese design contract
 .github/workflows/     Validation automation
@@ -39,10 +38,11 @@ just check     # Cabal, Fourmolu, HLint, and Go checks
 just fix       # Apply Fourmolu and check HLint suggestions
 just test      # Haskell product tests, without Docker
 just e2e       # Caller-owned image build and real Go/Testcontainers tests
-just ci        # Checks, native tests, and independent Nix package build
+just ci        # Checks, Cabal build, and native tests
 ```
 
-Report native checks, Docker E2E, and Nix package validation separately.
+Validate the ordinary Cabal build and native tests, with real Docker E2E as a separate local task.
+Independent Nix package validation is optional and is not part of `just ci`.
 CI runs `nix develop --command just ci` and does not require Docker.
 Docker E2E is an explicit local task and is not part of `just ci`.
 Use `just build-nix` to run the independent package build alone.
@@ -58,7 +58,8 @@ A zero-test run or a `no work to do` result is not product coverage.
 Read [the design contract](docs/design/contract.md) before changing path validation, parsing, lock persistence, or reconciliation.
 Keep CLI parsing in Iris and command policy in `CPlugin.Commands.*`.
 `CPlugin.Commands` owns only the command values and dispatch.
-Keep each handler in its own module: `Init`, `Sync`, `Update`, `PluginAdd`, `PluginAddGitHub`, `SkillAdd`, `SkillAddGitHub`, `Remove`, `TargetAdd`, or `TargetRemove`.
+Keep each public operation in its own handler module, including list, plugin/skill removal, and registered-plugin skill enable/disable operations.
+Use small shared helpers for rendering and related mutations instead of duplicating their safety policy.
 `CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
 Keep each domain type, its pure validation, and its serialization or deserialization in the same `CPlugin.Types.*` module.
 `CPlugin.Types` is only a re-export entrypoint, not a second implementation.
@@ -72,6 +73,8 @@ Keep the implementation small and use the existing Haskell modules rather than e
 
 - Accept one explicit local or GitHub standard Agent Plugins 1.0 root or one explicit standalone Agent Skill directory. Do not scan plugin collections or infer the source kind. Do not add marketplaces, vendor-format detection, non-GitHub remotes, MCP execution, or hooks without explicit scope approval.
 - Top-level `sync` reconciles both plugins and standalone skills offline from pinned sources. `update` refreshes both source kinds, validates a complete per-lock candidate, then reconciles even when the lock is unchanged. Keep `-r` compatible with the original Admiral 0.6.2 discovery rules, except documented `.git` and snapshot-cache safety exclusions.
+- Keep `target` at the top level. Plugin and skill removal have separate selector domains. Disabling the final plugin skill must keep its plugin registration.
+- Lists are read-only lock views, not source refreshes or reconciliation commands. Registered-plugin enable/disable must preserve source identity and use pinned GitHub caches without fetching.
 - Keep GitHub value validation/codecs in `CPlugin.Types.GitHub` and cache/transport effects in `CPlugin.Source.GitHub`. Use explicit argv, disable hooks and interactive authentication, and never delete an existing cache entry.
 - Preserve strict lock version `"3"`, canonical output, duplicate rejection, and isolated project/global scopes. No old lock conversion is provided.
 - Preserve ownership version `"1"`, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
@@ -91,7 +94,8 @@ Keep dependency probes and temporary reports outside tracked artifacts.
 
 For Go E2E, preserve each scenario, fixture, assertion, checksum, lint setting, and task dependency unless the requested behavior requires a change.
 The caller builds `c-plugin-e2e:local` before Go tests.
-Each registered scenario receives a separate disposable container.
+Each scenario runs in an ordinary `t.Run` callback that calls `cli.NewEnvironment(t, imageName)` and receives a separate disposable container.
+The caller opts into concurrency with `t.Parallel()` before creating the environment, and Go's `-parallel` limit controls concurrency without an SDK-specific slot limit.
 The CLI under test is `/sandbox/.local/bin/c-plugin`.
 Existing `/tmp/c-plugin-v2-*` paths are synthetic compatibility fixtures, not public product names.
 
@@ -105,5 +109,5 @@ A validator that discovers no Go sources is not coverage.
 
 Write maintained artifacts in English and keep [the Japanese contract](docs/design/contract.ja.md) aligned with its English source.
 Use Japanese for PR titles, descriptions, review discussions, and Linear collaboration.
-Keep `README.md` physical and `CLAUDE.md -> AGENTS.md` as a relative alias.
+Keep `README.md` physical and maintenance instructions in `AGENTS.md`.
 Do not add publishing automation without explicit approval and verified licensing, authentication, package availability, and immutable action pins.

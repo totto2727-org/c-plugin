@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 // The fixture is invoked through the existing container runner, not a separate test runner.
@@ -146,18 +146,18 @@ func interactiveSelectionScenario(t *testing.T, environment *cli.Environment) {
 	s.requireSymlink(project+"/.agents/skills/alpha", project+"/plugin/skills/alpha")
 	s.requireSymlink(project+"/.agents/skills/gamma", project+"/plugin/skills/gamma")
 	s.requireMissing(project + "/.agents/skills/beta")
-	removed := s.runTerminal(project, []string{"3"}, false, "skill", "remove")
+	removed := s.runTerminal(project, []string{"2"}, false, "skill", "remove")
 	s.requireTerminalSuccess(removed)
-	s.requireContains(removed.Stderr, "1) demo (entire plugin)")
-	s.requireContains(removed.Stderr, "2) demo/alpha")
-	s.requireContains(removed.Stderr, "3) demo/gamma")
+	s.requireNotContains(removed.Stderr, "(entire plugin)")
+	s.requireContains(removed.Stderr, "1) demo/alpha")
+	s.requireContains(removed.Stderr, "2) demo/gamma")
 	s.requireContains(removed.Stdout, "Removed skills demo/gamma")
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"alpha"}))
 	s.requireMissing(project + "/.agents/skills/gamma")
 	s.requireNotContains(string(s.readFile(project+"/.agents/c-plugin-state.json")), `"skill": "gamma"`)
-	s.requireSuccess(s.run(project, "skill", "target", "add", ".claude/skills"))
-	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
-	target := s.runTerminal(project, []string{"2"}, false, "skill", "target", "remove")
+	s.requireSuccess(s.run(project, "target", "add", ".claude/skills"))
+	s.requireSuccess(s.run(project, "target", "add", ".cursor/skills"))
+	target := s.runTerminal(project, []string{"2"}, false, "target", "remove")
 	s.requireTerminalSuccess(target)
 	s.requireContains(target.Stderr, ".claude/skills")
 	s.requireContains(target.Stderr, ".cursor/skills")
@@ -180,11 +180,11 @@ func interactiveGlobalScenario(t *testing.T, environment *cli.Environment) {
 	added := s.runTerminal(project+"/nested", []string{"all"}, false, "plugin", "add", "--global", "local:./plugin")
 	s.requireTerminalSuccess(added)
 	s.requireJSON(s.home+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"alpha", "beta", "gamma"}))
-	s.requireSuccess(s.run(project, "skill", "target", "add", "--global", ".cursor/skills"))
-	target := s.runTerminal(project+"/nested", []string{"all"}, false, "skill", "target", "remove", "--global")
+	s.requireSuccess(s.run(project, "target", "add", "--global", ".cursor/skills"))
+	target := s.runTerminal(project+"/nested", []string{"all"}, false, "target", "remove", "--global")
 	s.requireTerminalSuccess(target)
 	s.requireMissing(s.home + "/.cursor/skills/alpha")
-	removed := s.runTerminal(project+"/nested", []string{"2 4"}, false, "skill", "remove", "--global")
+	removed := s.runTerminal(project+"/nested", []string{"1 3"}, false, "skill", "remove", "--global")
 	s.requireTerminalSuccess(removed)
 	s.requireJSON(s.home+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"beta"}))
 	s.requireMissing(s.home + "/.agents/skills/alpha")
@@ -200,13 +200,13 @@ func interactiveGlobalScenario(t *testing.T, environment *cli.Environment) {
 func interactiveNoOp(s *scenarioEnvironment, project string, actions ...string) {
 	s.t.Helper()
 	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
-	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
+	s.requireSuccess(s.run(project, "target", "add", ".cursor/skills"))
 	s.remove(project+"/.agents/skills/alpha", project+"/.cursor/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
 	for _, action := range actions {
 		for _, arguments := range [][]string{
-			{"plugin", "add", "local:./plugin"}, {"skill", "remove"}, {"skill", "target", "remove"},
+			{"plugin", "add", "local:./plugin"}, {"skill", "remove"}, {"target", "remove"},
 		} {
 			result := s.runTerminal(project, []string{action}, false, arguments...)
 			s.requireTerminalSuccess(result)
@@ -232,7 +232,7 @@ func interactiveEmptyScenario(t *testing.T, environment *cli.Environment) {
 	interactiveNoOp(s, project, "")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
-	for _, arguments := range [][]string{{"skill", "remove"}, {"skill", "target", "remove"}} {
+	for _, arguments := range [][]string{{"skill", "remove"}, {"target", "remove"}} {
 		result := s.runTerminal(project, []string{"none"}, false, arguments...)
 		s.requireTerminalSuccess(result)
 		s.requireContains(result.Stdout, "No selection; no changes.")
@@ -286,18 +286,18 @@ func interactiveNoInputScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "no-input")
 	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
-	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
+	s.requireSuccess(s.run(project, "target", "add", ".cursor/skills"))
 	s.remove(project + "/.agents/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
 	for index, arguments := range [][]string{
-		{"--no-input", "plugin", "add", "local:./plugin"}, {"--no-input", "skill", "remove"}, {"--no-input", "skill", "target", "remove"},
+		{"--no-input", "plugin", "add", "local:./plugin"}, {"--no-input", "skill", "remove"}, {"--no-input", "target", "remove"},
 	} {
 		result := s.runTerminal(project, nil, false, arguments...)
 		s.requireTerminalFailure(result)
 		s.requireNotContains(result.Stderr, selectionPrompt)
-		for _, option := range [][]string{{"--all", "--none", "--skill"}, {"--plugin", "--skill"}, {"--target"}}[index] {
-			s.requireContains(result.Stdout+result.Stderr, option)
+		for _, option := range [][]string{{"--all", "--none", "--skill"}, {"--skill"}, {"--target"}}[index] {
+			s.requireContains(result.Stdout, option)
 		}
 		s.requireFile(project+"/c-plugin-lock.json", lock)
 		s.requireFile(project+"/.agents/c-plugin-state.json", state)
@@ -309,16 +309,16 @@ func interactivePipeScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
 	s, project := interactiveFixture(t, environment, "pipe")
 	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--all"))
-	s.requireSuccess(s.run(project, "skill", "target", "add", ".cursor/skills"))
+	s.requireSuccess(s.run(project, "target", "add", ".cursor/skills"))
 	s.remove(project + "/.agents/skills/alpha")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
-	for index, arguments := range [][]string{{"plugin", "add", "local:./plugin"}, {"skill", "remove"}, {"skill", "target", "remove"}} {
+	for index, arguments := range [][]string{{"plugin", "add", "local:./plugin"}, {"skill", "remove"}, {"target", "remove"}} {
 		result := s.runTerminal(project, nil, true, arguments...)
 		s.requireTerminalFailure(result)
 		s.requireNotContains(result.Stderr, selectionPrompt)
-		for _, option := range [][]string{{"--all", "--none", "--skill"}, {"--plugin", "--skill"}, {"--target"}}[index] {
-			s.requireContains(result.Stdout+result.Stderr, option)
+		for _, option := range [][]string{{"--all", "--none", "--skill"}, {"--skill"}, {"--target"}}[index] {
+			s.requireContains(result.Stdout, option)
 		}
 		if result.Unread != "unconsumed-input\n" {
 			t.Fatalf("pipe input consumed: %+v", result)

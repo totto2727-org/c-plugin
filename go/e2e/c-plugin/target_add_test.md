@@ -14,7 +14,7 @@ The relative Source link identifies the sibling Go implementation described belo
 
 | Command path | Purpose |
 | --- | --- |
-| `c-plugin skill target add` | Register a normalized additional target and synchronize it. |
+| `c-plugin target add` | Register a normalized additional target and synchronize it. |
 
 ### Arguments and options
 
@@ -35,11 +35,11 @@ The relative Source link identifies the sibling Go implementation described belo
 
 ### Execution flow
 
-1. Write the project plugin and initial lock, then run `c-plugin skill target add .cursor/skills` from `project`.
+1. Write the project plugin and initial lock, then run `c-plugin target add .cursor/skills` from `project`.
 2. Verify the lock target, both alpha symlinks, and both ownership roots; record lock/state digests.
-3. Run `c-plugin skill target add .cursor/./skills` from `project` and verify normalized duplicate no-op output and unchanged digests.
+3. Run `c-plugin target add .cursor/./skills` from `project` and verify normalized duplicate no-op output and unchanged digests.
 4. Create a separate global plugin and lock plus `project/nested`.
-5. From `project/nested`, run `c-plugin skill target add .claude/skills --global`.
+5. From `project/nested`, run `c-plugin target add .claude/skills --global`.
 6. Verify the global output, `.claude/skills` registration, primary/Claude beta links, and additional-root ownership record.
 
 ### Expected results

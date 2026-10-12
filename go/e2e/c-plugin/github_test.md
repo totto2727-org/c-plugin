@@ -5,7 +5,7 @@ Source: [github_test.go](./github_test.go)
 All scenarios use the existing Go/Testcontainers runner and `/sandbox/.local/bin/c-plugin` inside a separate disposable container.
 The hosted repository is `totto2727-org/c-plugin`.
 Scenarios explicitly select their fixture ref.
-The caller must publish the maintained `test/fixtures/github` fixtures at that ref before running these scenarios.
+The caller must publish the maintained `hs/test/fixtures/github` fixtures at that ref before running these scenarios.
 Successful installation scenarios require real public HTTPS GitHub access and Git in the container.
 They do not use local remotes, transport stubs, marketplaces, or vendor manifests.
 Positive install commands use one mandatory `github:` source operand containing the repository and optional subpath; local source operands use `local:./`.
@@ -47,15 +47,15 @@ Parser and typed-input rejections must not install hosted sources or managed lin
 1. Run `c-plugin init` and save exact lock bytes.
 2. Run `c-plugin plugin add --github totto2727-org/c-plugin --all`.
 3. Run `c-plugin skill add --local ./solo`.
-4. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --path test/fixtures/github/plugin --all`.
-5. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --local ./plugin --all`.
-6. Run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --local ./solo`.
-7. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin local:./plugin --all`.
-8. Run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo local:./solo`.
-9. Run `c-plugin plugin add local:./plugin --ref haskell/iris-port --all`.
-10. Run `c-plugin skill add local:./solo --path test/fixtures/github/solo`.
-11. Run `c-plugin plugin add --ref haskell/iris-port --all`.
-12. Run `c-plugin skill add --ref haskell/iris-port`.
+4. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --path hs/test/fixtures/github/plugin --all`.
+5. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --local ./plugin --all`.
+6. Run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --local ./solo`.
+7. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin local:./plugin --all`.
+8. Run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo local:./solo`.
+9. Run `c-plugin plugin add local:./plugin --ref test/e2e-unified-api --all`.
+10. Run `c-plugin skill add local:./solo --path hs/test/fixtures/github/solo`.
+11. Run `c-plugin plugin add --ref test/e2e-unified-api --all`.
+12. Run `c-plugin skill add --ref test/e2e-unified-api`.
 13. Run `c-plugin plugin add totto2727-org/c-plugin --all`.
 14. Run `c-plugin skill add https://github.com/totto2727-org/c-plugin`.
 15. Run `c-plugin skill add ./solo`.
@@ -67,9 +67,9 @@ Parser and typed-input rejections must not install hosted sources or managed lin
 21. Run `c-plugin skill add github:totto2727-org/c-plugin/.git`.
 22. Run `c-plugin skill add local:/tmp/solo`.
 23. Run `c-plugin skill add local:solo`.
-24. Run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --ref 'HEAD^{commit}'`, passing the ref as one argv value.
-25. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --all --none`.
-26. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --all --skill alpha`.
+24. Run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref 'HEAD^{commit}'`, passing the ref as one argv value.
+25. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --all --none`.
+26. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --all --skill alpha`.
 27. After every rejection, compare exact lock bytes and verify missing ownership, alpha, and solo paths.
 
 ### Expected results
@@ -102,25 +102,25 @@ Reject repository-root inference, collection inference, missing subdirectories, 
 | Argument or option | Purpose |
 | --- | --- |
 | `github:totto2727-org/c-plugin[/PATH]` | Use the real public repository with an explicit subpath inside the source operand. |
-| `github:totto2727-org/c-plugin-e2e-repository-that-does-not-exist/test/fixtures/github/solo` | Exercise unavailable repository failure. |
-| `--ref haskell/iris-port` | Fetch the fixture branch. |
+| `github:totto2727-org/c-plugin-e2e-repository-that-does-not-exist/hs/test/fixtures/github/solo` | Exercise unavailable repository failure. |
+| `--ref test/e2e-unified-api` | Fetch the fixture branch. |
 | `--ref c-plugin-e2e-ref-that-does-not-exist` | Exercise ref-resolution failure. |
-| Source suffix `test/fixtures/github`, `test/fixtures/github/missing`, or `test/fixtures/github/plugin` | Select a collection, missing directory, or valid root without a separate path flag. |
+| Source suffix `hs/test/fixtures/github`, `hs/test/fixtures/github/missing`, or `hs/test/fixtures/github/plugin` | Select a collection, missing directory, or valid root without a separate path flag. |
 | `--all` | Supply deterministic plugin selection. |
 
 ### Preconditions and fixtures
 
 `HOME=/tmp/c-plugin-github-source-failure/home` and the project is `$HOME/project`.
-The real fixture branch has a plugin at `test/fixtures/github/plugin` and solo at `test/fixtures/github/solo`, but no repository-root plugin or collection-level standalone manifest.
+The real fixture branch has a plugin at `hs/test/fixtures/github/plugin` and solo at `hs/test/fixtures/github/solo`, but no repository-root plugin or collection-level standalone manifest.
 
 ### Execution flow
 
 1. Run `c-plugin init` and save the exact lock bytes.
-2. Run `c-plugin plugin add github:totto2727-org/c-plugin --ref haskell/iris-port --all` without a subpath.
-3. Run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github --ref haskell/iris-port`.
-4. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/missing --ref haskell/iris-port --all`.
-5. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --ref c-plugin-e2e-ref-that-does-not-exist --all`.
-6. Run `c-plugin skill add github:totto2727-org/c-plugin-e2e-repository-that-does-not-exist/test/fixtures/github/solo`.
+2. Run `c-plugin plugin add github:totto2727-org/c-plugin --ref test/e2e-unified-api --all` without a subpath.
+3. Run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github --ref test/e2e-unified-api`.
+4. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/missing --ref test/e2e-unified-api --all`.
+5. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --ref c-plugin-e2e-ref-that-does-not-exist --all`.
+6. Run `c-plugin skill add github:totto2727-org/c-plugin-e2e-repository-that-does-not-exist/hs/test/fixtures/github/solo`.
 7. After each invocation, inspect exit status, exact lock bytes, and missing ownership and links.
 
 ### Expected results
@@ -145,16 +145,16 @@ Install a standard GitHub plugin from a nested working directory, verify pinned 
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
 | `c-plugin plugin add` | Install and configure the explicit GitHub plugin. |
-| `c-plugin skill sync` | Restore an externally removed managed link. |
-| `c-plugin skill remove` | Remove the plugin registration. |
+| `c-plugin sync` | Restore an externally removed managed link. |
+| `c-plugin plugin remove` | Remove the plugin registration. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `github:totto2727-org/c-plugin/test/fixtures/github/plugin` | Install using an explicitly typed repository and plugin subpath. |
-| `github:https://github.com/totto2727-org/c-plugin/test/fixtures/github/plugin` | Exercise prefixed HTTPS location normalization with the same explicit subpath. |
-| `--ref haskell/iris-port` | Resolve the fixture branch and preserve its requested-ref identity on re-add. |
+| `github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin` | Install using an explicitly typed repository and plugin subpath. |
+| `github:https://github.com/totto2727-org/c-plugin/hs/test/fixtures/github/plugin` | Exercise prefixed HTTPS location normalization with the same explicit subpath. |
+| `--ref test/e2e-unified-api` | Resolve the fixture branch and preserve its requested-ref identity on re-add. |
 | `--all`, `--skill beta`, `--none` | Install both skills, narrow to beta, then disable all. |
 | `--plugin github-demo` | Remove the installed plugin by manifest identity. |
 
@@ -162,19 +162,19 @@ Install a standard GitHub plugin from a nested working directory, verify pinned 
 
 `HOME=/tmp/c-plugin-github-plugin-lifecycle/home` and the project is `$HOME/project`.
 The hosted standard plugin has canonical schema, name `github-demo`, and valid alpha/beta skills.
-Its fixed cache is inside the owning project root at `.agents/c-plugin/sources/totto2727-org/c-plugin/COMMIT/tree/test/fixtures/github/plugin`.
+Its fixed cache is inside the owning project root at `.agents/c-plugin/sources/totto2727-org/c-plugin/COMMIT/tree/hs/test/fixtures/github/plugin`.
 
 ### Execution flow
 
 1. Run `c-plugin init` and create `project/nested`.
-2. From `project/nested`, run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --ref haskell/iris-port --all`.
+2. From `project/nested`, run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --ref test/e2e-unified-api --all`.
 3. Decode the lock, capture `COMMIT`, validate canonical source and origin, and verify both managed skill links.
 4. Save exact lock and ownership bytes, then delete only the alpha link.
-5. Run `c-plugin plugin add github:https://github.com/totto2727-org/c-plugin/test/fixtures/github/plugin --ref haskell/iris-port --all`.
-6. Compare exact persisted bytes and verify that alpha remains absent until `c-plugin skill sync` restores it.
-7. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --ref haskell/iris-port --skill beta` and inspect the enabled set and links.
-8. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --ref haskell/iris-port --none` and verify no enabled skills or beta link.
-9. Run `c-plugin skill remove --plugin github-demo` and inspect empty desired/ownership state and retained cached manifest.
+5. Run `c-plugin plugin add github:https://github.com/totto2727-org/c-plugin/hs/test/fixtures/github/plugin --ref test/e2e-unified-api --all`.
+6. Compare exact persisted bytes and verify that alpha remains absent until `c-plugin sync` restores it.
+7. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --ref test/e2e-unified-api --skill beta` and inspect the enabled set and links.
+8. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --ref test/e2e-unified-api --none` and verify no enabled skills or beta link.
+9. Run `c-plugin plugin remove --plugin github-demo` and inspect empty desired/ownership state and retained cached manifest.
 
 ### Expected results
 
@@ -202,7 +202,7 @@ Install a direct standalone GitHub skill without a plugin manifest, preserve an 
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
 | `c-plugin skill add` | Install the direct GitHub standalone root. |
-| `c-plugin skill sync` | Restore a missing link using cached data only. |
+| `c-plugin sync` | Restore a missing link using cached data only. |
 | `git ls-remote` | Confirm the configured offline environment cannot fetch the real hosted ref. |
 | `c-plugin skill remove` | Remove the bare standalone identity. |
 
@@ -210,8 +210,8 @@ Install a direct standalone GitHub skill without a plugin manifest, preserve an 
 
 | Argument or option | Purpose |
 | --- | --- |
-| `github:https://github.com/totto2727-org/c-plugin/test/fixtures/github/solo`, `github:totto2727-org/c-plugin/test/fixtures/github/solo` | Exercise equivalent explicitly typed locations containing the standalone subpath. |
-| `--ref haskell/iris-port` | Resolve the fixture branch and repeat the identical requested ref. |
+| `github:https://github.com/totto2727-org/c-plugin/hs/test/fixtures/github/solo`, `github:totto2727-org/c-plugin/hs/test/fixtures/github/solo` | Exercise equivalent explicitly typed locations containing the standalone subpath. |
+| `--ref test/e2e-unified-api` | Resolve the fixture branch and repeat the identical requested ref. |
 | `--skill solo` | Remove the bare standalone name. |
 
 ### Preconditions and fixtures
@@ -222,12 +222,12 @@ The scenario records the source file checksum and exact desired/ownership bytes 
 
 ### Execution flow
 
-1. Run `c-plugin init` and `c-plugin skill add github:https://github.com/totto2727-org/c-plugin/test/fixtures/github/solo --ref haskell/iris-port`.
+1. Run `c-plugin init` and `c-plugin skill add github:https://github.com/totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref test/e2e-unified-api`.
 2. Inspect origin, immutable source, solo link, and absent source plugin manifest, then save bytes and checksum.
 3. Delete only the managed solo link.
-4. Run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --ref haskell/iris-port` and compare exact state, leaving the link absent.
-5. Run `git ls-remote https://github.com/totto2727-org/c-plugin refs/heads/haskell/iris-port` with uppercase/lowercase HTTP(S)/all-proxy variables pointing to `127.0.0.1:1` and empty uppercase/lowercase no-proxy exemptions, and require a nonzero result.
-6. Run `c-plugin skill sync` with exactly the same proxy environment.
+4. Run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref test/e2e-unified-api` and compare exact state, leaving the link absent.
+5. Run `git ls-remote https://github.com/totto2727-org/c-plugin refs/heads/test/e2e-unified-api` with uppercase/lowercase HTTP(S)/all-proxy variables pointing to `127.0.0.1:1` and empty uppercase/lowercase no-proxy exemptions, and require a nonzero result.
+6. Run `c-plugin sync` with exactly the same proxy environment.
 7. Verify restored solo, unchanged desired bytes, and unchanged source checksum.
 8. Run `c-plugin skill remove --skill solo` and verify empty desired state, absent managed link, and retained snapshot checksum.
 
@@ -256,7 +256,7 @@ Keep project and global GitHub standalone snapshots, desired state, ownership st
 | --- | --- |
 | `c-plugin init` | Initialize both scopes. |
 | `c-plugin skill add` | Install project and global standalone snapshots. |
-| `c-plugin skill sync` | Reconcile only global state. |
+| `c-plugin sync` | Reconcile only global state. |
 | `c-plugin skill remove` | Remove only the global skill. |
 
 ### Arguments and options
@@ -264,8 +264,8 @@ Keep project and global GitHub standalone snapshots, desired state, ownership st
 | Argument or option | Purpose |
 | --- | --- |
 | `--global` | Select HOME-owned state and cache. |
-| `github:totto2727-org/c-plugin/test/fixtures/github/solo`, `github:https://github.com/totto2727-org/c-plugin/test/fixtures/github/solo` | Use equivalent explicitly typed standalone source operands. |
-| `--ref haskell/iris-port`, `--ref COMMIT` | Install the observed project commit in both scopes. |
+| `github:totto2727-org/c-plugin/hs/test/fixtures/github/solo`, `github:https://github.com/totto2727-org/c-plugin/hs/test/fixtures/github/solo` | Use equivalent explicitly typed standalone source operands. |
+| `--ref test/e2e-unified-api`, `--ref COMMIT` | Install the observed project commit in both scopes. |
 | `--skill solo` | Remove only the global registration. |
 
 ### Preconditions and fixtures
@@ -275,11 +275,11 @@ Both scopes start empty and install the same hosted solo identity into separate 
 
 ### Execution flow
 
-1. Run `c-plugin init`, `c-plugin init --global`, and `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --ref haskell/iris-port` from the project.
+1. Run `c-plugin init`, `c-plugin init --global`, and `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref test/e2e-unified-api` from the project.
 2. Capture `COMMIT` and exact project lock/ownership bytes, then create the nested directory.
-3. From the nested directory, run `c-plugin skill add --global github:https://github.com/totto2727-org/c-plugin/test/fixtures/github/solo --ref COMMIT`.
+3. From the nested directory, run `c-plugin skill add --global github:https://github.com/totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref COMMIT`.
 4. Compare source roots and verify the global solo link resolves into HOME's cache, not the project's cache.
-5. From the nested directory, run `c-plugin skill sync --global` and `c-plugin skill remove --global --skill solo`.
+5. From the nested directory, run `c-plugin sync --global` and `c-plugin skill remove --global --skill solo`.
 6. Verify empty global lock and absent global link, then compare exact project bytes and its intact link.
 
 ### Expected results
@@ -304,14 +304,14 @@ Reject a redirected source-cache ancestor even with force, verify snapshot prove
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
 | `c-plugin skill add` | Reject unsafe cache roots and install a valid snapshot. |
-| `c-plugin skill sync` | Preserve links when cached source integrity is unavailable. |
+| `c-plugin sync` | Preserve links when cached source integrity is unavailable. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `github:totto2727-org/c-plugin/test/fixtures/github/solo` | Select the hosted standalone fixture in one explicitly typed operand. |
-| `--ref haskell/iris-port` | Resolve the published branch. |
+| `github:totto2727-org/c-plugin/hs/test/fixtures/github/solo` | Select the hosted standalone fixture in one explicitly typed operand. |
+| `--ref test/e2e-unified-api` | Resolve the published branch. |
 | `--force` | Confirm force cannot authorize cache-root redirection. |
 
 ### Preconditions and fixtures
@@ -324,13 +324,13 @@ The authoritative snapshot root contains `origin.json` with version `1`, reposit
 ### Execution flow
 
 1. Run `c-plugin init`, create the sentinel and synthetic cache symlink, and save exact lock bytes.
-2. Run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --ref haskell/iris-port --force`.
+2. Run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref test/e2e-unified-api --force`.
 3. Verify failure, exact lock bytes, absent ownership state and outside repository directory, preserved sentinel, and unchanged cache symlink.
-4. Remove only that synthetic symlink and run `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --ref haskell/iris-port`.
+4. Remove only that synthetic symlink and run `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref test/e2e-unified-api`.
 5. Verify snapshot provenance and save exact provenance, desired state, ownership state, and source checksum.
-6. Replace only provenance repository with `foreign/repository` and run `c-plugin skill sync`.
+6. Replace only provenance repository with `foreign/repository` and run `c-plugin sync`.
 7. Compare persisted bytes, foreign provenance, solo link, and source checksum.
-8. Restore provenance, use infrastructure Git to change only the snapshot origin URL to `https://github.com/foreign/repository.git`, and run `c-plugin skill sync` again.
+8. Restore provenance, use infrastructure Git to change only the snapshot origin URL to `https://github.com/foreign/repository.git`, and run `c-plugin sync` again.
 9. Compare desired/ownership bytes, solo link, source checksum, remaining Git remote, and sentinel.
 
 ### Expected results
@@ -356,14 +356,14 @@ Apply explicit add force only to an eligible exact file collision while preservi
 | --- | --- |
 | `c-plugin init` | Initialize the project lock. |
 | `c-plugin plugin add` | Install the standard GitHub plugin with explicit force. |
-| `c-plugin skill remove` | Remove only the managed plugin links and registration. |
+| `c-plugin plugin remove` | Remove only the managed plugin links and registration. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
-| `github:totto2727-org/c-plugin/test/fixtures/github/plugin` | Select the real plugin fixture in one explicitly typed source operand. |
-| `--ref haskell/iris-port` | Resolve the published fixture branch. |
+| `github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin` | Select the real plugin fixture in one explicitly typed source operand. |
+| `--ref test/e2e-unified-api` | Resolve the published fixture branch. |
 | `--all`, `--force` | Enable both skills and force only eligible exact collisions. |
 | `--plugin github-demo` | Remove the installed plugin identity. |
 
@@ -376,9 +376,9 @@ Their synthetic contents are asserted exactly after installation and removal.
 ### Execution flow
 
 1. Run `c-plugin init` and create the three foreign collision fixtures.
-2. Run `c-plugin plugin add github:totto2727-org/c-plugin/test/fixtures/github/plugin --ref haskell/iris-port --all --force`.
+2. Run `c-plugin plugin add github:totto2727-org/c-plugin/hs/test/fixtures/github/plugin --ref test/e2e-unified-api --all --force`.
 3. Inspect GitHub origin/source, preserved real alpha directory and its file, unchanged neighbor, and replaced beta symlink.
-4. Run `c-plugin skill remove --plugin github-demo`.
+4. Run `c-plugin plugin remove --plugin github-demo`.
 5. Verify empty desired lock and missing beta while alpha/keep and neighbor remain byte-identical.
 
 ### Expected results
@@ -414,9 +414,9 @@ Verify recursive commands apply to independent descendant locks using the inspec
 
 | Argument or option | Purpose |
 | --- | --- |
-| `https://github.com/totto2727-org/c-plugin`, `refs/heads/haskell/iris-port` | Resolve the exact hosted branch with infrastructure Git. |
-| `github:https://github.com/totto2727-org/c-plugin.git/test/fixtures/github/plugin` | Exercise the mandatory source prefix, optional repository suffix, and explicit plugin subpath. |
-| `github:totto2727-org/c-plugin/test/fixtures/github/solo` | Select the standalone root with the mandatory source prefix and explicit subpath. |
+| `https://github.com/totto2727-org/c-plugin`, `refs/heads/test/e2e-unified-api` | Resolve the exact hosted branch with infrastructure Git. |
+| `github:https://github.com/totto2727-org/c-plugin.git/hs/test/fixtures/github/plugin` | Exercise the mandatory source prefix, optional repository suffix, and explicit plugin subpath. |
+| `github:totto2727-org/c-plugin/hs/test/fixtures/github/solo` | Select the standalone root with the mandatory source prefix and explicit subpath. |
 | `--ref COMMIT` | Use the observed immutable commit for both installed domains. |
 | `--all` | Enable alpha and beta. |
 | `-r` | Traverse locks below the nearest owning project lock. |
@@ -453,8 +453,8 @@ No global HOME lock exists during the missing-root and global/recursive rejectio
 
 ### Execution flow
 
-1. Run `c-plugin init` and `git ls-remote https://github.com/totto2727-org/c-plugin refs/heads/haskell/iris-port`, then validate the returned branch name and full hexadecimal `COMMIT`.
-2. Run `c-plugin plugin add github:https://github.com/totto2727-org/c-plugin.git/test/fixtures/github/plugin --ref COMMIT --all` and `c-plugin skill add github:totto2727-org/c-plugin/test/fixtures/github/solo --ref COMMIT`.
+1. Run `c-plugin init` and `git ls-remote https://github.com/totto2727-org/c-plugin refs/heads/test/e2e-unified-api`, then validate the returned branch name and full hexadecimal `COMMIT`.
+2. Run `c-plugin plugin add github:https://github.com/totto2727-org/c-plugin.git/hs/test/fixtures/github/plugin --ref COMMIT --all` and `c-plugin skill add github:totto2727-org/c-plugin/hs/test/fixtures/github/solo --ref COMMIT`.
 3. Inspect both pinned origins, save exact lock/ownership bytes and Linux stat identity, and create `project/nested`.
 4. Delete alpha, beta, and solo links, run `c-plugin sync` from the nested directory, and verify all three repaired links with unchanged lock/ownership bytes and lock identity.
 5. Delete the same three links again, run `c-plugin update` from the nested directory, and verify the same repair and non-replacement guarantees despite identical resolved commits.

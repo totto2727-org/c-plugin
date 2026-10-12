@@ -3,7 +3,7 @@ package cplugine2e
 import (
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func addScenario(t *testing.T, environment *cli.Environment) {

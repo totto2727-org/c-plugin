@@ -3,7 +3,7 @@ package cplugine2e
 import (
 	"testing"
 
-	"github.com/totto2727-org/e2e/cli"
+	"github.com/totto2727-org/e2e/go/cli"
 )
 
 func standardEnvironment(t *testing.T, environment *cli.Environment, name string, skills ...string) (*scenarioEnvironment, string) {
@@ -27,7 +27,7 @@ func standardMinimalScenario(t *testing.T, environment *cli.Environment) {
 		s.requireSymlink(project+"/.agents/skills/"+skill, project+"/plugin/skills/"+skill)
 		s.requireContains(string(s.readFile(project+"/.agents/c-plugin-state.json")), `"skill": "`+skill+`"`)
 	}
-	removed := s.run(project, "skill", "remove", "--plugin", "demo")
+	removed := s.run(project, "plugin", "remove", "--plugin", "demo")
 	s.requireSuccess(removed)
 	s.requireContains(removed.Stdout, "Removed plugins demo from "+project+"/c-plugin-lock.json:")
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)
