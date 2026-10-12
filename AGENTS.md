@@ -94,7 +94,8 @@ Keep dependency probes and temporary reports outside tracked artifacts.
 
 For Go E2E, preserve each scenario, fixture, assertion, checksum, lint setting, and task dependency unless the requested behavior requires a change.
 The caller builds `c-plugin-e2e:local` before Go tests.
-Each registered scenario receives a separate disposable container.
+Each scenario runs in an ordinary `t.Run` callback that calls `cli.NewEnvironment(t, imageName)` and receives a separate disposable container.
+The caller opts into concurrency with `t.Parallel()` before creating the environment, and Go's `-parallel` limit controls concurrency without an SDK-specific slot limit.
 The CLI under test is `/sandbox/.local/bin/c-plugin`.
 Existing `/tmp/c-plugin-v2-*` paths are synthetic compatibility fixtures, not public product names.
 
