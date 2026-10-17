@@ -15,6 +15,6 @@ run paths global raw = do
         then putStrLn ("Target " ++ relativeText target ++ " already registered in " ++ lockPath)
         else do
             let candidate = current{targets = Set.insert target (targets current)}
-            result <- persistSync lockPath candidate False
+            result <- persistSync lockPath candidate Set.empty
             reportCompletion result
             putStrLn ("Added target " ++ relativeText target ++ " to " ++ lockPath ++ ": " ++ renderSyncResult result)

@@ -222,6 +222,7 @@ lockをまたぐtransactionやrollbackは保証しません。
 - 所有stateの欠落や破損は、既存pathのcleanupやadoptionを決して許可しない。
 - 未記録の既存linkが望ましいtargetを指すという理由だけでadoptionしない。
 - 明示的add forceは、containment内の完全一致する通常ファイルまたはsymlinkの衝突だけを置換できる。
+- add forceはmanaged target内の選択されたsource identityだけに限定し、他の登録はforceなしで通常のreconciliationを行う。
 - 実ディレクトリ、特殊ファイル、隣接path、managed root外のpathを削除しない。
 - 削除されたtarget rootの古い所有entryを、安全なcleanupに使用できるよう保持する。
 - plugin sourceが利用できないときは、解決失敗を理由にlinkを削除せず保存する。

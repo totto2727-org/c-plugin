@@ -46,7 +46,7 @@ removeSelected :: FilePath -> Lock -> Set.Set RemovalChoice -> IO ()
 removeSelected lockPath current selected = do
     let removedStandalone = Set.fromList [name | RemoveStandalone name <- Set.toList selected]
         candidate = current{plugins = Map.mapMaybe (rebuild selected) (plugins current), standaloneSkills = Map.withoutKeys (standaloneSkills current) removedStandalone}
-    result <- persistSync lockPath candidate False
+    result <- persistSync lockPath candidate Set.empty
     reportCompletion result
     putStrLn (removalAction selected ++ " from " ++ lockPath ++ ": " ++ renderSyncResult result)
 
