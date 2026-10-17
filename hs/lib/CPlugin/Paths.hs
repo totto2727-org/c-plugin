@@ -135,7 +135,7 @@ discoverLocks paths global recursive
             cwd = absoluteText (cwdPath paths)
         unless (within home cwd) (notFound home)
         nearest <- findParent home cwd
-        if recursive then walk [(takeDirectory nearest, [])] else pure [nearest]
+        if recursive then sortOn (splitDirectories . takeDirectory) <$> walk [(takeDirectory nearest, [])] else pure [nearest]
   where
     notFound p = ioError (userError ("totto2727/c-plugin.LockDiscoveryError.LockFileNotFound " ++ p))
     requireLock p = do
@@ -155,7 +155,7 @@ discoverLocks paths global recursive
     walk frontier = do
         inspected <- mapConcurrentlyIO inspect frontier
         descendants <- walk (concatMap snd inspected)
-        pure (sortOn (splitDirectories . takeDirectory) (concatMap fst inspected ++ descendants))
+        pure (concatMap fst inspected ++ descendants)
     inspect (dir, inherited) = do
         localRules <- readIgnore dir
         let rules = inherited ++ [(dir, rule) | rule <- localRules]

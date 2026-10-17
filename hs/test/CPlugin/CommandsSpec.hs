@@ -3,7 +3,7 @@
 module CPlugin.CommandsSpec (spec) where
 
 import CPlugin.Commands (Command (..), runCommand, runCommandWith)
-import CPlugin.Paths (PathKind (SymbolicLink), pathKind)
+import CPlugin.Paths (PathKind (RegularFile, SymbolicLink), pathKind, relativeLinkTarget)
 import CPlugin.Reconcile (syncLoadedLock)
 import CPlugin.StateStore (readLock, writeLock)
 import CPlugin.TestSupport (inEnvironment, skillBytes, withFixture, withInteractionInput, writeFixture)
@@ -47,6 +47,18 @@ spec = do
             before <- BS.readFile (base </> "c-plugin-lock.json")
             runCommand (TargetAdd False "redirected/skills") `shouldThrow` anyIOException
             BS.readFile (base </> "c-plugin-lock.json") `shouldReturn` before
+
+    describe "add force scope" $ do
+        it "plugin add forces selected links without replacing other registered plugin or standalone collisions" $ withFixture ["alpha"] $ \base _ -> inEnvironment base $ do
+            writePlugin (base </> "added") "added" ["selected", "unselected"]
+            assertScopedForce base (base </> "added/skills/selected") (PluginAdd False "./added" (SelectItems ["selected"]) True)
+            pluginView (base </> "c-plugin-lock.json") `shouldReturn` [("added", "added", ["selected"]), ("demo", "plugin", ["alpha"])]
+            standaloneView (base </> "c-plugin-lock.json") `shouldReturn` [("neighbor", "neighbor")]
+        it "standalone add forces selected links without replacing other registered plugin or standalone collisions" $ withFixture ["alpha"] $ \base _ -> inEnvironment base $ do
+            writeFixture (base </> "selected/SKILL.md") (skillBytes "selected")
+            assertScopedForce base (base </> "selected") (SkillAdd False "./selected" True)
+            pluginView (base </> "c-plugin-lock.json") `shouldReturn` [("demo", "plugin", ["alpha"])]
+            standaloneView (base </> "c-plugin-lock.json") `shouldReturn` [("neighbor", "neighbor"), ("selected", "selected")]
 
     describe "explicit plugin selection" $ do
         it "adds only a sorted interactive subset and does not enable siblings" $ withFixture ["alpha", "beta", "gamma"] $ \base _ -> inEnvironment base $ do
@@ -573,6 +585,29 @@ assertBytesUnchanged root action = do
     action
     BS.readFile lockPath `shouldReturn` beforeLock
     BS.readFile statePath `shouldReturn` beforeState
+
+assertScopedForce :: FilePath -> FilePath -> Command -> IO ()
+assertScopedForce base selectedSource command = do
+    let roots = [base </> ".agents/skills", base </> "extra/skills"]
+        foreignRoot = base </> "foreign"
+    writeFixture (base </> "neighbor/SKILL.md") (skillBytes "neighbor")
+    writeFixture (foreignRoot </> "keep") "foreign destination must remain unchanged"
+    forM_ roots $ \root -> do
+        writeFixture (root </> "alpha") "registered plugin collision"
+        createSymbolicLink foreignRoot (root </> "neighbor")
+    runCommand (SkillAdd False "./neighbor" False)
+    runCommand (TargetAdd False "extra/skills")
+    writeFixture (head roots </> "selected") "replace selected file"
+    createSymbolicLink foreignRoot (last roots </> "selected")
+    runCommand command
+    forM_ roots $ \root -> do
+        pathKind (root </> "selected") `shouldReturn` Just SymbolicLink
+        readSymbolicLink (root </> "selected") `shouldReturn` relativeLinkTarget root selectedSource
+        pathKind (root </> "alpha") `shouldReturn` Just RegularFile
+        BS.readFile (root </> "alpha") `shouldReturn` "registered plugin collision"
+        readSymbolicLink (root </> "neighbor") `shouldReturn` foreignRoot
+        pathKind (root </> "unselected") `shouldReturn` Nothing
+    BS.readFile (foreignRoot </> "keep") `shouldReturn` "foreign destination must remain unchanged"
 
 writePlugin :: FilePath -> String -> [String] -> IO ()
 writePlugin root name skills = do

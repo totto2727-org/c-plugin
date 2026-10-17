@@ -23,6 +23,6 @@ run interaction paths global values = do
             | not (selected `Set.isSubsetOf` targets current) -> putStrLn ("No target changes for " ++ lockPath)
             | otherwise -> do
                 let candidate = current{targets = targets current Set.\\ selected}
-                result <- persistSync lockPath candidate False
+                result <- persistSync lockPath candidate Set.empty
                 reportCompletion result
                 putStrLn ("Removed targets " ++ intercalate ", " (map relativeText (Set.toAscList selected)) ++ " from " ++ lockPath ++ ": " ++ renderSyncResult result)

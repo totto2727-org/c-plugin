@@ -7,6 +7,7 @@ import CPlugin.Reconcile (renderSyncResult)
 import CPlugin.Types.GitHub (GitHubOrigin)
 import CPlugin.Types.InstalledSkill (InstalledSkill (..), makeInstalledSkillWithOrigin, sameInstalledSkillSource)
 import CPlugin.Types.Lock (Lock (..), makeLockWithSkills)
+import CPlugin.Types.Ownership (OwnershipSource (..))
 import CPlugin.Types.Path (AbsolutePath, RelativePath, absoluteText)
 import CPlugin.Types.Skill (resolvedSkillName)
 import Control.Exception (IOException, catch)
@@ -37,6 +38,10 @@ runResolved lockPath current source root origin force = do
     if candidate == current
         then putStrLn ("No skill changes for " ++ lockPath)
         else do
-            result <- persistSync lockPath candidate force
+            let forcedSources =
+                    if force
+                        then Set.singleton (StandaloneSource (installedSkillSource skill) (installedSkillName skill))
+                        else Set.empty
+            result <- persistSync lockPath candidate forcedSources
             reportCompletion result
             putStrLn ("Added skill " ++ absoluteText root ++ " to " ++ lockPath ++ ": " ++ renderSyncResult result)

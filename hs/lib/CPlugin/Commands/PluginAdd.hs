@@ -8,6 +8,7 @@ import CPlugin.Reconcile (renderSyncResult)
 import CPlugin.Types.GitHub (GitHubOrigin)
 import CPlugin.Types.Lock (Lock (..), makeLockWithSkills)
 import CPlugin.Types.Name (ItemName, itemName, nameText)
+import CPlugin.Types.Ownership (OwnershipSource (..))
 import CPlugin.Types.Path (AbsolutePath, RelativePath, absoluteText)
 import CPlugin.Types.Plugin (Plugin (..), makePluginWithOrigin, samePluginSource)
 import CPlugin.Types.PluginManifest (manifestName)
@@ -61,6 +62,10 @@ updatePlugin lockPath current root plugin force = do
     if candidate == current
         then putStrLn ("No skill changes for " ++ lockPath)
         else do
-            result <- persistSync lockPath candidate force
+            let forcedSources =
+                    if force
+                        then Set.map (OwnershipSource (pluginSource plugin) (pluginName plugin)) (enabledSkills plugin)
+                        else Set.empty
+            result <- persistSync lockPath candidate forcedSources
             reportCompletion result
             putStrLn ("Added " ++ absoluteText root ++ " to " ++ lockPath ++ ": " ++ renderSyncResult result)

@@ -259,6 +259,7 @@ Do not delete an existing lock to work around an error unless you intend to repl
 
 By default, c-plugin preserves unowned files, directories, and symlinks, even when a symlink already points to the desired skill.
 Explicit add `-f` can replace an exact contained regular file or symlink collision.
+This permission covers only the skills selected by that add operation, across the default and additional targets, not other registered plugins or standalone skills.
 It cannot delete a real directory or a neighboring path.
 
 Cleanup requires a valid ownership record, physical containment, and the exact recorded literal symlink target and resolved destination.

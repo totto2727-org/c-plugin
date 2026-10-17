@@ -106,7 +106,7 @@ updateSkills action invalid lockPath current plugin selected = do
     if candidate == current
         then putStrLn ("No skill changes for " ++ lockPath)
         else do
-            result <- persistSync lockPath candidate False
+            result <- persistSync lockPath candidate Set.empty
             reportCompletion result
             putStrLn (actionLabel action ++ " skills for " ++ nameText (pluginName plugin) ++ " in " ++ lockPath ++ ": " ++ renderSyncResult result)
 

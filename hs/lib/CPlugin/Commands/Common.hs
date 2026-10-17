@@ -1,9 +1,10 @@
 module CPlugin.Commands.Common (loadCurrent, resolveLocalSource, persistSync, reportCompletion, validateAs, failAs) where
 
 import CPlugin.Paths (RuntimePaths, absoluteIO, discoverLocks, strictRealPath, validateManagedRoot, within)
-import CPlugin.Reconcile (printWarnings, syncLoadedLock)
+import CPlugin.Reconcile (printWarnings, syncLoadedLockWithForce)
 import CPlugin.StateStore (readLock, writeLock)
 import CPlugin.Types.Lock (Lock (..))
+import CPlugin.Types.Ownership (OwnershipSource)
 import CPlugin.Types.Path (AbsolutePath, RelativePath, absoluteText, relativePath, relativeText)
 import CPlugin.Types.Sync (SyncCompletion (..), SyncResult (..))
 import Control.Monad (unless, when)
@@ -31,8 +32,8 @@ resolveLocalSource invalid lockPath raw = do
     unless (within physicalBase physicalRoot) (failAs invalid "local source resolves outside lock root")
     pure (source, root)
 
-persistSync :: FilePath -> Lock -> Bool -> IO SyncResult
-persistSync lockPath candidate force = do
+persistSync :: FilePath -> Lock -> Set.Set OwnershipSource -> IO SyncResult
+persistSync lockPath candidate forcedSources = do
     let base = takeDirectory lockPath
     roots <-
         mapM
@@ -40,7 +41,7 @@ persistSync lockPath candidate force = do
             (".agents" : ".agents/skills" : map relativeText (Set.toAscList (targets candidate)))
     mapM_ (validateManagedRoot base) roots
     writeLock lockPath candidate
-    syncLoadedLock lockPath candidate force
+    syncLoadedLockWithForce lockPath candidate forcedSources
 
 reportCompletion :: SyncResult -> IO ()
 reportCompletion result = do

@@ -205,6 +205,7 @@ There is no cross-lock transaction or rollback guarantee.
 - Missing or corrupt ownership state never authorizes cleanup or adoption of existing paths.
 - Do not adopt an existing unrecorded link merely because it points to the desired destination.
 - Explicit add force may replace only the exact contained regular file or symlink collision.
+- Limit add force to the selected source identities across managed targets; other registrations receive ordinary reconciliation without force.
 - Never delete a real directory, special file, neighboring path, or path outside a managed root.
 - Keep stale owned entries for removed target roots available for safe cleanup.
 - Preserve links for unavailable plugin sources rather than deleting them because resolution failed.
