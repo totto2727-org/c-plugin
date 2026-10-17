@@ -26,7 +26,7 @@ c-plugin target remove [--target PATH ...] [-g]
 
 | Command | Behavior |
 | --- | --- |
-| `init` | Create an empty version-3 lock exclusively. Reject an existing path without overwriting it. |
+| `init` | Create an empty lock exclusively. Reject an existing path without overwriting it. |
 | `list` | Show registered plugins and enabled plugin or standalone skills without changing state. |
 | `plugin add` | Load one explicit plugin root, set its enabled skills, save a changed lock, and reconcile links. |
 | `plugin list` | Show registered plugins, their sources, and their enabled skill sets, including disabled plugins. |
@@ -150,7 +150,7 @@ Use `plugin remove` to unregister the plugin itself.
 
 ## Interactive selection
 
-When stdin and stderr support terminal interaction, commands with no explicit selectors show a numbered list:
+When stdin and stderr support terminal interaction, commands with no explicit selectors show a keyboard-operated list:
 
 | Command | Choices |
 | --- | --- |
@@ -161,19 +161,20 @@ When stdin and stderr support terminal interaction, commands with no explicit se
 | `plugin skill disable [PLUGIN]` | One registered plugin if omitted, then valid skills in that plugin |
 | `target remove` | Registered additional targets, excluding the primary target |
 
-Enter one or more 1-based numbers separated by spaces or commas, or enter `all`.
+Use Up/Down to move and Space to toggle the focused item.
+Press `a` to select all items or `n` to clear the selection.
+Press Enter to confirm the selected set. No items are selected initially.
 For `plugin add`, the selected set replaces the enabled set rather than adding to it.
 For `plugin skill enable` and `disable`, it adds or removes only the selected skills.
-For `plugin add`, enter `none` to configure the plugin with no enabled skills.
-For `plugin skill enable` and `plugin skill disable`, `none` selects no skills and leaves the enabled set unchanged.
-For removal, `none` removes nothing.
-Invalid text, duplicate numbers, and out-of-range numbers produce an error message and another prompt before any write.
-An empty line, `q`, `cancel`, or end-of-input cancels without changing the lock, ownership state, or links.
-Ctrl-C interrupts the process before selection and does not save a candidate.
+For `plugin add`, confirming an empty selection configures the plugin with no enabled skills.
+For `plugin skill enable`, `plugin skill disable`, and removal, confirming an empty selection makes no changes.
+If a command requires exactly one plugin, selecting more than one repeats the plugin prompt before any write.
+Esc, `q`, or Ctrl-D cancels without changing the lock, ownership state, or links.
+Ctrl-C interrupts the process and does not save a candidate.
 No entries are implicitly selected for removal.
 
-The interface uses line input, not arrow-key navigation or a full-screen terminal UI.
-Prompts use stderr; command results use stdout.
+The selection interface uses Brick and restores the terminal on completion, cancellation, or interruption.
+The selection screen uses stderr; command results use stdout.
 Use explicit selectors when stderr is redirected.
 
 Iris supplies the global `--no-input` option and terminal-input detection.
@@ -235,24 +236,24 @@ This product supports the skills subset and does not claim a complete conformanc
 
 ```json
 {
-  "version": "3",
   "targets": ["extra-skills"],
-  "plugins": [
-    {"source": "./plugin", "name": "demo", "skills": ["alpha"]}
-  ],
-  "skills": [
-    {"source": "./solo", "name": "solo"}
-  ]
+  "plugins": {
+    "demo": {"pluginName": "demo", "pluginSource": "plugin", "enabledSkills": ["alpha"], "pluginOrigin": null}
+  },
+  "standaloneSkills": {
+    "solo": {"installedSkillName": "solo", "installedSkillSource": "solo", "installedSkillOrigin": null}
+  }
 }
 ```
 
-The optional top-level `skills` array stores standalone skills.
-It is omitted from canonical output when empty; existing version-3 locks without it remain valid.
-Plugin and standalone sources are stored in normalized relative form with the `./` prefix.
+Internal JSON uses Aeson's default derived representation of the Haskell types: record field names stay unchanged, maps are objects, and absent origins are `null`.
+The `plugins` and `standaloneSkills` maps use the registered name as the key.
+Each key must match the name in its record.
+Plugin and standalone sources are stored as normalized relative paths without adding the CLI's `local:` or `./` prefix.
 Additional targets use normalized relative paths.
-Version must be the exact string `"3"`.
-Invalid types, identities, duplicate entries, and unsupported versions are errors.
-There is no conversion from version 2 or other versions.
+Decoded data is validated before filesystem use; invalid paths, identities, duplicate selections, and conflicting registrations are errors.
+Legacy lock, ownership, and cache-provenance shapes are not converted or used as fallback formats.
+External `plugin.json` and `SKILL.md` retain their standard schema and frontmatter formats.
 Do not delete an existing lock to work around an error unless you intend to replace its configuration.
 
 ## Collisions and recovery

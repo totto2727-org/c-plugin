@@ -1,10 +1,11 @@
 module CPlugin.Interaction (Interaction (..), select) where
 
+import qualified CPlugin.Interaction.Brick as Brick
 import CPlugin.Types.Selection (Selection (..), SelectionRequest (..), parseSelectionResponse, validateSelectionItems)
 import Control.Monad (forM_)
 import Data.List (sortOn)
 import qualified Data.Set as Set
-import System.IO (Handle, hFlush, hGetLine, hPutStr, hPutStrLn)
+import System.IO (Handle, hFlush, hGetLine, hIsTerminalDevice, hPutStr, hPutStrLn)
 import System.IO.Error (catchIOError, isEOFError)
 
 data Interaction = NonInteractive | Interactive Handle Handle
@@ -20,11 +21,15 @@ select (Interactive input output) guidance label choices PromptSelection =
     if null ordered
         then pure Cancelled
         else do
-            hPutStrLn output guidance
-            hPutStrLn output "Blank input cancels and keeps the current configuration unchanged."
-            forM_ (zip [1 :: Int ..] ordered) $ \(index, choice) ->
-                hPutStrLn output (show index ++ ") " ++ label choice)
-            prompt input output ordered
+            terminal <- (&&) <$> hIsTerminalDevice input <*> hIsTerminalDevice output
+            if terminal
+                then Brick.select input output guidance label ordered
+                else do
+                    hPutStrLn output guidance
+                    hPutStrLn output "Blank input cancels and keeps the current configuration unchanged."
+                    forM_ (zip [1 :: Int ..] ordered) $ \(index, choice) ->
+                        hPutStrLn output (show index ++ ") " ++ label choice)
+                    prompt input output ordered
   where
     ordered = sortOn label (Set.toList (Set.fromList choices))
 

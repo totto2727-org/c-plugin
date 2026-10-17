@@ -43,10 +43,10 @@ c-plugin init
 c-plugin plugin add local:./plugins/demo
 ```
 
-The plugin command loads exactly the supplied root and offers a numbered skill selection in a terminal.
-Enter a number such as `1`, several numbers separated by spaces or commas, or `all`.
-An empty line or `q` cancels without changing the configuration.
-Repeating `plugin add` configures that plugin's enabled skill set; `none` disables all its skills.
+The plugin command loads exactly the supplied root and offers a skill selection in a terminal.
+Use Up/Down to move, Space to select skills, and Enter to confirm.
+Esc or `q` cancels without changing the configuration.
+Repeating `plugin add` replaces that plugin's enabled skill set; confirming an empty selection disables all its skills.
 The command does not scan other plugin roots.
 
 Inspect registrations and control an installed plugin:
@@ -88,7 +88,7 @@ Use `-g` for the lock and skill links in `HOME`.
 See [interactive selection](docs/cli.md#interactive-selection) for removal, cancellation, and non-terminal behavior.
 
 > [!IMPORTANT]
-> Lock version `"3"` is required. Other versions are rejected without conversion.
+> Internal lock and ownership files use the default JSON representation of their Haskell types. Legacy wire formats are not converted.
 > Existing paths are preserved unless explicit add force can safely replace an exact file or symlink collision.
 
 ## Setup

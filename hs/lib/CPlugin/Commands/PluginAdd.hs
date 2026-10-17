@@ -35,7 +35,7 @@ runResolved interaction lockPath current source root origin request force = do
         previous = case Map.lookup name (plugins current) of
             Just plugin | samePluginSource plugin identity -> enabledSkills plugin
             _ -> Set.empty
-    selection <- select interaction "Choose the replacement enabled skill set. Markers show current state. Blank/q keeps unchanged, none disables all. Use --all / --none / --skill for explicit selection." (skillLabel previous) choices requested
+    selection <- select interaction "Choose the replacement enabled skill set. Markers show current state. Esc/q keeps unchanged; confirming no items disables all. Use --all / --none / --skill for explicit selection." (skillLabel previous) choices requested
     case selection of
         Cancelled -> putStrLn "Cancelled; no changes."
         Selected selected -> do

@@ -25,7 +25,7 @@ Do not define orphan JSON instances in filesystem or command modules.
 | `CPlugin.Types.Name` | Item names and plugin/skill name validation, with JSON conversion |
 | `CPlugin.Types.Plugin` | Installed plugin selections, validation, and JSON conversion |
 | `CPlugin.Types.InstalledSkill` | Standalone skill registration, validation, and JSON conversion |
-| `CPlugin.Types.Lock` | Desired lock shape, version, uniqueness, and JSON conversion |
+| `CPlugin.Types.Lock` | Desired lock shape, uniqueness, derived JSON, and boundary validation |
 | `CPlugin.Types.Ownership` | Related ownership records, relationship validation, and JSON conversion |
 | `CPlugin.Types.PluginManifest` | Standard plugin manifest type, decoding, and validation |
 | `CPlugin.Types.Skill` | Discovered skill type and frontmatter decoding/validation |
@@ -82,20 +82,23 @@ This contract does not establish a complete conformance certification.
 [Iris 0.1.0.0](https://hackage.haskell.org/package/iris-0.1.0.0) provides `cliEnvInteractiveMode` and the global `--no-input` option.
 Its [interactive module](https://hackage.haskell.org/package/iris-0.1.0.0/docs/Iris-Cli-Interactive.html) detects terminal input; it does not provide selection widgets.
 Use that mode with a terminal check for the prompt output handle.
-The product adapter uses standard line input and stderr prompts, without raw-terminal state or a full-screen UI dependency.
+The terminal adapter uses [Brick](https://hackage.haskell.org/package/brick) with Vty input on stdin and screen output on stderr.
+Bracket terminal setup and shutdown so completion, cancellation, and asynchronous interruption restore terminal state.
 
 Keep selection types and response validation in `CPlugin.Types.Selection`.
 Keep input/output effects in `CPlugin.Interaction` and command policy in each handler.
 Pass typed plugin/skill and target values through selection; do not reconstruct identities from display labels.
-Expose deterministic handle-based interaction for tests without changing production selection policy.
+Keep the deterministic line-based handle adapter for non-terminal test inputs; the CLI still rejects missing selectors outside a terminal.
 
 Missing selectors in interactive mode request a choice for plugin configuration, remove, and target removal.
 Standalone skill add already identifies one complete item by its path and does not need a selection prompt.
 Explicit options bypass prompts.
 Non-interactive mode requires explicit selectors, or `--all` or `--none` for plugin configuration, and must not consume pipe input or silently select everything.
-An invalid response repeats the prompt before any candidate write.
-Cancellation, an empty input line, and end-of-input neither write configuration nor run synchronization.
-For plugin configuration, a confirmed empty set (`none` or `--none`) disables all skills while retaining the plugin.
+Up/Down move focus, Space toggles an item, and Enter confirms the selected set.
+The selection starts empty; `a` selects all and `n` clears it.
+Selecting multiple plugins where exactly one is required repeats the prompt before any candidate write.
+Esc, `q`, and Ctrl-D cancel without writing configuration or running synchronization.
+For plugin configuration, a confirmed empty set or `--none` disables all skills while retaining the plugin.
 An unchanged enabled set is a semantic no-op; a changed set replaces the previous set.
 Empty removal selections do not mutate state.
 Do not catch asynchronous interruption as an ordinary selection error.
@@ -120,32 +123,35 @@ The desired lock is `c-plugin-lock.json`:
 
 ```json
 {
-  "version": "3",
   "targets": [],
-  "plugins": [
-    {"source": "./plugins/demo", "name": "demo", "skills": ["alpha"]}
-  ]
+  "plugins": {
+    "demo": {"pluginName": "demo", "pluginSource": "plugins/demo", "enabledSkills": ["alpha"], "pluginOrigin": null}
+  },
+  "standaloneSkills": {}
 }
 ```
 
-Require the exact string version `"3"` and all required fields.
-The optional top-level `skills` array stores standalone `{name, source}` registrations and is omitted from canonical output when empty.
-Plugin and standalone records can carry an optional typed `origin` with exactly `kind`, `repository`, `ref`, `subpath`, and `commit` fields.
-GitHub origins require `kind: "github"`, a validated repository/ref/subpath, and a full commit ID; the source must equal the derived cache path.
-Local records omit origin and keep their existing wire shape.
+Use stock Generic-derived JSON instances for records and sums, and newtype-derived instances for primitive string/path values and map keys.
+Do not customize field names, constructor tags, or optional-field encoding.
+Keep validation separate from structural decoding, next to each type, and call validated decoders at persistence and cache boundaries.
+Check map keys against their records before rebuilding validated domain values.
+The `standaloneSkills` map stores records with `installedSkillName`, `installedSkillSource`, and `installedSkillOrigin` fields.
+Plugin and standalone origins use `githubOriginRepository`, `githubOriginRef`, `githubOriginSubpath`, and `githubOriginCommit`.
+Validate repository/ref/subpath and the full commit ID before deriving the cache path, and require that path to match the record's source.
+Local records encode their origin as `null`.
 Cache provenance stores only the repository and commit, because different requested refs and subpaths can share one immutable snapshot.
-Absent `skills` in existing version-3 locks means no standalone skills.
 Validate standalone name/source uniqueness and reject a standalone name that collides with an enabled plugin skill.
-Reject unsupported versions without conversion or mutation.
+Do not provide legacy wire conversion or fallback parsing.
 Reject duplicate sources, plugin identities, selected skills, and target entries.
 Encode normalized relative paths and deterministic ordering.
 Keep project and global locks independent.
 
-Machine-local ownership state is `.agents/c-plugin-state.json`, with version `"1"`.
+Machine-local ownership state is `.agents/c-plugin-state.json`, with an `ownershipEntries` map keyed by absolute link path.
 It is not portable desired configuration.
 Each entry records the absolute link path, managed root, exact literal symlink target, resolved target, and source/plugin/skill identity.
 The literal target must round-trip unchanged, separately from the resolved path.
-Standalone ownership uses `{kind: "standalone", path, skill}`; existing plugin source records keep their original shape.
+The `entrySource` sum uses Aeson's default `tag` and `contents` fields for `OwnershipSource` or `StandaloneSource`.
+External Agent Plugins manifests and Agent Skills frontmatter keep their standard format and validation.
 
 ## Persistence and reconciliation
 

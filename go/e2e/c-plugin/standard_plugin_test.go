@@ -25,7 +25,7 @@ func standardMinimalScenario(t *testing.T, environment *cli.Environment) {
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"alpha", "beta"}))
 	for _, skill := range []string{"alpha", "beta"} {
 		s.requireSymlink(project+"/.agents/skills/"+skill, project+"/plugin/skills/"+skill)
-		s.requireContains(string(s.readFile(project+"/.agents/c-plugin-state.json")), `"skill": "`+skill+`"`)
+		s.requireOwnershipSkill(string(s.readFile(project+"/.agents/c-plugin-state.json")), skill, true)
 	}
 	removed := s.run(project, "plugin", "remove", "--plugin", "demo")
 	s.requireSuccess(removed)
@@ -33,7 +33,7 @@ func standardMinimalScenario(t *testing.T, environment *cli.Environment) {
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)
 	s.requireMissing(project + "/.agents/skills/alpha")
 	s.requireMissing(project + "/.agents/skills/beta")
-	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
+	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"ownershipEntries":{}}`)
 }
 
 func standardEmptyScenario(t *testing.T, environment *cli.Environment) {
@@ -43,7 +43,7 @@ func standardEmptyScenario(t *testing.T, environment *cli.Environment) {
 	s.requireSuccess(result)
 	s.requireContains(result.Stdout, "Added "+project+"/plugin")
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{}))
-	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
+	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"ownershipEntries":{}}`)
 	s.requireMissing(project + "/.agents/skills/alpha")
 	s.requireMissing(project + "/.agents/skills/beta")
 }
@@ -87,7 +87,7 @@ func standardInvalidSkillScenario(t *testing.T, environment *cli.Environment) {
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{"alpha"}))
 	s.requireSymlink(project+"/.agents/skills/alpha", project+"/plugin/skills/alpha")
 	s.requireMissing(project + "/.agents/skills/beta")
-	s.requireNotContains(string(s.readFile(project+"/.agents/c-plugin-state.json")), `"skill": "beta"`)
+	s.requireOwnershipSkill(string(s.readFile(project+"/.agents/c-plugin-state.json")), "beta", false)
 }
 
 func standardShallowDiscoveryScenario(t *testing.T, environment *cli.Environment) {
@@ -133,7 +133,7 @@ func standardSkillsEscapeScenario(t *testing.T, environment *cli.Environment) {
 	s.requireSuccess(result)
 	s.requireContains(result.Stdout, "outside plugin root")
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{}))
-	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
+	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"ownershipEntries":{}}`)
 	s.requireMissing(project + "/.agents/skills/alpha")
 	s.requireDigest(outside, outsideDigest)
 }

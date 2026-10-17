@@ -40,14 +40,14 @@ Verify standard local plugin registration, same-set idempotency, removal, and fo
 3. Repeat `c-plugin plugin add local:./plugin --skill alpha --skill beta` from the same directory and verify successful no-op output, unchanged lock/state digests, and unchanged links and foreign content.
 4. Run `c-plugin skill remove --skill demo/alpha --skill demo/beta` from `project/nested`. Alpha remains foreign and beta is removed.
 5. Create beta's real directory and `keep` plus the foreign neighbor. Run `c-plugin plugin add local:./plugin --skill alpha --skill beta --force` from `project/nested`.
-6. Verify alpha replacement, beta directory contents, neighbor contents, and final ownership entries.
+6. Verify alpha replacement, beta directory contents, neighbor contents, and final ownership entries. Decode `ownershipEntries` and each tagged `entrySource.contents` tuple to check skill presence and absence.
 
 ### Expected results
 
 | Observation | Expected result |
 | --- | --- |
 | Initial add | Exit 0, stdout contains `Added <project>/plugin to <lock>: partial`. |
-| Lock | Version `3`, targets `[]`, one plugin `{source:"./plugin",name:"demo",skills:["alpha","beta"]}`. |
+| Lock | No version field, targets `[]`, standaloneSkills `{}`, and plugins keyed by demo with `{pluginName:"demo",pluginSource:"plugin",enabledSkills:["alpha","beta"],pluginOrigin:null}`. |
 | Same-set add | Exit 0 with exactly `No skill changes for <lock>\n`, unchanged lock and ownership-state digests, foreign alpha and managed beta preserved. |
 | Force | Exit 0 with the same partial action prefix. Alpha links to `<project>/plugin/skills/alpha`; beta remains a real directory containing `directory-content\n`; neighbor remains `neighbor\n`. |
 | Ownership | Initial state contains beta but not alpha. Final state contains alpha but not beta. |

@@ -30,8 +30,8 @@ func syncScenario(t *testing.T, environment *cli.Environment) {
 		}
 	}
 	state := string(scenario.readFile(statePath))
-	scenario.requireContains(state, `"skill": "alpha"`)
-	scenario.requireContains(state, `"skill": "beta"`)
+	scenario.requireOwnershipSkill(state, "alpha", true)
+	scenario.requireOwnershipSkill(state, "beta", true)
 
 	primaryRoot := project + "/.agents/skills"
 	scenario.remove(primaryRoot + "/beta")
@@ -50,5 +50,5 @@ func syncScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireRegularFile(primaryRoot + "/beta")
 	scenario.requireFile(primaryRoot+"/beta", "foreign\n")
 	scenario.requireFile(primaryRoot+"/neighbor", "neighbor\n")
-	scenario.requireJSON(statePath, `{"version":"1","entries":[]}`)
+	scenario.requireJSON(statePath, `{"ownershipEntries":{}}`)
 }

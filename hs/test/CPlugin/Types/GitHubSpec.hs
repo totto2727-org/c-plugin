@@ -4,9 +4,9 @@ module CPlugin.Types.GitHubSpec (spec) where
 
 import CPlugin.Paths (nameIO, relativeIO)
 import CPlugin.StateStore (encodePretty)
-import CPlugin.Types.GitHub (GitHubOrigin (..), GitHubSnapshot, githubCommit, githubRef, githubRepository, githubRepositoryInput, githubSource, githubSubpath, makeGitHubOrigin, repositoryURL, sameGitHubSelection, snapshotFor)
+import CPlugin.Types.GitHub (GitHubOrigin (..), decodeOrigin, decodeSnapshot, githubCommit, githubRef, githubRepository, githubRepositoryInput, githubSource, githubSubpath, makeGitHubOrigin, repositoryURL, sameGitHubSelection, snapshotFor)
 import CPlugin.Types.InstalledSkill (InstalledSkill (installedSkillOrigin), makeInstalledSkillWithOrigin)
-import CPlugin.Types.Lock (makeLockWithSkills)
+import CPlugin.Types.Lock (decodeLock, makeLockWithSkills)
 import CPlugin.Types.Path (relativeText)
 import CPlugin.Types.Plugin (Plugin (pluginOrigin), makePluginWithOrigin)
 import Control.Monad (forM_)
@@ -73,24 +73,28 @@ spec = do
             origin `shouldSatisfy` isRight
         it "encodes pinned provenance canonically and round trips" $ do
             origin <- testOrigin "main" 'a'
-            encodePretty origin `shouldBe` "{\n  \"commit\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"kind\": \"github\",\n  \"ref\": \"main\",\n  \"repository\": \"fixture-owner/fixture-repo\",\n  \"subpath\": \"package\"\n}\n"
-            eitherDecodeStrict' (encodePretty origin) `shouldBe` Right origin
+            encodePretty origin `shouldBe` "{\n  \"githubOriginCommit\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"githubOriginRef\": \"main\",\n  \"githubOriginRepository\": \"fixture-owner/fixture-repo\",\n  \"githubOriginSubpath\": \"package\"\n}\n"
+            decodeOrigin (encodePretty origin) `shouldBe` Right origin
             relativeText (githubSource origin) `shouldBe` ".agents/c-plugin/sources/fixture-owner/fixture-repo/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/tree/package"
         it "encodes snapshot provenance canonically without selection-specific ref or subpath" $ do
             origin <- testOrigin "main" 'a'
             let snapshot = snapshotFor origin
-            encodePretty snapshot `shouldBe` "{\n  \"commit\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"repository\": \"fixture-owner/fixture-repo\",\n  \"version\": \"1\"\n}\n"
-            eitherDecodeStrict' (encodePretty snapshot) `shouldBe` Right snapshot
-        forM_ ["\"2\"", "1"] $ \version ->
-            it ("rejects unsupported or numeric snapshot version wire " ++ version) $
-                (eitherDecodeStrict' (BSC.pack ("{\"version\":" ++ version ++ ",\"repository\":\"fixture-owner/fixture-repo\",\"commit\":\"" ++ replicate 40 'a' ++ "\"}")) :: Either String GitHubSnapshot) `shouldSatisfy` isLeft
+            encodePretty snapshot `shouldBe` "{\n  \"snapshotCommit\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"snapshotRepository\": \"fixture-owner/fixture-repo\"\n}\n"
+            decodeSnapshot (encodePretty snapshot) `shouldBe` Right snapshot
+        it "rejects legacy snapshot fields instead of migrating" $
+            decodeSnapshot "{\"version\":\"1\",\"repository\":\"fixture-owner/fixture-repo\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}" `shouldSatisfy` isLeft
+        forM_ ["\"main\"", "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\""] $ \commit ->
+            it ("rejects unpinned snapshot commit wire " ++ commit) $
+                decodeSnapshot (BSC.pack ("{\"snapshotRepository\":\"fixture-owner/fixture-repo\",\"snapshotCommit\":" ++ commit ++ "}")) `shouldSatisfy` isLeft
+        it "rejects unsafe snapshot repository wire" $
+            decodeSnapshot "{\"snapshotRepository\":\"https://token@github.com/owner/repo\",\"snapshotCommit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}" `shouldSatisfy` isLeft
         it "keeps logical selection identity across commit updates but not across ref changes" $ do
             before <- testOrigin "main" 'a'
             updated <- testOrigin "main" 'b'
             otherRef <- testOrigin "v1" 'a'
             sameGitHubSelection before updated `shouldBe` True
             sameGitHubSelection before otherRef `shouldBe` False
-        it "round trips a complete remote plugin and standalone version 3 lock" $ do
+        it "round trips a complete remote plugin and standalone lock" $ do
             origin <- testOrigin "main" 'a'
             name <- nameIO "remote"
             skillName <- nameIO "standalone"
@@ -99,14 +103,14 @@ spec = do
             plugin <- either (ioError . userError) pure (makePluginWithOrigin name (githubSource origin) [] (Just origin))
             skill <- either (ioError . userError) pure (makeInstalledSkillWithOrigin skillName (githubSource standaloneOrigin) (Just standaloneOrigin))
             lock <- either (ioError . userError) pure (makeLockWithSkills [] [plugin] [skill])
-            eitherDecodeStrict' (encodePretty lock) `shouldBe` Right lock
-        it "preserves existing local plugin and standalone codec shapes without origins" $ do
-            let localPlugin = eitherDecodeStrict' "{\"name\":\"demo\",\"source\":\"./plugin\",\"skills\":[]}" :: Either String Plugin
-                localSkill = eitherDecodeStrict' "{\"name\":\"alpha\",\"source\":\"./standalone\"}" :: Either String InstalledSkill
+            decodeLock (encodePretty lock) `shouldBe` Right lock
+        it "uses actual local plugin and standalone fields with explicit null origins" $ do
+            let localPlugin = eitherDecodeStrict' "{\"pluginName\":\"demo\",\"pluginSource\":\"plugin\",\"enabledSkills\":[],\"pluginOrigin\":null}" :: Either String Plugin
+                localSkill = eitherDecodeStrict' "{\"installedSkillName\":\"alpha\",\"installedSkillSource\":\"standalone\",\"installedSkillOrigin\":null}" :: Either String InstalledSkill
             fmap pluginOrigin localPlugin `shouldBe` Right Nothing
             fmap installedSkillOrigin localSkill `shouldBe` Right Nothing
-            fmap encodePretty localPlugin `shouldBe` Right "{\n  \"name\": \"demo\",\n  \"skills\": [],\n  \"source\": \"./plugin\"\n}\n"
-            fmap encodePretty localSkill `shouldBe` Right "{\n  \"name\": \"alpha\",\n  \"source\": \"./standalone\"\n}\n"
+            fmap encodePretty localPlugin `shouldBe` Right "{\n  \"enabledSkills\": [],\n  \"pluginName\": \"demo\",\n  \"pluginOrigin\": null,\n  \"pluginSource\": \"plugin\"\n}\n"
+            fmap encodePretty localSkill `shouldBe` Right "{\n  \"installedSkillName\": \"alpha\",\n  \"installedSkillOrigin\": null,\n  \"installedSkillSource\": \"standalone\"\n}\n"
         it "rejects a local source paired with remote provenance at both constructors" $ do
             origin <- testOrigin "main" 'a'
             name <- nameIO "remote"
@@ -114,17 +118,19 @@ spec = do
             makePluginWithOrigin name source [] (Just origin) `shouldSatisfy` isLeft
             makeInstalledSkillWithOrigin name source (Just origin) `shouldSatisfy` isLeft
         forM_
-            [ ("kind", "\"local\"")
-            , ("repository", "\"https://token@github.com/owner/repo\"")
-            , ("ref", "\"main^{tree}\"")
-            , ("subpath", "\"../escape\"")
-            , ("commit", "\"main\"")
+            [ ("githubOriginRepository", "\"https://token@github.com/owner/repo\"")
+            , ("githubOriginRef", "\"main^{tree}\"")
+            , ("githubOriginSubpath", "\"../escape\"")
+            , ("githubOriginCommit", "\"main\"")
             ]
             $ \(field, value) ->
                 it ("rejects unsafe origin wire " ++ field) $
-                    (eitherDecodeStrict' (originWire field value) :: Either String GitHubOrigin) `shouldSatisfy` isLeft
+                    decodeOrigin (originWire field value) `shouldSatisfy` isLeft
+        it "rejects unsafe nested provenance before deriving a source path" $ do
+            let wire = "{\"targets\":[],\"plugins\":{\"remote\":{\"pluginName\":\"remote\",\"pluginSource\":\".agents/c-plugin/sources/fixture-owner/fixture-repo/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/tree/package\",\"enabledSkills\":[],\"pluginOrigin\":" <> originWire "githubOriginSubpath" "\"../escape\"" <> "}},\"standaloneSkills\":{}}"
+            decodeLock wire `shouldSatisfy` isLeft
         it "rejects incomplete origin JSON rather than silently accepting unpinned provenance" $
-            (eitherDecodeStrict' "{}" :: Either String GitHubOrigin) `shouldSatisfy` isLeft
+            decodeOrigin "{}" `shouldSatisfy` isLeft
 
 testOrigin :: String -> Char -> IO GitHubOrigin
 testOrigin ref digit = either (ioError . userError) pure $ do
@@ -137,7 +143,7 @@ testOrigin ref digit = either (ioError . userError) pure $ do
 originWire :: String -> String -> BSC.ByteString
 originWire field replacement = BSC.pack ("{" ++ joinFields fields ++ "}")
   where
-    fields = [("kind", "\"github\""), ("repository", "\"fixture-owner/fixture-repo\""), ("ref", "\"main\""), ("subpath", "\"package\""), ("commit", "\"" ++ replicate 40 'a' ++ "\"")]
+    fields = [("githubOriginRepository", "\"fixture-owner/fixture-repo\""), ("githubOriginRef", "\"main\""), ("githubOriginSubpath", "\"package\""), ("githubOriginCommit", "\"" ++ replicate 40 'a' ++ "\"")]
     render (key, value) = "\"" ++ key ++ "\":" ++ if key == field then replacement else value
     joinFields [] = ""
     joinFields [entry] = render entry

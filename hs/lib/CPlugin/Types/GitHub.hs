@@ -1,3 +1,7 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module CPlugin.Types.GitHub (
@@ -22,24 +26,35 @@ module CPlugin.Types.GitHub (
     githubSource,
     GitHubSnapshot (..),
     snapshotFor,
+    decodeOrigin,
+    validateOrigin,
+    decodeSnapshot,
+    validateSnapshot,
 ) where
 
-import CPlugin.Internal.JSON (validated)
 import CPlugin.Types.Path (RelativePath, relativePath)
-import Control.Monad (unless, when)
+import Control.Monad (when)
 import Data.Aeson
-import qualified Data.Aeson.Key as Key
-import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.ByteString as BS
 import Data.Char (isAlphaNum, isAscii, isHexDigit, toLower)
-import Data.List (isInfixOf, isSuffixOf, sort, stripPrefix)
+import Data.List (isInfixOf, isSuffixOf, stripPrefix)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as Text
+import GHC.Generics (Generic)
 import System.FilePath ((</>))
 
-newtype GitHubRepository = GitHubRepository String deriving (Eq, Ord, Show)
-newtype GitHubRef = GitHubRef String deriving (Eq, Ord, Show)
-newtype GitHubSubpath = GitHubSubpath FilePath deriving (Eq, Ord, Show)
-newtype GitHubCommit = GitHubCommit String deriving (Eq, Ord, Show)
+newtype GitHubRepository = GitHubRepository String
+    deriving stock (Eq, Ord, Show)
+    deriving newtype (FromJSON, ToJSON, FromJSONKey, ToJSONKey)
+newtype GitHubRef = GitHubRef String
+    deriving stock (Eq, Ord, Show)
+    deriving newtype (FromJSON, ToJSON, FromJSONKey, ToJSONKey)
+newtype GitHubSubpath = GitHubSubpath FilePath
+    deriving stock (Eq, Ord, Show)
+    deriving newtype (FromJSON, ToJSON, FromJSONKey, ToJSONKey)
+newtype GitHubCommit = GitHubCommit String
+    deriving stock (Eq, Ord, Show)
+    deriving newtype (FromJSON, ToJSON, FromJSONKey, ToJSONKey)
 
 repositoryText :: GitHubRepository -> String
 repositoryText (GitHubRepository value) = value
@@ -115,7 +130,8 @@ data GitHubOrigin = GitHubOrigin
     , githubOriginSubpath :: GitHubSubpath
     , githubOriginCommit :: GitHubCommit
     }
-    deriving (Eq, Ord, Show)
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
 
 makeGitHubOrigin :: GitHubRepository -> Maybe GitHubRef -> GitHubSubpath -> GitHubCommit -> GitHubOrigin
 makeGitHubOrigin = GitHubOrigin
@@ -130,40 +146,28 @@ data GitHubSnapshot = GitHubSnapshot
     { snapshotRepository :: GitHubRepository
     , snapshotCommit :: GitHubCommit
     }
-    deriving (Eq, Show)
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
 
 snapshotFor :: GitHubOrigin -> GitHubSnapshot
 snapshotFor origin = GitHubSnapshot (githubOriginRepository origin) (githubOriginCommit origin)
 
-instance FromJSON GitHubRepository where
-    parseJSON = withText "GitHub repository" (validated . githubRepository . Text.unpack)
-instance ToJSON GitHubRepository where
-    toJSON = toJSON . repositoryText
-instance FromJSON GitHubRef where
-    parseJSON = withText "Git ref" (validated . githubRef . Text.unpack)
-instance ToJSON GitHubRef where
-    toJSON = toJSON . refText
-instance FromJSON GitHubSubpath where
-    parseJSON = withText "GitHub subpath" (validated . githubSubpath . Text.unpack)
-instance ToJSON GitHubSubpath where
-    toJSON = toJSON . subpathText
-instance FromJSON GitHubCommit where
-    parseJSON = withText "Git commit" (validated . githubCommit . Text.unpack)
-instance ToJSON GitHubCommit where
-    toJSON = toJSON . commitText
-instance FromJSON GitHubOrigin where
-    parseJSON = withObject "GitHub origin" $ \o -> do
-        unless (sort (map Key.toString (KeyMap.keys o)) == ["commit", "kind", "ref", "repository", "subpath"]) (fail "GitHub origin fields must match the exact supported shape")
-        kind <- o .: "kind"
-        unless (kind == ("github" :: String)) (fail "unsupported source origin kind")
-        GitHubOrigin <$> o .: "repository" <*> o .: "ref" <*> o .: "subpath" <*> o .: "commit"
-instance ToJSON GitHubOrigin where
-    toJSON origin = object ["kind" .= ("github" :: String), "repository" .= githubOriginRepository origin, "ref" .= githubOriginRef origin, "subpath" .= githubOriginSubpath origin, "commit" .= githubOriginCommit origin]
-instance FromJSON GitHubSnapshot where
-    parseJSON = withObject "GitHub snapshot provenance" $ \o -> do
-        unless (sort (map Key.toString (KeyMap.keys o)) == ["commit", "repository", "version"]) (fail "GitHub snapshot provenance fields must match the exact supported shape")
-        version <- o .: "version"
-        unless (version == ("1" :: String)) (fail "unsupported snapshot provenance version")
-        GitHubSnapshot <$> o .: "repository" <*> o .: "commit"
-instance ToJSON GitHubSnapshot where
-    toJSON snapshot = object ["version" .= ("1" :: String), "repository" .= snapshotRepository snapshot, "commit" .= snapshotCommit snapshot]
+decodeOrigin :: BS.ByteString -> Either String GitHubOrigin
+decodeOrigin bytes = eitherDecodeStrict' bytes >>= validateOrigin
+
+validateOrigin :: GitHubOrigin -> Either String GitHubOrigin
+validateOrigin origin =
+    GitHubOrigin
+        <$> githubRepository (repositoryText (githubOriginRepository origin))
+        <*> traverse (githubRef . refText) (githubOriginRef origin)
+        <*> githubSubpath (subpathText (githubOriginSubpath origin))
+        <*> githubCommit (commitText (githubOriginCommit origin))
+
+decodeSnapshot :: BS.ByteString -> Either String GitHubSnapshot
+decodeSnapshot bytes = eitherDecodeStrict' bytes >>= validateSnapshot
+
+validateSnapshot :: GitHubSnapshot -> Either String GitHubSnapshot
+validateSnapshot snapshot =
+    GitHubSnapshot
+        <$> githubRepository (repositoryText (snapshotRepository snapshot))
+        <*> githubCommit (commitText (snapshotCommit snapshot))

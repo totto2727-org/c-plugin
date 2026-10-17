@@ -43,8 +43,8 @@ Verify that a minimal standard manifest discovers all valid immediate skills whe
 | --- | --- |
 | Exit status | Both mutations exit 0. |
 | Output | Add contains `Added <project>/plugin to <lock>: partial`; removal contains `Removed plugins demo from <lock>:`. |
-| Lock | Add yields version `3`, targets `[]`, and plugin `{source:"./plugin",name:"demo",skills:["alpha","beta"]}`. Removal yields `{"version":"3","targets":[],"plugins":[]}`. |
-| Filesystem/state | Both links resolve to their plugin skill directories and are recorded as owned after add. Removal removes both links and yields `{"version":"1","entries":[]}`. |
+| Lock | Add yields targets `[]`, standaloneSkills `{}`, and plugins keyed by demo with `{pluginName:"demo",pluginSource:"plugin",enabledSkills:["alpha","beta"],pluginOrigin:null}`. Removal yields `{"targets":[],"plugins":{},"standaloneSkills":{}}`. |
+| Filesystem/state | Both links resolve to their plugin skill directories. Tagged `OwnershipSource` contents in `ownershipEntries` record each owned skill after add. Removal removes both links and yields `{"ownershipEntries":{}}`. |
 
 ### Notes
 
@@ -86,8 +86,8 @@ Verify that a plugin without a skills location is valid and can be registered wi
 | Observation | Expected result |
 | --- | --- |
 | Exit/output | Exit 0; output contains `Added <project>/plugin`. |
-| Lock | Version `3`, targets `[]`, plugin `{source:"./plugin",name:"demo",skills:[]}`. |
-| Filesystem/state | No alpha or beta link exists; ownership is exactly `{"version":"1","entries":[]}`. |
+| Lock | No version field, targets `[]`, standaloneSkills `{}`, and plugins keyed by demo with `{pluginName:"demo",pluginSource:"plugin",enabledSkills:[],pluginOrigin:null}`. |
+| Filesystem/state | No alpha or beta link exists; ownership is exactly `{"ownershipEntries":{}}`. |
 
 ### Notes
 
@@ -131,7 +131,7 @@ Verify every unknown top-level manifest field is reported and ignored, without r
 | Observation | Expected result |
 | --- | --- |
 | Exit/output | Exit 0; output contains `Warning: unknown top-level field: skills` and `Warning: unknown top-level field: custom`. |
-| Lock | Version `3`, targets `[]`, demo source `./plugin`, skills `["alpha"]`. |
+| Lock | No version field, targets `[]`, standaloneSkills `{}`, and plugins.demo with pluginSource `plugin`, enabledSkills `["alpha"]`, and pluginOrigin `null`. |
 | Filesystem | Alpha links to `<project>/plugin/skills/alpha`; no beta link exists. |
 
 ### Notes
@@ -219,7 +219,7 @@ Verify an invalid skill is skipped without preventing a valid sibling from loadi
 | Observation | Expected result |
 | --- | --- |
 | Exit/output | Exit 0; output contains `Warning: invalid skill beta:`. |
-| Lock/filesystem | Version `3`, demo source `./plugin`, skills `["alpha"]`; alpha links to its plugin directory and beta has no link. |
+| Lock/filesystem | Generic plugins.demo has pluginSource `plugin`, enabledSkills `["alpha"]`, and pluginOrigin `null`; alpha links to its plugin directory and beta has no link. |
 | Ownership | No beta entry is recorded. |
 
 ### Notes
@@ -263,7 +263,7 @@ Verify fixed skill discovery examines immediate directories only, not deep desce
 | Observation | Expected result |
 | --- | --- |
 | Exit | Exit 0. |
-| Lock/filesystem | Version `3`, demo source `./plugin`, skills `["alpha"]`; alpha links to its plugin directory; beta and group links are absent. |
+| Lock/filesystem | Generic plugins.demo has pluginSource `plugin`, enabledSkills `["alpha"]`, and pluginOrigin `null`; alpha links to its plugin directory; beta and group links are absent. |
 
 ### Notes
 
@@ -351,8 +351,8 @@ Verify physically escaping fixed skills location is rejected as a component, whi
 | Observation | Expected result |
 | --- | --- |
 | Exit/output | Exit 0 with output containing `outside plugin root`. |
-| Lock | Version `3`, demo source `./plugin`, skills `[]`. |
-| Safety | Alpha is not linked; outside `SKILL.md` digest is unchanged; ownership is exactly `{"version":"1","entries":[]}`. |
+| Lock | Generic plugins.demo has pluginSource `plugin`, enabledSkills `[]`, and pluginOrigin `null`. |
+| Safety | Alpha is not linked; outside `SKILL.md` digest is unchanged; ownership is exactly `{"ownershipEntries":{}}`. |
 
 ### Notes
 
@@ -396,7 +396,7 @@ Verify a physically escaping discovered `SKILL.md` is skipped while a valid imme
 | Observation | Expected result |
 | --- | --- |
 | Exit/output | Exit 0; output contains `Warning: invalid skill beta:` and `outside plugin root`. |
-| Lock/filesystem | Version `3`, demo source `./plugin`, skills `["alpha"]`; alpha links to its plugin directory and beta has no link. |
+| Lock/filesystem | Generic plugins.demo has pluginSource `plugin`, enabledSkills `["alpha"]`, and pluginOrigin `null`; alpha links to its plugin directory and beta has no link. |
 | Safety | The outside `SKILL.md` digest is unchanged. |
 
 ### Notes

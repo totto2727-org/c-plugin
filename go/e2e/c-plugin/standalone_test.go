@@ -16,7 +16,7 @@ func standaloneFixture(t *testing.T, environment *cli.Environment, name string) 
 	return s, project
 }
 
-const soloLock = `{"version":"3","targets":[],"plugins":[],"skills":[{"name":"solo","source":"./standalone/solo"}]}`
+const soloLock = `{"targets":[],"plugins":{},"standaloneSkills":{"solo":{"installedSkillName":"solo","installedSkillSource":"standalone/solo","installedSkillOrigin":null}}}`
 
 func standaloneLifecycleScenario(t *testing.T, environment *cli.Environment) {
 	t.Helper()
@@ -27,6 +27,7 @@ func standaloneLifecycleScenario(t *testing.T, environment *cli.Environment) {
 	s.requireContains(added.Stdout, "Added skill "+project+"/standalone/solo")
 	s.requireJSON(project+"/c-plugin-lock.json", soloLock)
 	s.requireSymlink(project+"/.agents/skills/solo", project+"/standalone/solo")
+	s.requireOwnershipSkill(string(s.readFile(project+"/.agents/c-plugin-state.json")), "solo", true)
 	s.requireMissing(project + "/standalone/solo/plugin.json")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
@@ -42,7 +43,7 @@ func standaloneLifecycleScenario(t *testing.T, environment *cli.Environment) {
 	removed := s.run(project+"/nested", "skill", "remove", "--skill", "solo")
 	s.requireSuccess(removed)
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)
-	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
+	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"ownershipEntries":{}}`)
 	s.requireMissing(project + "/.agents/skills/solo")
 }
 
@@ -175,7 +176,7 @@ func pluginEnabledSetScenario(t *testing.T, environment *cli.Environment) {
 	s.requireSymlink(project+"/.agents/skills/beta", project+"/plugin/skills/beta")
 	s.requireSuccess(s.run(project, "plugin", "add", "local:./plugin", "--none"))
 	s.requireJSON(project+"/c-plugin-lock.json", localLock([]string{}, "plugin", []string{}))
-	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
+	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"ownershipEntries":{}}`)
 	s.requireMissing(project + "/.agents/skills/beta")
 	lock := string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))

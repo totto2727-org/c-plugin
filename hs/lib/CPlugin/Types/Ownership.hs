@@ -1,20 +1,22 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 
-module CPlugin.Types.Ownership (OwnershipSource (..), sourcePath, sourcePlugin, sourceSkill, OwnershipEntry (..), OwnershipState (..), PreviousOwnership (..), makeOwnership, makeEntry) where
+module CPlugin.Types.Ownership (OwnershipSource (..), sourcePath, sourcePlugin, sourceSkill, OwnershipEntry (..), OwnershipState (..), PreviousOwnership (..), makeOwnership, makeEntry, decodeOwnership, validateOwnership) where
 
-import CPlugin.Internal.JSON (validated)
 import CPlugin.Internal.Validation (uniqueMap)
 import CPlugin.Types.Name
 import CPlugin.Types.Path
-import Control.Monad (unless, when)
-import Data.Aeson
-import qualified Data.Aeson.KeyMap as KeyMap
-import Data.Aeson.Types (Parser)
+import Control.Monad (unless)
+import Data.Aeson (FromJSON, ToJSON, eitherDecodeStrict')
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
+import GHC.Generics (Generic)
 import System.FilePath (takeDirectory, takeFileName)
 
 data OwnershipSource = OwnershipSource RelativePath ItemName ItemName | StandaloneSource RelativePath ItemName
-    deriving (Eq, Ord, Show)
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
 
 sourcePath :: OwnershipSource -> RelativePath
 sourcePath (OwnershipSource path _ _) = path
@@ -27,6 +29,7 @@ sourcePlugin (StandaloneSource _ _) = Nothing
 sourceSkill :: OwnershipSource -> ItemName
 sourceSkill (OwnershipSource _ _ skill) = skill
 sourceSkill (StandaloneSource _ skill) = skill
+
 data OwnershipEntry = OwnershipEntry
     { entryLink :: AbsolutePath
     , symlinkTarget :: FilePath
@@ -34,57 +37,51 @@ data OwnershipEntry = OwnershipEntry
     , managedRoot :: AbsolutePath
     , entrySource :: OwnershipSource
     }
-    deriving (Eq, Ord, Show)
+    deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
 newtype OwnershipState = OwnershipState {ownershipEntries :: Map.Map AbsolutePath OwnershipEntry}
-    deriving (Eq, Show)
+    deriving stock (Eq, Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
 data PreviousOwnership = Trusted OwnershipState | Missing | Corrupt String deriving (Eq, Show)
 
 makeEntry :: AbsolutePath -> FilePath -> AbsolutePath -> AbsolutePath -> OwnershipSource -> Either String OwnershipEntry
 makeEntry link literal resolved root source = do
-    mapM_ (pluginNameValue . nameText) (sourcePlugin source)
-    _ <- skillNameValue (nameText (sourceSkill source))
-    if takeDirectory (absoluteText link) /= absoluteText root
-        then Left "ownership link must be a direct child of managed root"
-        else
-            if takeFileName (absoluteText link) /= nameText (sourceSkill source)
-                then Left "ownership link name must match its source skill"
-                else
-                    if null literal || '\0' `elem` literal
-                        then Left "ownership symlink target must be nonempty without NUL"
-                        else Right (OwnershipEntry link literal resolved root source)
-makeOwnership :: [OwnershipEntry] -> Either String OwnershipState
-makeOwnership es = OwnershipState <$> uniqueMap "ownership links" entryLink es
+    checkedLink <- absolutePath (absoluteText link)
+    checkedResolved <- absolutePath (absoluteText resolved)
+    checkedRoot <- absolutePath (absoluteText root)
+    checkedSource <- case source of
+        OwnershipSource path plugin skill ->
+            OwnershipSource
+                <$> relativePath (relativeText path)
+                <*> pluginNameValue (nameText plugin)
+                <*> skillNameValue (nameText skill)
+        StandaloneSource path skill ->
+            StandaloneSource
+                <$> relativePath (relativeText path)
+                <*> skillNameValue (nameText skill)
+    unless (takeDirectory (absoluteText checkedLink) == absoluteText checkedRoot) (Left "ownership link must be a direct child of managed root")
+    unless (takeFileName (absoluteText checkedLink) == nameText (sourceSkill checkedSource)) (Left "ownership link name must match its source skill")
+    unless (not (null literal) && '\0' `notElem` literal) (Left "ownership symlink target must be nonempty without NUL")
+    pure (OwnershipEntry checkedLink literal checkedResolved checkedRoot checkedSource)
 
-instance FromJSON OwnershipSource where
-    parseJSON = withObject "ownership source" $ \o -> do
-        p <- o .: "path"
-        skill <- o .: "skill" >>= validated . skillNameValue
-        case KeyMap.lookup "kind" o of
-            Nothing -> do
-                plugin <- o .: "plugin" >>= validated . pluginNameValue
-                pure (OwnershipSource p plugin skill)
-            Just (String "standalone") -> do
-                when (KeyMap.member "plugin" o) (fail "standalone ownership source must not contain plugin")
-                pure (StandaloneSource p skill)
-            _ -> fail "unsupported ownership source kind"
-instance ToJSON OwnershipSource where
-    toJSON (OwnershipSource path plugin skill) = object ["path" .= path, "plugin" .= plugin, "skill" .= skill]
-    toJSON (StandaloneSource path skill) = object ["kind" .= String "standalone", "path" .= path, "skill" .= skill]
-instance FromJSON OwnershipEntry where
-    parseJSON = withObject "ownership entry" $ \o -> do
-        link <- o .: "link"
-        literal <- o .: "symlinkTarget"
-        resolved <- o .: "resolvedTarget"
-        root <- o .: "managedRoot"
-        source <- o .: "source"
-        validated (makeEntry link literal resolved root source)
-instance ToJSON OwnershipEntry where
-    toJSON e = object ["link" .= entryLink e, "symlinkTarget" .= symlinkTarget e, "resolvedTarget" .= resolvedTarget e, "managedRoot" .= managedRoot e, "source" .= entrySource e]
-instance FromJSON OwnershipState where
-    parseJSON = withObject "ownership state" $ \o -> do
-        version <- o .: "version" :: Parser String
-        unless (version == "1") (fail "unsupported ownership version")
-        entries <- o .: "entries"
-        validated (makeOwnership entries)
-instance ToJSON OwnershipState where
-    toJSON (OwnershipState es) = object ["version" .= String "1", "entries" .= Map.elems es]
+makeOwnership :: [OwnershipEntry] -> Either String OwnershipState
+makeOwnership es = do
+    checked <- traverse validateEntry es
+    OwnershipState <$> uniqueMap "ownership links" entryLink checked
+
+validateEntry :: OwnershipEntry -> Either String OwnershipEntry
+validateEntry e = makeEntry (entryLink e) (symlinkTarget e) (resolvedTarget e) (managedRoot e) (entrySource e)
+
+decodeOwnership :: BS.ByteString -> Either String OwnershipState
+decodeOwnership bytes = eitherDecodeStrict' bytes >>= validateOwnership
+
+validateOwnership :: OwnershipState -> Either String OwnershipState
+validateOwnership (OwnershipState entries) = do
+    mapM_ validateKey (Map.toList entries)
+    makeOwnership (Map.elems entries)
+  where
+    validateKey (key, entry) = do
+        checked <- absolutePath (absoluteText key)
+        unless (checked == key && key == entryLink entry) (Left "ownership map key must match its canonical link path")

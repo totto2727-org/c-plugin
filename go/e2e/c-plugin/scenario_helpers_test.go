@@ -207,15 +207,49 @@ func pluginJSON() string {
 
 func localLock(targets []string, repository string, skills []string) string {
 	value := map[string]any{
-		"version": "3",
 		"targets": targets,
-		"plugins": []any{map[string]any{
-			"source": "./" + repository, "name": "demo", "skills": skills,
+		"plugins": map[string]any{"demo": map[string]any{
+			"pluginSource": repository, "pluginName": "demo", "enabledSkills": skills, "pluginOrigin": nil,
 		}},
+		"standaloneSkills": map[string]any{},
 	}
 	encoded, err := json.Marshal(value)
 	if err != nil {
 		panic(fmt.Sprintf("encode lock fixture: %v", err))
 	}
 	return string(encoded)
+}
+
+func (s *scenarioEnvironment) requireOwnershipSkill(state string, skill string, present bool) {
+	s.t.Helper()
+	var ownership struct {
+		Entries map[string]struct {
+			Source struct {
+				Tag      string   `json:"tag"`
+				Contents []string `json:"contents"`
+			} `json:"entrySource"`
+		} `json:"ownershipEntries"`
+	}
+	if err := json.Unmarshal([]byte(state), &ownership); err != nil {
+		s.t.Fatalf("decode ownership: %v", err)
+	}
+	if ownership.Entries == nil {
+		s.t.Fatal("ownershipEntries must be an object")
+	}
+	found := false
+	for link, entry := range ownership.Entries {
+		expected := 3
+		if entry.Source.Tag == "StandaloneSource" {
+			expected = 2
+		} else if entry.Source.Tag != "OwnershipSource" {
+			s.t.Fatalf("unknown ownership source at %s: %+v", link, entry.Source)
+		}
+		if len(entry.Source.Contents) != expected {
+			s.t.Fatalf("invalid ownership source at %s: %+v", link, entry.Source)
+		}
+		found = found || entry.Source.Contents[expected-1] == skill
+	}
+	if found != present {
+		s.t.Fatalf("ownership skill %s present=%t want=%t", skill, found, present)
+	}
 }

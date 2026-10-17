@@ -67,7 +67,7 @@ func listMissingCorruptScenario(t *testing.T, environment *cli.Environment) {
 	project := home + "/project"
 	s := newScenarioEnvironment(t, environment, home)
 	s.mkdirAll(project)
-	for _, content := range []string{"", "not JSON\n", `{"version":"2","targets":[],"plugins":[]}`} {
+	for _, content := range []string{"", "not JSON\n", `{"version":"2","targets":[],"plugins":[]}`, `{"version":"3","targets":[],"plugins":[]}`} {
 		for _, root := range []string{project, home} {
 			if content != "" {
 				s.writeFile(root+"/c-plugin-lock.json", content)

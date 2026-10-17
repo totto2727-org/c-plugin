@@ -36,8 +36,8 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireRegularFile(foreign)
 	scenario.requireFile(foreign, "foreign\n")
 	state := string(scenario.readFile(statePath))
-	scenario.requireContains(state, `"skill": "beta"`)
-	scenario.requireNotContains(state, `"skill": "alpha"`)
+	scenario.requireOwnershipSkill(state, "beta", true)
+	scenario.requireOwnershipSkill(state, "alpha", false)
 	beforeRepeat := scenario.digest(lockPath)
 	stateBeforeRepeat := scenario.digest(statePath)
 
@@ -79,6 +79,6 @@ func addScenario(t *testing.T, environment *cli.Environment) {
 	scenario.requireFile(link+"/keep", "directory-content\n")
 	scenario.requireFile(neighbor, "neighbor\n")
 	state = string(scenario.readFile(statePath))
-	scenario.requireContains(state, `"skill": "alpha"`)
-	scenario.requireNotContains(state, `"skill": "beta"`)
+	scenario.requireOwnershipSkill(state, "alpha", true)
+	scenario.requireOwnershipSkill(state, "beta", false)
 }

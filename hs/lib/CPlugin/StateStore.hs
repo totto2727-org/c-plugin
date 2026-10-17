@@ -10,11 +10,11 @@ module CPlugin.StateStore (
 ) where
 
 import CPlugin.Internal.Concurrent (withIO)
-import CPlugin.Types.Lock (Lock)
-import CPlugin.Types.Ownership (OwnershipState, PreviousOwnership (..))
+import CPlugin.Types.Lock (Lock, decodeLock)
+import CPlugin.Types.Ownership (OwnershipState, PreviousOwnership (..), decodeOwnership)
 import Control.Exception (IOException, bracket, catch, mask, onException)
 import Control.Monad (unless, when)
-import Data.Aeson (ToJSON, eitherDecodeStrict')
+import Data.Aeson (ToJSON)
 import qualified Data.Aeson.Encode.Pretty as Pretty
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
@@ -40,7 +40,7 @@ encodePretty =
 readLock :: FilePath -> IO Lock
 readLock p = do
     bytes <- withIO (BS.readFile p)
-    either (ioError . userError . ("totto2727/c-plugin.StateStoreError.Decode " ++)) pure (eitherDecodeStrict' bytes)
+    either (ioError . userError . ("totto2727/c-plugin.StateStoreError.Decode " ++)) pure (decodeLock bytes)
 readOwnership :: FilePath -> IO PreviousOwnership
 readOwnership p =
     ( do
@@ -49,7 +49,7 @@ readOwnership p =
             then pure (Corrupt "ownership state must be a physical regular file")
             else do
                 bytes <- withIO (BS.readFile p)
-                pure (either Corrupt Trusted (eitherDecodeStrict' bytes))
+                pure (either Corrupt Trusted (decodeOwnership bytes))
     )
         `catch` \e ->
             if isDoesNotExistError e then pure Missing else ioError (e :: IOException)

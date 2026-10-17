@@ -81,6 +81,10 @@
                 p.aeson
                 p.aeson-pretty
                 p.async
+                p.brick
+                p.vty
+                p.vty-unix
+                p.mtl
                 p.iris
                 p.optparse-applicative
                 p.yaml

@@ -76,8 +76,8 @@ Keep the implementation small and use the existing Haskell modules rather than e
 - Keep `target` at the top level. Plugin and skill removal have separate selector domains. Disabling the final plugin skill must keep its plugin registration.
 - Lists are read-only lock views, not source refreshes or reconciliation commands. Registered-plugin enable/disable must preserve source identity and use pinned GitHub caches without fetching.
 - Keep GitHub value validation/codecs in `CPlugin.Types.GitHub` and cache/transport effects in `CPlugin.Source.GitHub`. Use explicit argv, disable hooks and interactive authentication, and never delete an existing cache entry.
-- Preserve strict lock version `"3"`, canonical output, duplicate rejection, and isolated project/global scopes. No old lock conversion is provided.
-- Preserve ownership version `"1"`, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
+- Use stock Aeson-derived JSON instances for internal records and newtypes. Do not customize field names, constructor tags, or optional-field encoding. Validate decoded values at the persistence/cache boundary, including identities, duplicate selections, and map-key relationships. No legacy wire conversion is provided.
+- Preserve canonical output, isolated project/global scopes, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
 - Missing or corrupt ownership records do not authorize deletion or adoption of existing paths.
 - Explicit add force applies only to an exact eligible contained file or symlink. It never authorizes real-directory deletion, neighbor mutation, or scope escape.
 - Record new ownership only after link creation, verification, and a successful checkpoint. Do not promise adoption across the mutation/checkpoint crash window.

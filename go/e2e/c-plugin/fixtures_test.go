@@ -1,6 +1,6 @@
 package cplugine2e
 
-const emptyLock = `{"version":"3","targets":[],"plugins":[]}`
+const emptyLock = `{"targets":[],"plugins":{},"standaloneSkills":{}}`
 
 const pluginSchema = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 

@@ -43,7 +43,7 @@ Create the project lock exclusively and reject a repeated initialization without
 | Observation | Expected result |
 | --- | --- |
 | Initial status/output | Exit 0; exactly `Created <absolute selected lock path>\n` in captured output. |
-| Lock JSON | Exactly the JSON value `{"version":"3","targets":[],"plugins":[]}`; object key ordering is not asserted by the JSON helper. |
+| Lock JSON | Exactly the JSON value `{"targets":[],"plugins":{},"standaloneSkills":{}}`; object key ordering is not asserted by the JSON helper. |
 | Scope isolation | `$PROJECT/c-plugin-lock.json` exists and `$HOME/c-plugin-lock.json` is absent. |
 | Repeated status/output | Nonzero exit; captured output contains `totto2727/c-plugin.StateStoreError.AlreadyExists`. |
 | Non-mutation | The selected lock digest is unchanged by the repeat and the opposite lock remains absent. |
@@ -93,7 +93,7 @@ Create the global lock exclusively and reject a repeated initialization without 
 | Observation | Expected result |
 | --- | --- |
 | Initial status/output | Exit 0; exactly `Created <absolute selected lock path>\n` in captured output. |
-| Lock JSON | Exactly the JSON value `{"version":"3","targets":[],"plugins":[]}`; object key ordering is not asserted by the JSON helper. |
+| Lock JSON | Exactly the JSON value `{"targets":[],"plugins":{},"standaloneSkills":{}}`; object key ordering is not asserted by the JSON helper. |
 | Scope isolation | `$HOME/c-plugin-lock.json` exists and `$PROJECT/c-plugin-lock.json` is absent. |
 | Repeated status/output | Nonzero exit; captured output contains `totto2727/c-plugin.StateStoreError.AlreadyExists`. |
 | Non-mutation | The selected lock digest is unchanged by the repeat and the opposite lock remains absent. |
