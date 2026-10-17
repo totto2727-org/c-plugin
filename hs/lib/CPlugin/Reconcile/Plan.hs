@@ -1,8 +1,9 @@
-module CPlugin.Reconcile.Plan (SyncPlan (..), planSync) where
+module CPlugin.Reconcile.Plan (SyncPlan (..), planSync, planSyncWithGit) where
 
+import CPlugin.Internal.Concurrent (concurrentlyIO, mapConcurrentlyIO)
 import CPlugin.Paths (absoluteIO, relativeLinkTarget, strictRealPath, validateManagedRoot, within)
 import CPlugin.Plugin (loadPlugin, loadStandaloneSkill)
-import CPlugin.Source.GitHub (verifyGitHub)
+import CPlugin.Source.GitHub (GitRunner, runGit, verifyGitHubSourcesWith)
 import CPlugin.Types.GitHub (GitHubOrigin, githubSource)
 import CPlugin.Types.InstalledSkill
 import CPlugin.Types.Lock
@@ -13,9 +14,10 @@ import CPlugin.Types.Plugin
 import CPlugin.Types.PluginManifest (manifestName)
 import CPlugin.Types.Skill
 import CPlugin.Types.Sync
-import Control.Exception (IOException, try)
+import Control.Exception (IOException, throwIO, try)
 import Control.Monad (forM, unless)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import System.FilePath (takeDirectory, (</>))
 
@@ -33,7 +35,10 @@ type PluginResolution = (Plugin, AbsolutePath, Either IOException ([ResolvedSkil
 type SkillResolution = (InstalledSkill, Either IOException ResolvedSkill)
 
 planSync :: FilePath -> Lock -> IO SyncPlan
-planSync lockPath lock = do
+planSync = planSyncWithGit runGit
+
+planSyncWithGit :: GitRunner -> FilePath -> Lock -> IO SyncPlan
+planSyncWithGit git lockPath lock = do
     let base = takeDirectory lockPath
         statePath = base </> ".agents/c-plugin-state.json"
     stateRoot <- absoluteIO (base </> ".agents")
@@ -43,9 +48,14 @@ planSync lockPath lock = do
             <$> mapM
                 (absoluteIO . (base </>))
                 (".agents/skills" : map relativeText (Set.toAscList (targets lock)))
-    mapM_ (validateManagedRoot base) roots
-    resolutions <- mapM (resolvePlugin base) (Map.elems (plugins lock))
-    skillResolutions <- mapM (resolveStandalone base) (Map.elems (standaloneSkills lock))
+    _ <- mapConcurrentlyIO (validateManagedRoot base) (Set.toAscList roots)
+    let origins = mapMaybe pluginOrigin (Map.elems (plugins lock)) ++ mapMaybe installedSkillOrigin (Map.elems (standaloneSkills lock))
+    verified <- verifyGitHubSourcesWith git base origins
+    let snapshots = Map.fromList (zip origins verified)
+    (resolutions, skillResolutions) <-
+        concurrentlyIO
+            (mapConcurrentlyIO (resolvePlugin snapshots base) (Map.elems (plugins lock)))
+            (mapConcurrentlyIO (resolveStandalone snapshots base) (Map.elems (standaloneSkills lock)))
     pluginEntries <- concat <$> mapM (resolutionEntries roots) resolutions
     standaloneEntries <- concat <$> mapM (standaloneResolutionEntries roots) skillResolutions
     let entries = pluginEntries ++ standaloneEntries
@@ -62,11 +72,13 @@ planSync lockPath lock = do
             , planWarnings = [PluginWarning (absoluteText root) w | (_, root, Right (_, ws)) <- resolutions, w <- ws]
             }
 
-resolvePlugin :: FilePath -> Plugin -> IO PluginResolution
-resolvePlugin base plugin = do
+type VerifiedSources = Map.Map GitHubOrigin (Either IOException AbsolutePath)
+
+resolvePlugin :: VerifiedSources -> FilePath -> Plugin -> IO PluginResolution
+resolvePlugin snapshots base plugin = do
     root <- absoluteIO (base </> relativeText (pluginSource plugin))
     result <- try $ do
-        validateSource base (pluginSource plugin) root (pluginOrigin plugin)
+        validateSource snapshots base (pluginSource plugin) root (pluginOrigin plugin)
         (manifest, skills, warnings) <- loadPlugin root
         unless (manifestName manifest == pluginName plugin) (ioError (userError "plugin name differs from lock"))
         pure (skills, warnings)
@@ -86,22 +98,24 @@ desiredEntry :: Plugin -> ResolvedSkill -> AbsolutePath -> IO OwnershipEntry
 desiredEntry plugin skill =
     desiredEntryFor (OwnershipSource (pluginSource plugin) (pluginName plugin) (resolvedSkillName skill)) skill
 
-resolveStandalone :: FilePath -> InstalledSkill -> IO SkillResolution
-resolveStandalone base installed = do
+resolveStandalone :: VerifiedSources -> FilePath -> InstalledSkill -> IO SkillResolution
+resolveStandalone snapshots base installed = do
     root <- absoluteIO (base </> relativeText (installedSkillSource installed))
     result <- try $ do
-        validateSource base (installedSkillSource installed) root (installedSkillOrigin installed)
+        validateSource snapshots base (installedSkillSource installed) root (installedSkillOrigin installed)
         skill <- loadStandaloneSkill root
         unless (resolvedSkillName skill == installedSkillName installed) (ioError (userError "skill name differs from lock"))
         pure skill
     pure (installed, result)
 
-validateSource :: FilePath -> RelativePath -> AbsolutePath -> Maybe GitHubOrigin -> IO ()
-validateSource base source root origin = case origin of
+validateSource :: VerifiedSources -> FilePath -> RelativePath -> AbsolutePath -> Maybe GitHubOrigin -> IO ()
+validateSource snapshots base source root origin = case origin of
     Nothing -> validateSourceRoot base root
     Just value -> do
         unless (source == githubSource value) (ioError (userError "source path differs from GitHub provenance"))
-        verified <- verifyGitHub base value
+        verified <- case Map.lookup value snapshots of
+            Just result -> either throwIO pure result
+            Nothing -> ioError (userError "GitHub source was not verified")
         unless (root == verified) (ioError (userError "GitHub source root differs from locked selection"))
 
 validateSourceRoot :: FilePath -> AbsolutePath -> IO ()

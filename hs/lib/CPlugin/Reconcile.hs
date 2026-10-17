@@ -1,7 +1,7 @@
-module CPlugin.Reconcile (syncLoadedLock, renderSyncResult, printWarnings) where
+module CPlugin.Reconcile (SyncPlan, planSync, planSyncWithGit, syncPlannedLock, syncLoadedLock, renderSyncResult, printWarnings) where
 
 import CPlugin.Reconcile.Mutation (desiredStep, staleStep)
-import CPlugin.Reconcile.Plan (SyncPlan (..), planSync)
+import CPlugin.Reconcile.Plan (SyncPlan (..), planSync, planSyncWithGit)
 import CPlugin.Reconcile.Report (printWarnings, renderSyncResult)
 import CPlugin.Reconcile.Session (Session, checkpoint, newSession, readNotices, readState, runSession)
 import CPlugin.Types.Lock (Lock)
@@ -13,6 +13,12 @@ import qualified Data.Map.Strict as Map
 syncLoadedLock :: FilePath -> Lock -> Bool -> IO SyncResult
 syncLoadedLock lockPath lock force = do
     plan <- planSync lockPath lock
+    syncPlannedLock plan force
+
+-- Planning is read-only and may overlap other repositories and locks. The
+-- session owns sequential mutations and their required durable checkpoints.
+syncPlannedLock :: SyncPlan -> Bool -> IO SyncResult
+syncPlannedLock plan force = do
     (session, previous) <- newSession plan
     completion <- runSession $ do
         mapM_ (desiredStep session force) (Map.elems (planDesired plan))

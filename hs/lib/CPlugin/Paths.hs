@@ -16,13 +16,14 @@ module CPlugin.Paths (
     relativeLinkTarget,
 ) where
 
+import CPlugin.Internal.Concurrent (concurrentlyIO, mapConcurrentlyIO, withIO)
 import CPlugin.Types.Name (ItemName, itemName)
 import CPlugin.Types.Ownership (OwnershipEntry (..))
 import CPlugin.Types.Path
 import Control.Exception (IOException, catch, evaluate)
-import Control.Monad (forM, unless)
+import Control.Monad (unless)
 import Data.Char (isSpace)
-import Data.List (isPrefixOf, sort, tails)
+import Data.List (isPrefixOf, sort, sortOn, tails)
 import System.Directory (canonicalizePath, createDirectoryIfMissing, getCurrentDirectory, listDirectory)
 import System.Environment (getEnv)
 import System.FilePath (joinPath, makeRelative, normalise, splitDirectories, takeDirectory, takeFileName, (</>))
@@ -134,7 +135,7 @@ discoverLocks paths global recursive
             cwd = absoluteText (cwdPath paths)
         unless (within home cwd) (notFound home)
         nearest <- findParent home cwd
-        if recursive then walk (takeDirectory nearest) [] else pure [nearest]
+        if recursive then walk [(takeDirectory nearest, [])] else pure [nearest]
   where
     notFound p = ioError (userError ("totto2727/c-plugin.LockDiscoveryError.LockFileNotFound " ++ p))
     requireLock p = do
@@ -147,28 +148,41 @@ discoverLocks paths global recursive
             then pure p
             else
                 if dir == home || takeDirectory dir == dir then notFound home else findParent home (takeDirectory dir)
-    walk dir inherited = do
+    -- Traverse one frontier at a time instead of nesting worker pools at every
+    -- directory. Sort by path components afterward to retain root-first DFS
+    -- reporting, including names whose punctuation changes string-sort order.
+    walk [] = pure []
+    walk frontier = do
+        inspected <- mapConcurrentlyIO inspect frontier
+        descendants <- walk (concatMap snd inspected)
+        pure (sortOn (splitDirectories . takeDirectory) (concatMap fst inspected ++ descendants))
+    inspect (dir, inherited) = do
         localRules <- readIgnore dir
         let rules = inherited ++ [(dir, rule) | rule <- localRules]
             localLock = dir </> "c-plugin-lock.json"
-        localKind <- pathKind localLock
-        names <- sort <$> listDirectory dir
-        descendants <- fmap concat $ forM names $ \name -> do
-            let p = dir </> name
-            kind <- pathKind p
-            if kind == Just PhysicalDirectory && name /= ".git" && not (sourceCache p) && not (ignored rules p)
-                then walk p rules
-                else pure []
-        pure ([localLock | localKind == Just RegularFile] ++ descendants)
+        (localKind, names) <- concurrentlyIO (pathKind localLock) (sort <$> withIO (listDirectory dir))
+        descendants <-
+            concat
+                <$> mapConcurrentlyIO
+                    ( \name -> do
+                        let p = dir </> name
+                        kind <- pathKind p
+                        if kind == Just PhysicalDirectory && name /= ".git" && not (sourceCache p) && not (ignored rules p)
+                            then pure [(p, rules)]
+                            else pure []
+                    )
+                    names
+        pure ([localLock | localKind == Just RegularFile], descendants)
     -- Snapshots are implementation-owned inputs, not projects. A cloned
     -- repository's own lock must never enter recursive lock discovery.
     sourceCache p = takeFileName p == "sources" && takeFileName (takeDirectory p) == "c-plugin" && takeFileName (takeDirectory (takeDirectory p)) == ".agents"
     readIgnore dir =
-        ( do
-            content <- readFile (dir </> ".gitignore")
-            _ <- evaluate (length content)
-            pure (parseIgnore (lines content))
-        )
+        withIO
+            ( do
+                content <- readFile (dir </> ".gitignore")
+                _ <- evaluate (length content)
+                pure (parseIgnore (lines content))
+            )
             `catch` ignoreReadFailure
     ignoreReadFailure :: IOException -> IO [String]
     ignoreReadFailure _ = pure []

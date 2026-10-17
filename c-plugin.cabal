@@ -39,7 +39,9 @@ common settings
 library
   import: settings
   hs-source-dirs: hs/lib
-  build-depends: process >=1.6 && <1.7
+  build-depends:
+      process >=1.6 && <1.7
+    , async >=2.2 && <2.3
   exposed-modules:
       CPlugin.Types
       CPlugin.Types.Path
@@ -86,8 +88,10 @@ library
       CPlugin.Commands.TargetAdd
       CPlugin.Commands.TargetRemove
       CPlugin.Commands.Common
+      CPlugin.Commands.Batch
       CPlugin.Internal.Validation
       CPlugin.Internal.JSON
+      CPlugin.Internal.Concurrent
 
 executable c-plugin
   import: settings
@@ -104,6 +108,7 @@ executable c-plugin
 
 test-suite product-tests
   import: settings
+  ghc-options: -threaded -rtsopts
   type: exitcode-stdio-1.0
   hs-source-dirs: hs/test
   main-is: Spec.hs
@@ -121,7 +126,9 @@ test-suite product-tests
       CPlugin.ReconcileSpec
       CPlugin.CommandsSpec
       CPlugin.TestSupport
+      CPlugin.ConcurrencySpec
   build-depends:
       c-plugin
     , hspec >=2.11 && <2.12
     , temporary >=1.3 && <1.4
+    , async >=2.2 && <2.3

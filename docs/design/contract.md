@@ -176,6 +176,28 @@ Stop on checkpoint failure.
 Atomic replacement does not eliminate the crash window between a filesystem mutation and its ownership checkpoint.
 Do not promise automatic recovery or ownership adoption across that window.
 
+## Concurrent IO
+
+Independent repository and filesystem IO runs concurrently through ordered worker pools with at most eight workers per traversal.
+A process-wide eight-slot gate bounds active Git processes and skill, lock, and ignore-file reads, including nested traversals.
+Only leaf effects hold a slot; an operation must not hold a slot while it waits for child work.
+Worker failure or asynchronous interruption cancels and joins its dependent workers before control returns.
+
+`update` fetches each repository and requested ref once per lock, sharing the verified snapshot across plugin and standalone subpaths.
+Offline planning verifies each repository and pinned commit once per lock, then validates each selected subpath separately.
+Invalid snapshot contents make its selections unavailable; an invalid subpath does not make valid siblings unavailable.
+Concurrent publishers can reuse only an existing, fully verified snapshot with the exact repository and commit.
+They never remove an existing cache entry.
+
+Recursive commands prepare and apply locks with disjoint root directories concurrently.
+Ancestor and descendant roots execute in discovery order, including their reads: an ancestor can change a descendant's selected source or target.
+Within each lock, link mutations and their ownership checkpoints remain sequential.
+Reporting and collision resolution retain deterministic discovery and identity order, not completion order.
+An ordinary failure does not interrupt another independent lock halfway through its checkpoints.
+All locks in the current disjoint wave finish, including work queued behind the worker limit, before the first failure is reported.
+No later wave starts after that failure.
+There is no cross-lock transaction or rollback guarantee.
+
 ## Safety rules
 
 - Delete or replace an owned link only when its filesystem kind, literal target, resolved target, and containment still match its record.

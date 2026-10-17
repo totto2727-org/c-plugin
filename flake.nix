@@ -80,6 +80,7 @@
               (h.ghcWithPackages (p: [
                 p.aeson
                 p.aeson-pretty
+                p.async
                 p.iris
                 p.optparse-applicative
                 p.yaml

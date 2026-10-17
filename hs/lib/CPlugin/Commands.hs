@@ -53,7 +53,7 @@ runCommandWithGit git interaction command = do
     paths <- runtimePaths
     case command of
         Init global -> Init.run paths global
-        Sync global recursive -> Sync.run paths global recursive
+        Sync global recursive -> Sync.runWithGit git paths global recursive
         Update global recursive -> Update.runWithGit git paths global recursive
         List global -> List.run paths global
         PluginList global -> PluginList.run paths global

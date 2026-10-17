@@ -1,16 +1,17 @@
-module CPlugin.Commands.Sync (run) where
+module CPlugin.Commands.Sync (runWithGit) where
 
+import CPlugin.Commands.Batch (runPreparedLocks)
 import CPlugin.Commands.Common (reportCompletion)
 import CPlugin.Paths (RuntimePaths, discoverLocks)
-import CPlugin.Reconcile (renderSyncResult, syncLoadedLock)
+import CPlugin.Reconcile (planSyncWithGit, renderSyncResult, syncPlannedLock)
+import CPlugin.Source.GitHub (GitRunner)
 import CPlugin.StateStore (readLock)
-import Control.Monad (forM_)
 
-run :: RuntimePaths -> Bool -> Bool -> IO ()
-run paths global recursive = do
+runWithGit :: GitRunner -> RuntimePaths -> Bool -> Bool -> IO ()
+runWithGit git paths global recursive = do
     lockPaths <- discoverLocks paths global recursive
-    forM_ lockPaths $ \lockPath -> do
-        lock <- readLock lockPath
-        result <- syncLoadedLock lockPath lock False
+    runPreparedLocks lockPaths prepare (\_ plan -> syncPlannedLock plan False) $ \lockPath result -> do
         reportCompletion result
         putStrLn ("Synced " ++ lockPath ++ ": " ++ renderSyncResult result)
+  where
+    prepare lockPath = readLock lockPath >>= planSyncWithGit git lockPath

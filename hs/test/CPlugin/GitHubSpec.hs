@@ -317,19 +317,18 @@ spec = do
             readSymbolicLink (base </> ".agents/skills/alpha") >>= (`shouldSatisfy` (/= oldPluginLink))
             readSymbolicLink (base </> ".agents/skills/standalone") >>= (`shouldSatisfy` (/= oldStandaloneLink))
             pathKind (base </> ".agents/skills/beta") `shouldReturn` Nothing
-        it "does not write a partial candidate when the second domain refresh fails" $ withGitFixture $ \base repository _ _ -> do
+        it "does not write a partial candidate when the shared domain fetch fails" $ withGitFixture $ \base repository _ _ -> do
             registerRemotePair repository
             _ <- advanceFixture repository
             fetches <- newIORef (0 :: Int)
-            let failSecond network directory arguments = do
+            let failShared network directory arguments = do
                     if network && "fetch" `elem` arguments
                         then do
                             modifyIORef' fetches (+ 1)
-                            count <- readIORef fetches
-                            if count == 2 then ioError (userError "synthetic second-domain refresh failure") else syntheticTransport repository network directory arguments
+                            ioError (userError "synthetic shared-domain refresh failure")
                         else syntheticTransport repository network directory arguments
-            assertStateUnchanged base $ runCommandWithGit failSecond NonInteractive (Update False False) `shouldThrow` anyIOException
-            readIORef fetches `shouldReturn` 2
+            assertStateUnchanged base $ runCommandWithGit failShared NonInteractive (Update False False) `shouldThrow` anyIOException
+            readIORef fetches `shouldReturn` 1
         forM_ ["plugin rename", "missing enabled skill", "standalone rename"] $ \change ->
             it ("rejects " ++ change ++ " during update without mutating the owning lock or links") $ withGitFixture $ \base repository _ _ -> do
                 registerRemotePair repository

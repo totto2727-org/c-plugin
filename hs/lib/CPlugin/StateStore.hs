@@ -9,6 +9,7 @@ module CPlugin.StateStore (
     encodePretty,
 ) where
 
+import CPlugin.Internal.Concurrent (withIO)
 import CPlugin.Types.Lock (Lock)
 import CPlugin.Types.Ownership (OwnershipState, PreviousOwnership (..))
 import Control.Exception (IOException, bracket, catch, mask, onException)
@@ -38,7 +39,7 @@ encodePretty =
 
 readLock :: FilePath -> IO Lock
 readLock p = do
-    bytes <- BS.readFile p
+    bytes <- withIO (BS.readFile p)
     either (ioError . userError . ("totto2727/c-plugin.StateStoreError.Decode " ++)) pure (eitherDecodeStrict' bytes)
 readOwnership :: FilePath -> IO PreviousOwnership
 readOwnership p =
@@ -47,7 +48,7 @@ readOwnership p =
         if not (isRegularFile status)
             then pure (Corrupt "ownership state must be a physical regular file")
             else do
-                bytes <- BS.readFile p
+                bytes <- withIO (BS.readFile p)
                 pure (either Corrupt Trusted (eitherDecodeStrict' bytes))
     )
         `catch` \e ->

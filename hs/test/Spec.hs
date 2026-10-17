@@ -2,6 +2,7 @@ module Main (main) where
 
 import qualified CPlugin.CodecSpec as CodecSpec
 import qualified CPlugin.CommandsSpec as CommandsSpec
+import qualified CPlugin.ConcurrencySpec as ConcurrencySpec
 import qualified CPlugin.GitHubSpec as GitHubSpec
 import qualified CPlugin.InteractionSpec as InteractionSpec
 import qualified CPlugin.PathsSpec as PathsSpec
@@ -24,5 +25,6 @@ main = hspec $ do
     InteractionSpec.spec
     GitHubTypesSpec.spec
     GitHubSpec.spec
+    ConcurrencySpec.spec
     PathsSpec.spec
     SourceSpec.spec

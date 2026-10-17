@@ -192,6 +192,29 @@ checkpoint失敗時は停止します。
 atomicな置換でも、filesystem mutationと所有checkpointの間のcrash windowはなくなりません。
 このwindowをまたぐ自動復旧や所有権adoptionを保証しません。
 
+## 並列I/O
+
+独立したリポジトリとファイルシステムのI/Oは、各走査で最大8ワーカーの順序付きプールを使って並列実行します。
+ネストした走査も含め、実行中のGitプロセスとskill・lock・ignoreファイルの読み取りはプロセス全体で最大8件に制限します。
+スロットを保持するのは末端のI/Oだけで、子処理の完了を待つ間は保持しません。
+ワーカーの失敗や非同期割込みでは、依存ワーカーをキャンセルして終了を待ってから制御を戻します。
+
+`update`はlockごとの同じリポジトリと要求refを1回だけ取得し、検証済みsnapshotをpluginと単体skillのsubpathで共有します。
+オフラインの計画はlockごとの同じリポジトリと固定commitを1回だけ検証し、選択したsubpathは別々に検証します。
+snapshotの破損はその選択全体を利用不可にしますが、無効なsubpathは正常な兄弟の選択を利用不可にしません。
+同時にsnapshotを公開する処理は、リポジトリとcommitが一致し、完全な検証に成功した既存snapshotだけを再利用できます。
+既存のcache entryは削除しません。
+
+再帰コマンドは、互いに独立したlock rootの準備と反映を並列実行します。
+祖先と子孫のrootは、読み取りも含めて探索順で実行します。
+祖先の変更によって、子孫が選択するsourceやtargetが変化する場合があるためです。
+同じlock内のリンク変更とownership checkpointは逐次実行します。
+報告と衝突解決の順序は完了順ではなく、探索順と識別子の順序で固定します。
+通常の失敗が発生しても、独立した別lockをcheckpointの途中で中断しません。
+最初の失敗を報告する前に、ワーカー数の上限によって待機中の処理も含め、現在の独立した実行waveの全lockを完了させます。
+失敗後に次の実行waveは開始しません。
+lockをまたぐtransactionやrollbackは保証しません。
+
 ## 安全規則
 
 - filesystem kind、literal target、resolved target、containmentが記録と一致する場合だけ、所有linkを削除または置換する。

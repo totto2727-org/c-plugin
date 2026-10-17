@@ -1,11 +1,12 @@
 module CPlugin.Plugin (loadPlugin, loadStandaloneSkill) where
 
+import CPlugin.Internal.Concurrent (mapConcurrentlyIO, withIO)
 import CPlugin.Paths (absoluteIO, pathKind, strictRealPath, within)
 import CPlugin.Types.Path (AbsolutePath, absoluteText)
 import CPlugin.Types.PluginManifest
 import CPlugin.Types.Skill
 import Control.Exception (IOException, try)
-import Control.Monad (forM, unless)
+import Control.Monad (unless)
 import qualified Data.ByteString as BS
 import Data.List (sort)
 import System.Directory (listDirectory)
@@ -25,7 +26,7 @@ loadStandaloneSkill root = do
     unless (within physicalRoot physicalMarker) (ioError (userError "SKILL.md resolves outside skill root"))
     markerStatus <- getFileStatus marker
     unless (isRegularFile markerStatus) (ioError (userError "SKILL.md must resolve to a regular file"))
-    name <- BS.readFile marker >>= either (ioError . userError) pure . decodeSkill (takeFileName rootText)
+    name <- withIO (BS.readFile marker) >>= either (ioError . userError) pure . decodeSkill (takeFileName rootText)
     physical <- absoluteIO physicalRoot
     pure (ResolvedSkill name physical)
 
@@ -43,7 +44,7 @@ loadPlugin root = do
     unless (within physicalRoot manifestPhysical) (ioError (userError "plugin.json resolves outside plugin root"))
     manifestStatus <- getFileStatus manifestPath
     unless (isRegularFile manifestStatus) (ioError (userError "plugin.json must resolve to a regular file"))
-    manifest <- BS.readFile manifestPath >>= either (ioError . userError) pure . decodeManifest
+    manifest <- withIO (BS.readFile manifestPath) >>= either (ioError . userError) pure . decodeManifest
     let skillsRoot = rootText </> "skills"
     kind <- pathKind skillsRoot
     case kind of
@@ -62,12 +63,16 @@ loadPlugin root = do
             case component of
                 Left e -> pure (manifest, [], manifestWarnings manifest ++ ["invalid skills component: " ++ show e])
                 Right names -> do
-                    candidates <- forM names $ \name -> do
-                        result <- try (readSkill physicalRoot skillsRoot name) :: IO (Either IOException (Maybe ResolvedSkill))
-                        pure $ case result of
-                            Left e -> ([], ["invalid skill " ++ name ++ ": " ++ show e])
-                            Right Nothing -> ([], [])
-                            Right (Just skill) -> ([skill], [])
+                    candidates <-
+                        mapConcurrentlyIO
+                            ( \name -> do
+                                result <- try (readSkill physicalRoot skillsRoot name) :: IO (Either IOException (Maybe ResolvedSkill))
+                                pure $ case result of
+                                    Left e -> ([], ["invalid skill " ++ name ++ ": " ++ show e])
+                                    Right Nothing -> ([], [])
+                                    Right (Just skill) -> ([skill], [])
+                            )
+                            names
                     pure (manifest, concatMap fst candidates, manifestWarnings manifest ++ concatMap snd candidates)
 
 readSkill :: FilePath -> FilePath -> String -> IO (Maybe ResolvedSkill)
@@ -90,6 +95,6 @@ readSkill physicalRoot skillsRoot name = do
                     if not (isRegularFile markerStatus)
                         then pure Nothing
                         else do
-                            n <- BS.readFile marker >>= either (ioError . userError) pure . decodeSkill name
+                            n <- withIO (BS.readFile marker) >>= either (ioError . userError) pure . decodeSkill name
                             resolved <- absoluteIO physicalDirectory
                             pure (Just (ResolvedSkill n resolved))
