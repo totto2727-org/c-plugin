@@ -63,9 +63,9 @@ spec = describe "historical recursive directory discovery parity" $ do
             createDirectoryIfMissing True (base </> "work/deep")
             withCurrentDirectory (base </> "work/deep") $ assertDiscovered base ["child"]
     it "preserves owning-lock-first sorted depth-first traversal order" $
-        withDiscovery "c-plugin-lock.json\n" ["bbb", "aaa/deeper", "aaa"] $ \base -> do
+        withDiscovery "c-plugin-lock.json\n" ["bbb", "aaa/deeper", "aaa", "aaa-sibling"] $ \base -> do
             paths <- runtimePaths
-            discoverLocks paths False True `shouldReturn` [base </> "c-plugin-lock.json", base </> "aaa/c-plugin-lock.json", base </> "aaa/deeper/c-plugin-lock.json", base </> "bbb/c-plugin-lock.json"]
+            discoverLocks paths False True `shouldReturn` [base </> "c-plugin-lock.json", base </> "aaa/c-plugin-lock.json", base </> "aaa/deeper/c-plugin-lock.json", base </> "aaa-sibling/c-plugin-lock.json", base </> "bbb/c-plugin-lock.json"]
     it "preserves historical literal equality before star wildcard retry" $
         withDiscovery "*a/\n" ["*ba", "ba", "*a"] $
             \base -> assertDiscovered base ["*ba"]
