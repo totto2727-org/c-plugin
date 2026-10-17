@@ -51,7 +51,7 @@ filesystemやcommandモジュールにorphan JSON instanceを定義しません�
 | `CPlugin.Types.Name` | 識別子の型、plugin/skill名の検証、JSON変換 |
 | `CPlugin.Types.Plugin` | インストール対象pluginの型、選択の検証、JSON変換 |
 | `CPlugin.Types.InstalledSkill` | 単独skill登録の型、検証、JSON変換 |
-| `CPlugin.Types.Lock` | 望ましい状態の型、versionと重複の検証、JSON変換 |
+| `CPlugin.Types.Lock` | 望ましい状態の型、重複の検証、標準導出JSON、境界検証 |
 | `CPlugin.Types.Ownership` | 関連する所有権記録の型、関係の検証、JSON変換 |
 | `CPlugin.Types.PluginManifest` | 標準plugin manifestの型、デコード、検証 |
 | `CPlugin.Types.Skill` | 探索済みskillの型、frontmatterのデコードと検証 |
@@ -106,20 +106,23 @@ skillは`skills/`の直下の子ディレクトリからだけ探索します。
 [Iris 0.1.0.0](https://hackage.haskell.org/package/iris-0.1.0.0)は`cliEnvInteractiveMode`とglobal optionの`--no-input`を提供します。
 [interactive module](https://hackage.haskell.org/package/iris-0.1.0.0/docs/Iris-Cli-Interactive.html)はterminal入力を判定しますが、選択widgetは提供しません。
 このmodeと、prompt出力handleのterminal判定を組み合わせて使用します。
-製品adapterは標準の行入力とstderr promptを使い、raw terminal状態やfull-screen UI依存を追加しません。
+terminal adapterは[Brick](https://hackage.haskell.org/package/brick)を使い、stdinから入力してstderrに画面を表示します。
+terminalの初期化と終了をbracketで管理し、確定、cancel、非同期割り込みのいずれでもterminal状態を復元します。
 
 選択型と応答検証は`CPlugin.Types.Selection`に置きます。
 入出力effectは`CPlugin.Interaction`、command policyは各handlerに置きます。
 選択では型付きplugin/skillとtarget値を渡し、表示labelからidentityを再構築しません。
-productionの選択policyを変更せず、testへ決定的なhandleベースの対話を提供します。
+非terminalのtest入力には決定的な行入力adapterを維持します。CLIは引き続き非terminalでselectorの省略を拒否します。
 
 対話modeでselectorが省略された場合、plugin設定、remove、target removeは選択を求めます。
 単独skill addはpathだけで1項目を指定するため、選択promptを必要としません。
 明示optionはpromptを省略します。
 非対話modeでは明示selector、またはplugin設定の`--all`か`--none`を必須とし、pipe入力を消費したり暗黙に全選択したりしません。
-無効な応答ではcandidateを書き込む前にpromptを繰り返します。
-cancel、空の入力行、入力終了では、設定を書き込まず同期もしません。
-plugin設定で確認した空集合（`none`または`--none`）は、plugin登録を維持したまま全skillを無効にします。
+Up/Downでfocusを移動し、Spaceで項目を切り替え、Enterで選択集合を確定します。
+初期選択は空とし、`a`で全選択、`n`で選択を解除します。
+1つのpluginが必要な場面で複数を選択した場合、candidateを書き込む前にpromptを繰り返します。
+Esc、`q`、Ctrl-Dでは、設定を書き込まず同期もしません。
+plugin設定で確定した空集合または`--none`は、plugin登録を維持したまま全skillを無効にします。
 有効集合が同じ場合は意味的なno-opとし、異なる場合は前の集合を置き換えます。
 removeの空選択はstateを変更しません。
 非同期の割り込みを通常の選択errorとして捕捉しません。
@@ -144,28 +147,35 @@ plugin一覧には無効化した登録も含め、skill一覧には有効なplu
 
 ```json
 {
-  "version": "3",
   "targets": [],
-  "plugins": [
-    {"source": "./plugins/demo", "name": "demo", "skills": ["alpha"]}
-  ]
+  "plugins": {
+    "demo": {"pluginName": "demo", "pluginSource": "plugins/demo", "enabledSkills": ["alpha"], "pluginOrigin": null}
+  },
+  "standaloneSkills": {}
 }
 ```
 
-厳密な文字列version `"3"`と、すべての必須fieldを要求します。
-任意の最上位`skills`配列には単独skillの`{name, source}`登録を保存し、空の場合はcanonical出力から省略します。
-既存version-3ロックで`skills`がない場合、単独skillはないものとします。
+recordと直和型には標準のGeneric導出JSON instanceを使い、primitiveな文字列/pathとmap keyにはnewtype導出instanceを使います。
+field名、constructor tag、optional fieldのencodeをカスタマイズしません。
+構造的なdecodeと検証は分離して各型のそばに置き、永続化とcacheの境界で検証付きdecoderを呼びます。
+検証済みdomain値を再構築する前に、map keyとrecord内のidentityが一致することを確認します。
+`standaloneSkills` mapには`installedSkillName`、`installedSkillSource`、`installedSkillOrigin`を持つrecordを保存します。
+pluginと単独skillのoriginには`githubOriginRepository`、`githubOriginRef`、`githubOriginSubpath`、`githubOriginCommit`を使います。
+cache pathを導出する前にrepository/ref/subpathと完全なcommit IDを検証し、recordのsourceと一致することを要求します。
+local recordのoriginは`null`としてencodeします。
+cache provenanceはrepositoryとcommitだけを保存し、異なるrefやsubpathで同じimmutable snapshotを共有できます。
 単独skillのname/sourceの一意性を検証し、有効なplugin skillと同名の単独skillを拒否します。
-未対応versionは、変換や変更を行わず拒否します。
+旧wire形式への変換やfallback解析は提供しません。
 source、plugin identity、選択skill、targetの重複を拒否します。
 正規化した相対パスと決定的な順序でencodeします。
 projectとglobalのロックを分離します。
 
-machine-localな所有stateは`.agents/c-plugin-state.json`で、versionは`"1"`です。
+machine-localな所有stateは`.agents/c-plugin-state.json`で、絶対link pathをkeyに持つ`ownershipEntries` mapを使います。
 これは共有可能な望ましい状態の設定ではありません。
 各entryは、絶対link path、managed root、正確なliteral symlink target、resolved target、source/plugin/skill identityを記録します。
 literal targetはresolved pathと分離し、変更せずround-tripしなければなりません。
-単独skillの所有sourceには`{kind: "standalone", path, skill}`を使用し、既存plugin source記録の形式は維持します。
+`entrySource`直和型は、`OwnershipSource`または`StandaloneSource`に対してAeson標準の`tag`と`contents`を使用します。
+外部のAgent Plugins manifestとAgent Skills frontmatterは標準の形式と検証を維持します。
 
 ## 永続化と調整
 

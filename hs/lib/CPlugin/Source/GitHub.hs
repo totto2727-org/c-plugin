@@ -15,7 +15,7 @@ import CPlugin.Types.GitHub
 import CPlugin.Types.Path (AbsolutePath, absoluteText, relativePath, relativeText)
 import Control.Exception (IOException, bracket, evaluate)
 import Control.Monad (unless, void, when)
-import Data.Aeson (eitherDecodeStrict', encode)
+import Data.Aeson (encode)
 import Data.Bits ((.&.))
 import qualified Data.ByteString as Strict
 import qualified Data.ByteString.Lazy as Lazy
@@ -176,7 +176,7 @@ verifyGitHubSnapshotWith git base origin = do
     validateManagedRoot base snapshotRoot
     markerKind <- pathKind marker
     unless (markerKind == Just RegularFile) (ioError (userError "GitHub cache provenance must be a physical regular file"))
-    recorded <- withIO (Strict.readFile marker) >>= either (ioError . userError) pure . eitherDecodeStrict'
+    recorded <- withIO (Strict.readFile marker) >>= either (ioError . userError) pure . decodeSnapshot
     unless (recorded == snapshotFor origin) (ioError (userError "GitHub cache provenance does not match locked origin"))
     treeRoot <- absoluteIO tree
     validateManagedRoot base treeRoot

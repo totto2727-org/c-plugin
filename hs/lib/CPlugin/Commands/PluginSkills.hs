@@ -44,7 +44,7 @@ choosePlugin invalid NonInteractive _ Nothing =
     failAs invalid "Plugin selection required in non-interactive mode; provide PLUGIN."
 choosePlugin invalid interaction@(Interactive _ output) current Nothing = do
     when (Map.null (plugins current)) (failAs invalid "no registered plugins")
-    selected <- select interaction "Choose exactly one registered plugin. Blank/q keeps unchanged." nameText (Map.keys (plugins current)) PromptSelection
+    selected <- select interaction "Choose exactly one registered plugin. Esc/q keeps unchanged." nameText (Map.keys (plugins current)) PromptSelection
     case selected of
         Cancelled -> pure Nothing
         Selected names -> case Set.toAscList names of
@@ -123,7 +123,7 @@ skillLabel :: Set.Set ItemName -> ItemName -> String
 skillLabel enabled skill = nameText skill ++ if Set.member skill enabled then " [enabled]" else " [disabled]"
 
 guidance :: SkillAction -> String
-guidance action = "Choose plugin skills to " ++ actionVerb action ++ ". Markers show current state. Blank/q keeps unchanged. Use --all or --skill for explicit selection."
+guidance action = "Choose plugin skills to " ++ actionVerb action ++ ". Markers show current state. Esc/q keeps unchanged. Use --all or --skill for explicit selection."
 
 actionVerb :: SkillAction -> String
 actionVerb EnableSkills = "enable"

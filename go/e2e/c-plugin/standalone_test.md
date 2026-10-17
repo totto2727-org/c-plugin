@@ -43,10 +43,12 @@ The helper invokes `/sandbox/.local/bin/c-plugin` with direct argv and isolated 
 
 All invocations exit 0.
 Add stdout contains `Added skill <project>/standalone/solo`.
-The lock is version `3` with empty targets/plugins and `skills:[{name:"solo",source:"./standalone/solo"}]`.
+The lock has targets `[]`, plugins `{}`, and standaloneSkills keyed by solo with `{installedSkillName:"solo",installedSkillSource:"standalone/solo",installedSkillOrigin:null}`.
+There is no version field.
 The managed solo link resolves to the standalone root, and the source needs no plugin manifest.
+Its ownershipEntries record uses a tagged StandaloneSource contents tuple with the registered source path and solo identity.
 Repeat stdout is exactly `No skill changes for <lock>\n`, lock and ownership bytes stay exact, and the deleted link remains absent until explicit sync.
-Removal leaves the empty version `3` lock, ownership `{"version":"1","entries":[]}`, and no solo link.
+Removal leaves the empty Generic lock `{"targets":[],"plugins":{},"standaloneSkills":{}}`, ownership `{"ownershipEntries":{}}`, and no solo link.
 
 ### Notes
 
@@ -407,7 +409,7 @@ The CLI is `/sandbox/.local/bin/c-plugin` with isolated HOME.
 
 Enabled-set updates and repeat exit 0.
 Beta-only state removes alpha and keeps beta linked.
-`--none` retains demo with skills `[]`, removes beta, and leaves empty ownership.
+`--none` retains plugins.demo with enabledSkills `[]` and pluginOrigin `null`, removes beta, and leaves ownership `{"ownershipEntries":{}}`.
 Repeating `--none` prints exactly `No skill changes for <lock>\n` and changes no bytes.
 `--all` restores both skill links and the full enabled set.
 All three conflicting selector combinations exit nonzero and preserve exact lock/ownership bytes and both links.

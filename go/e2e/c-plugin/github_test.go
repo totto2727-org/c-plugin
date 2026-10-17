@@ -36,34 +36,37 @@ func githubEnvironment(t *testing.T, environment *cli.Environment, name string) 
 // Decode only the public lock fields used by these scenarios, without imposing
 // an unrelated whole-lock representation on the existing runner.
 type githubRegistration struct {
-	Name   string          `json:"name"`
-	Source string          `json:"source"`
-	Skills []string        `json:"skills"`
-	Origin json.RawMessage `json:"origin"`
+	Name   string          `json:"pluginName"`
+	Source string          `json:"pluginSource"`
+	Skills []string        `json:"enabledSkills"`
+	Origin json.RawMessage `json:"pluginOrigin"`
 }
 
 func githubRegisteredSource(s *scenarioEnvironment, root string, kind string, name string) githubRegistration {
 	s.t.Helper()
 	var lock struct {
-		Version string               `json:"version"`
-		Plugins []githubRegistration `json:"plugins"`
-		Skills  []githubRegistration `json:"skills"`
+		Plugins map[string]githubRegistration `json:"plugins"`
+		Skills  map[string]struct {
+			Name   string          `json:"installedSkillName"`
+			Source string          `json:"installedSkillSource"`
+			Origin json.RawMessage `json:"installedSkillOrigin"`
+		} `json:"standaloneSkills"`
 	}
 	if err := json.Unmarshal(s.readFile(root+"/c-plugin-lock.json"), &lock); err != nil {
 		s.t.Fatal(err)
 	}
-	if lock.Version != "3" {
-		s.t.Fatalf("lock version=%q want=3", lock.Version)
-	}
 	entries := lock.Plugins
 	if kind == "skill" {
-		entries = lock.Skills
+		entries = make(map[string]githubRegistration, len(lock.Skills))
+		for key, skill := range lock.Skills {
+			entries[key] = githubRegistration{Name: skill.Name, Source: skill.Source, Origin: skill.Origin}
+		}
 	}
-	if len(entries) != 1 || entries[0].Name != name {
+	entry, exists := entries[name]
+	if len(entries) != 1 || !exists || entry.Name != name {
 		s.t.Fatalf("%s registrations=%+v want exactly %s", kind, entries, name)
 	}
-	entry := entries[0]
-	if !strings.HasPrefix(entry.Source, "./") || strings.Contains(entry.Source, "..") {
+	if !strings.HasPrefix(entry.Source, ".agents/c-plugin/sources/") || path.Clean(entry.Source) != entry.Source || strings.Contains(entry.Source, "..") {
 		s.t.Fatalf("GitHub source is not a contained relative snapshot: %q", entry.Source)
 	}
 	s.requireDirectory(path.Join(root, entry.Source))
@@ -73,21 +76,21 @@ func githubRegisteredSource(s *scenarioEnvironment, root string, kind string, na
 func githubPinnedCommit(s *scenarioEnvironment, entry githubRegistration) string {
 	s.t.Helper()
 	var origin struct {
-		Kind       string `json:"kind"`
-		Repository string `json:"repository"`
-		Commit     string `json:"commit"`
-		Subpath    string `json:"subpath"`
+		Repository string `json:"githubOriginRepository"`
+		Ref        string `json:"githubOriginRef"`
+		Commit     string `json:"githubOriginCommit"`
+		Subpath    string `json:"githubOriginSubpath"`
 	}
 	if err := json.Unmarshal(entry.Origin, &origin); err != nil {
 		s.t.Fatalf("decode GitHub origin %s: %v", entry.Origin, err)
 	}
-	if origin.Kind != "github" || origin.Repository != githubFixtureRepository {
+	if origin.Repository != githubFixtureRepository || origin.Ref == "" {
 		s.t.Fatalf("GitHub origin identity=%s", entry.Origin)
 	}
 	if !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(origin.Commit) {
 		s.t.Fatalf("GitHub origin commit=%q is not an immutable SHA-1", origin.Commit)
 	}
-	expected := "./.agents/c-plugin/sources/" + origin.Repository + "/" + origin.Commit + "/tree/" + origin.Subpath
+	expected := ".agents/c-plugin/sources/" + origin.Repository + "/" + origin.Commit + "/tree/" + origin.Subpath
 	if entry.Source != expected {
 		s.t.Fatalf("GitHub source=%q want=%q", entry.Source, expected)
 	}
@@ -194,7 +197,7 @@ func githubPluginLifecycleScenario(t *testing.T, environment *cli.Environment) {
 	s.requireMissing(project + "/.agents/skills/beta")
 	s.requireSuccess(s.run(project, "plugin", "remove", "--plugin", "github-demo"))
 	s.requireJSON(project+"/c-plugin-lock.json", emptyLock)
-	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"version":"1","entries":[]}`)
+	s.requireJSON(project+"/.agents/c-plugin-state.json", `{"ownershipEntries":{}}`)
 	s.requireRegularFile(source + "/plugin.json")
 }
 
@@ -302,12 +305,12 @@ func githubCacheSafetyScenario(t *testing.T, environment *cli.Environment) {
 	commit := githubPinnedCommit(s, entry)
 	cache := project + "/.agents/c-plugin/sources/" + githubFixtureRepository + "/" + commit
 	source := path.Join(project, entry.Source)
-	s.requireJSON(cache+"/origin.json", `{"version":"1","repository":"`+githubFixtureRepository+`","commit":"`+commit+`"}`)
+	s.requireJSON(cache+"/origin.json", `{"snapshotRepository":"`+githubFixtureRepository+`","snapshotCommit":"`+commit+`"}`)
 	origin := string(s.readFile(cache + "/origin.json"))
 	lock = string(s.readFile(project + "/c-plugin-lock.json"))
 	state := string(s.readFile(project + "/.agents/c-plugin-state.json"))
 	digest := s.digest(source + "/SKILL.md")
-	s.writeFile(cache+"/origin.json", `{"version":"1","repository":"foreign/repository","commit":"`+commit+`"}`)
+	s.writeFile(cache+"/origin.json", `{"snapshotRepository":"foreign/repository","snapshotCommit":"`+commit+`"}`)
 	foreignOrigin := string(s.readFile(cache + "/origin.json"))
 	partial := s.run(project, "sync")
 	s.requireSuccess(partial)
@@ -398,7 +401,7 @@ func topLevelSyncUpdateRecursiveScenario(t *testing.T, environment *cli.Environm
 	child := project + "/child"
 	s.writePlugin(child, "child-skill")
 	s.writeFile(child+"/standalone/solo/SKILL.md", skillMarkdown("solo"))
-	childLock := `{"version":"3","targets":[],"plugins":[{"source":"./plugin","name":"demo","skills":["child-skill"]}],"skills":[{"name":"solo","source":"./standalone/solo"}]}`
+	childLock := `{"targets":[],"plugins":{"demo":{"pluginName":"demo","pluginSource":"plugin","enabledSkills":["child-skill"],"pluginOrigin":null}},"standaloneSkills":{"solo":{"installedSkillName":"solo","installedSkillSource":"standalone/solo","installedSkillOrigin":null}}}`
 	s.writeFile(child+"/c-plugin-lock.json", childLock)
 	// Admiral 0.6.2's actual matcher trims rules, ignores negations, strips
 	// anchors, and matches '*' only within individual path segments.

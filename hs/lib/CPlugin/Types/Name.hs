@@ -1,12 +1,12 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module CPlugin.Types.Name (ItemName, itemName, pluginNameValue, skillNameValue, nameText) where
 
-import CPlugin.Internal.JSON (validated)
-import Data.Aeson (FromJSON (..), ToJSON (..), withText)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Char (isAlphaNum, isAscii, isAsciiUpper, isControl, isLower, isNumber)
 import Data.List (isInfixOf)
-import qualified Data.Text as Text
 
-newtype ItemName = ItemName String deriving (Eq, Ord, Show)
+newtype ItemName = ItemName String deriving (Eq, Ord, Show, FromJSON, ToJSON, FromJSONKey, ToJSONKey)
 
 nameText :: ItemName -> String
 nameText (ItemName n) = n
@@ -39,8 +39,3 @@ skillNameValue n
         || not (all (\c -> c == '-' || isLower c || isNumber c) n) =
         Left "invalid Agent Skills name"
     | otherwise = itemName n
-
-instance FromJSON ItemName where
-    parseJSON = withText "item name" (validated . itemName . Text.unpack)
-instance ToJSON ItemName where
-    toJSON = toJSON . nameText

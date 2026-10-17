@@ -31,10 +31,10 @@ This scenario uses no command options. It relies on project lock discovery from 
 ### Execution flow
 
 1. Write the two-skill project lock with additional `.cursor/skills`, record its digest, and run `c-plugin sync` from `project`.
-2. Verify the output substring, unchanged lock digest, four symlinks, and alpha/beta ownership records.
+2. Verify the output substring, unchanged lock digest, four symlinks, and alpha/beta identities decoded from tagged `OwnershipSource` contents in `ownershipEntries`.
 3. Replace the primary beta symlink with a foreign file, add the foreign neighbor, and rewrite the lock fixture with no selected skills. Record this edited lock digest.
 4. Run `c-plugin sync` again from `project`.
-5. Verify the asserted partial action/lock/status substring, unchanged edited lock digest, removal of safely owned links, preservation of foreign beta/neighbor contents, and empty version-1 ownership state.
+5. Verify the asserted partial action/lock/status substring, unchanged edited lock digest, removal of safely owned links, preservation of foreign beta/neighbor contents, and empty Generic ownership state.
 
 ### Expected results
 
@@ -43,7 +43,7 @@ This scenario uses no command options. It relies on project lock discovery from 
 | Initial sync    | Exit 0; stdout contains `Synced <lock>: partial`; four desired symlinks point to plugin skills. |
 | Lock integrity  | Neither sync rewrites the lock; its digest equals the value recorded before that invocation.                                  |
 | Edited sync     | Owned alpha links and cursor beta are removed; replacement beta and neighbor remain regular files.                            |
-| Ownership state | State is reduced to `{"version":"1","entries":[]}` after all safe owned links are gone.                                       |
+| Ownership state | State is reduced to `{"ownershipEntries":{}}` after all safe owned links are gone.                                       |
 
 
 The edited sync also asserts exit 0 and `Synced <lock>: partial`.

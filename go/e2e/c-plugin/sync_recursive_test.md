@@ -2,6 +2,9 @@
 
 Source: [sync_recursive_test.go](./sync_recursive_test.go)
 
+Project and child fixtures use unversioned Generic lock records with keyed plugins and standaloneSkills.
+The retained child beta ownership check decodes tagged `OwnershipSource` contents from `ownershipEntries`.
+
 The relative Source link identifies the sibling Go implementation described below.
 
 ## `syncRecursiveScenario`
@@ -46,7 +49,7 @@ The relative Source link identifies the sibling Go implementation described belo
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Discovery     | Exactly two `Synced` lines name parent and child; the ignored malformed lock is never mentioned.                                           |
 | Initial state | Parent alpha and child beta links/state exist; both lock digests remain unchanged.                                                         |
-| Edited state  | Parent alpha is removed, child beta and its state remain, the foreign parent file remains, and each lock digest matches its current input. |
+| Edited state  | Parent alpha is removed. Child beta remains linked and present in tagged `OwnershipSource` contents. The foreign parent file remains, and each lock digest matches its current input. |
 | Invalid flags | Nonzero exit with `totto2727/c-plugin.SyncError.Planning`.                                                                              |
 
 ### Notes

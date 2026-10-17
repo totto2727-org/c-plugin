@@ -66,7 +66,7 @@ pluginSkillCommand command = Execute <$> (command <$> global <*> optional (strAr
 commandParser :: Parser Request
 commandParser =
     hsubparser
-        ( command "init" (info (Execute . Init <$> global <**> helper) (progDesc "Create a version 3 lock without linking skills"))
+        ( command "init" (info (Execute . Init <$> global <**> helper) (progDesc "Create an empty lock without linking skills"))
             <> command "list" (info (Execute . List <$> global <**> helper) (progDesc "List registered plugins and skills without changing state"))
             <> command "sync" (info (Execute <$> (Sync <$> global <*> recursive) <**> helper) (progDesc "Reconcile all plugin and standalone skill links from pinned sources"))
             <> command "update" (info (Execute <$> (Update <$> global <*> recursive) <**> helper) (progDesc "Refresh GitHub plugins and standalone skills, then reconcile links"))

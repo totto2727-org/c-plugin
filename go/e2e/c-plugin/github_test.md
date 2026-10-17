@@ -39,7 +39,7 @@ Reject missing or unprefixed sources, retired source flags, multiple source oper
 ### Preconditions and fixtures
 
 `HOME=/tmp/c-plugin-github-parser-invalid/home` and the project is `$HOME/project`.
-Initialization produces an empty version `3` lock and no ownership state.
+Initialization produces the empty Generic lock `{"targets":[],"plugins":{},"standaloneSkills":{}}` and no ownership state.
 Parser and typed-input rejections must not install hosted sources or managed links.
 
 ### Execution flow
@@ -179,11 +179,12 @@ Its fixed cache is inside the owning project root at `.agents/c-plugin/sources/t
 ### Expected results
 
 All commands succeed.
-The origin identifies GitHub, the canonical repository, and an immutable hexadecimal commit; the relative source is the exact contained snapshot path.
+The origin record uses githubOriginRepository, githubOriginRef, githubOriginSubpath, and githubOriginCommit, without a kind or version field.
+The canonical repository and immutable hexadecimal commit identify the exact contained snapshot path, stored without a leading `./`.
 The source manifest matches the maintained standard fixture and both initial links resolve into that snapshot.
 Same-commit re-add preserves exact lock/ownership bytes and does not implicitly synchronize the missing link.
 Selection changes remove only the disabled owned links.
-Final removal empties the lock and ownership entries without deleting the source snapshot.
+Final removal empties the Generic lock and yields `{"ownershipEntries":{}}` without deletion of the source snapshot.
 
 ### Notes
 
@@ -319,7 +320,8 @@ Reject a redirected source-cache ancestor even with force, verify snapshot prove
 `HOME=/tmp/c-plugin-github-cache-safety/home` and the project is `$HOME/project`.
 A foreign `$HOME/outside/sentinel` exists, and `.agents/c-plugin/sources` initially symlinks to that outside directory.
 After rejecting the redirected cache, the scenario removes only its synthetic symlink and installs a real snapshot.
-The authoritative snapshot root contains `origin.json` with version `1`, repository, and observed commit, and `tree/.git` with the fixed remote identity.
+The authoritative snapshot root contains `origin.json` with snapshotRepository and snapshotCommit, without a version field.
+Its `tree/.git` retains the fixed remote identity.
 
 ### Execution flow
 
@@ -336,7 +338,7 @@ The authoritative snapshot root contains `origin.json` with version `1`, reposit
 ### Expected results
 
 The redirected-cache add fails safely and does not mutate the foreign directory.
-The valid add succeeds with exact version `1` provenance matching the lock commit.
+The valid add succeeds with exact Generic snapshot provenance matching the lock commit.
 Each integrity-invalid sync succeeds with a partial-result notice while preserving installed links, lock, ownership, source content, and foreign cache metadata.
 
 ### Notes
@@ -429,7 +431,8 @@ The scenario resolves the public fixture branch to a real immutable commit and i
 The project lock therefore contains both domains, with cached sources inside the project rather than synthetic transport replacements.
 Exact lock and ownership bytes plus lock inode/modification-second identity are captured before repair checks.
 Child has an independent local standard demo plugin with child-skill and a standalone solo root.
-Additional visible directories contain empty version `3` locks, while deliberately excluded directories contain malformed locks so accidental discovery fails visibly.
+Additional visible directories contain empty Generic locks, while deliberately excluded directories contain malformed locks so accidental discovery fails visibly.
+The child fixture has plugins keyed by demo and standaloneSkills keyed by solo, with plain relative source paths and null local origins.
 
 | Directory fixture | Discovery expectation |
 | --- | --- |

@@ -61,7 +61,7 @@ A surviving dangling link is checked with `test -L`, not `realpath`.
 
 ### Scope
 
-Verify missing, malformed, and unsupported-version locks fail without creating state, and empty valid locks produce headings and headers only.
+Verify missing, malformed, and legacy versioned lock shapes fail without state creation, while empty Generic locks produce headings and headers only.
 
 ### Commands under test
 
@@ -81,20 +81,20 @@ Verify missing, malformed, and unsupported-version locks fail without creating s
 
 - A disposable container uses `HOME=/tmp/c-plugin-list-missing-corrupt/home` and an empty project directory.
 - The executable is `/sandbox/.local/bin/c-plugin`.
-- Both scopes successively have no lock, literal `not JSON\n`, a version-2 lock, then an empty valid version-3 lock.
+- Both scopes successively have no lock, literal `not JSON\n`, legacy version-2 and version-3 array-based locks, then an empty Generic lock with targets `[]`, plugins `{}`, and standaloneSkills `{}`.
 - No ownership or managed roots exist.
 
 ### Execution flow
 
 1. For absent locks, run `c-plugin list`, `c-plugin plugin list`, `c-plugin skill list`, `c-plugin list -g`, `c-plugin plugin list -g`, and `c-plugin skill list -g` in order.
 2. Write malformed bytes to both locks and repeat the same six ordered argv.
-3. Write the unsupported version-2 fixture to both locks and repeat the same six ordered argv.
-4. Write the empty valid version-3 fixture to both locks and repeat the same six ordered argv.
+3. Write the legacy version-2 fixture to both locks and repeat the same six ordered argv. Repeat with the legacy version-3 fixture.
+4. Write the empty valid Generic fixture to both locks and repeat the same six ordered argv.
 5. After every command, verify both lock contents or continued absence and absent `.agents` directories.
 
 ### Expected results
 
-- Missing, malformed, and unsupported-version locks return nonzero for every list command, without conversion, lock creation, or state creation.
+- Missing, malformed, and legacy versioned locks return nonzero for every list command, without conversion, fallback, lock creation, or state creation.
 - Empty valid locks return 0 with exact headings and column headers and no rows.
 - Combined empty output separates its two sections with one blank line.
 - Valid locks retain their original bytes and `.agents` remains absent in both scopes.

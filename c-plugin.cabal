@@ -42,6 +42,10 @@ library
   build-depends:
       process >=1.6 && <1.7
     , async >=2.2 && <2.3
+    , brick >=2.9 && <2.10
+    , vty >=6.4 && <6.5
+    , vty-unix >=0.2 && <0.3
+    , mtl >=2.2 && <2.4
   exposed-modules:
       CPlugin.Types
       CPlugin.Types.Path
@@ -64,6 +68,7 @@ library
       CPlugin.Commands
       CPlugin.Source.GitHub
   other-modules:
+      CPlugin.Interaction.Brick
       CPlugin.Reconcile.Plan
       CPlugin.Reconcile.Session
       CPlugin.Reconcile.Mutation

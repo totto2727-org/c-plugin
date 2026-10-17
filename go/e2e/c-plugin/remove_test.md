@@ -2,6 +2,9 @@
 
 Source: [remove_test.go](./remove_test.go)
 
+Ownership skill checks decode the `ownershipEntries` map and tagged `entrySource.contents` tuples.
+Lock fixtures use unversioned Generic records with keyed plugins and standaloneSkills.
+
 The relative Source link identifies the sibling Go implementation described below.
 
 ## `removeScenario`
@@ -55,7 +58,7 @@ The relative Source link identifies the sibling Go implementation described belo
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Missing selection | Nonzero exit with actionable `--skill` guidance without `--plugin`; lock and ownership bytes, foreign files, and beta link do not change. |
 | Unknown selection | Exit 0 with `No skill changes for <lock>`; lock and state digests do not change. |
-| Alpha         | Exit 0 with output containing `Removed skills demo/alpha from <lock>: partial`; the replacement file and neighbor remain, beta stays linked and owned, and alpha leaves state. |
+| Alpha         | Exit 0 with output containing `Removed skills demo/alpha from <lock>: partial`; the replacement file and neighbor remain. Tagged ownership source contents retain beta and omit alpha. |
 | Repeat alpha  | Exit 0 no-op with unchanged lock and state digests.                                                                             |
 | Beta          | Exit 0 with output containing `Removed skills demo/beta from <lock>: complete`; project plugin remains registered with skills `[]`, beta link is removed, and foreign paths remain.                                   |
 | Global gamma  | Exit 0 with output containing `Removed skills demo/gamma from <global-lock>: complete`; the global plugin remains registered with skills `[]` and the global gamma link/state entry is removed.                               |

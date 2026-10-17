@@ -51,7 +51,7 @@ func syncRecursiveScenario(t *testing.T, environment *cli.Environment) {
 	}
 	scenario.requireMissing(project + "/.agents/skills/alpha")
 	scenario.requireSymlink(child+"/.agents/skills/beta", child+"/plugin/skills/beta")
-	scenario.requireContains(string(scenario.readFile(child+"/.agents/c-plugin-state.json")), `"skill": "beta"`)
+	scenario.requireOwnershipSkill(string(scenario.readFile(child+"/.agents/c-plugin-state.json")), "beta", true)
 	scenario.requireFile(project+"/.agents/skills/foreign", "foreign\n")
 	scenario.requireDigest(project+"/c-plugin-lock.json", editedParentDigest)
 	scenario.requireDigest(child+"/c-plugin-lock.json", childDigest)

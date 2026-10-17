@@ -6,7 +6,7 @@ Source: [interactive_test.go](./interactive_test.go)
 
 ### Scope
 
-Verify project add, skill removal, and target removal as an ordered numbered-selection workflow, without changing global state.
+Verify project add, skill removal, and target removal with arrow-key navigation and Space selection, without changes to global state.
 
 ### Commands under test
 
@@ -31,20 +31,24 @@ Verify project add, skill removal, and target removal as an ordered numbered-sel
 - A fresh container uses `HOME=/tmp/c-plugin-standard-interactive-selection/home`, with separate project and global demo plugins containing alpha, beta, and gamma.
 - `c-plugin` is `/sandbox/.local/bin/c-plugin`.
 - A Python standard-library fixture creates an actual PTY for stdin and stderr, captures stdout separately, and sets `TERM=xterm`.
-- The fixture feeds input only after the flushed stderr prompt `Select indexes (comma/space separated), all, none, or q to cancel: `.
+- The fixture sets a 40-row, 120-column terminal and sends raw keys only after the stderr footer `Space: toggle`.
+- Every invocation checks restoration of the original terminal settings, except kernel input-replay bookkeeping in PENDIN.
+- For keyboard invocations, the xterm transcript must enter and leave the alternate screen and hide then restore the cursor.
+- Lock assertions use Generic records with keyed plugins and standaloneSkills. Ownership assertions use the ownershipEntries map and tagged source tuples.
 
 ### Execution flow
 
 1. Run `c-plugin init` and `c-plugin init --global` from the project, then record the global lock digest.
-2. Run `c-plugin plugin add local:./plugin` from the project and enter `1, 3` at the prompt.
-3. Check alpha and gamma selection, then run `c-plugin skill remove` and enter `2`, the gamma row after alpha, with no entire-plugin row.
+2. Run `c-plugin plugin add local:./plugin` from the project and press Space, Down, Down, Space, Enter to select alpha and gamma.
+3. Check alpha and gamma selection, then run `c-plugin skill remove` and press Down, Space, Enter to select gamma after alpha, with no entire-plugin row.
 4. Run `c-plugin target add .claude/skills`, then `c-plugin target add .cursor/skills`.
-5. Run `c-plugin target remove` and enter `2`, the cursor row.
+5. Run `c-plugin target remove` and press Down, Space, Enter to select the cursor row.
 6. Inspect final project links, ownership, and lock, then compare independent global state.
 
 ### Expected results
 
-- Every CLI invocation exits 0. Add completion appears on stdout, while numbered menu labels and the prompt appear on stderr, never stdout.
+- Every CLI invocation exits 0 and restores terminal settings. Add completion appears on stdout. Menu labels and the keyboard footer appear on stderr, never stdout.
+- The terminal does not display the retired numbered-input prompt.
 - Add persists only alpha and gamma. Removal leaves only alpha and removes gamma's owned link and state entry.
 - Target removal leaves only `.claude/skills` registered, removes cursor alpha and cursor ownership, and preserves primary and Claude alpha links.
 - The global lock digest is unchanged and global ownership remains absent.
@@ -53,7 +57,8 @@ Verify project add, skill removal, and target removal as an ordered numbered-sel
 
 The embedded fixture explicitly waits for the child and emits exit/status/output JSON to the existing Go runner.
 Each child has a ten-second deadline and an outer fifteen-second timeout.
-No arrow-key interface or sleeps are used.
+The driver removes terminal escape sequences from the captured stderr transcript before label assertions.
+It does not use sleeps or append line endings to key actions.
 
 ## `interactiveGlobalScenario`
 
@@ -84,16 +89,16 @@ Verify interactive global operations from a nested project directory preserve al
 
 - A fresh container uses `HOME=/tmp/c-plugin-standard-interactive-global/home` with separate project and global plugins, each containing alpha, beta, and gamma.
 - The fixture initializes both locks and populates project links and ownership before recording their digests.
-- The actual PTY uses stdin and stderr, separate stdout, `TERM=xterm`, prompt-driven input, and bounded child waits.
+- The actual PTY uses stdin and stderr, separate stdout, `TERM=xterm`, footer-driven raw keys, and bounded child waits.
 
 ### Execution flow
 
 1. Run `c-plugin init`, `c-plugin init --global`, and `c-plugin plugin add local:./plugin --all` from the project.
 2. Record project lock and ownership digests and create `project/nested`.
-3. From `project/nested`, run `c-plugin plugin add --global local:./plugin` and enter `all`.
+3. From `project/nested`, run `c-plugin plugin add --global local:./plugin` and press Space, Down, Space, Down, Space, Enter to select all three skills.
 4. From the project, run `c-plugin target add --global .cursor/skills`.
-5. From `project/nested`, run `c-plugin target remove --global` and enter `all`.
-6. Run `c-plugin skill remove --global` from the same directory and enter `1 3`, selecting alpha and gamma from skill-only rows.
+5. From `project/nested`, run `c-plugin target remove --global` and press Space, Enter to select the only additional target.
+6. Run `c-plugin skill remove --global` from the same directory and press Space, Down, Down, Space, Enter to select alpha and gamma from skill-only rows.
 7. Inspect global beta and all project state.
 
 ### Expected results
@@ -112,7 +117,7 @@ Each registered scenario receives its own container.
 
 ### Scope
 
-Verify both cancellation words preserve exact persisted bytes and do not synchronize deliberately missing links.
+Verify q and Escape preserve exact persisted bytes and do not synchronize deliberately missing links.
 
 ### Commands under test
 
@@ -139,14 +144,14 @@ Verify both cancellation words preserve exact persisted bytes and do not synchro
 - Project demo contains alpha, beta, and gamma. All are registered and synchronized to primary and cursor roots.
 - Primary and cursor alpha links are then removed externally, leaving trusted ownership unchanged.
 - Exact lock and ownership bytes are captured before cancellation.
-- Real stdin/stderr PTYs use separate stdout, `TERM=xterm`, and prompt-driven input.
+- Real stdin/stderr PTYs use separate stdout, `TERM=xterm`, and footer-driven raw keys.
 
 ### Execution flow
 
 1. Initialize both scopes, run `c-plugin plugin add local:./plugin --all`, and run `c-plugin target add .cursor/skills` from the project.
 2. Delete both alpha links and capture lock and ownership bytes.
-3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove` in order, entering `q` for each prompt.
-4. Repeat those three invocations, entering `cancel` for each prompt.
+3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove` in order, pressing q for each menu.
+4. Repeat those three invocations, pressing Escape for each menu.
 5. After every invocation, compare exact lock and ownership bytes, absent alpha links, and the retained beta link.
 
 ### Expected results
@@ -164,7 +169,7 @@ The helper groups the command family because each implements the same cancellati
 
 ### Scope
 
-Verify blank input keeps the current state, removal `none` is a no-op, and plugin `none` disables all skills before subsequent numeric selections replace the enabled set.
+Verify Enter with an empty selection leaves removals unchanged and disables all plugin skills, then verify arrow-key selections replace the enabled set.
 
 ### Commands under test
 
@@ -194,40 +199,40 @@ Verify blank input keeps the current state, removal `none` is a no-op, and plugi
 
 ### Execution flow
 
-1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, then `c-plugin target add .cursor/skills` from the project.
+1. Initialize both locks. Run `c-plugin plugin add local:./plugin` and press Enter without Space. Verify a new empty plugin registration, empty ownership, and absent skill links. Then run `c-plugin plugin add local:./plugin --all` and `c-plugin target add .cursor/skills` from the project.
 2. Delete primary and cursor alpha links and capture persisted bytes.
-3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove`, sending a blank line at each prompt.
-4. Run `c-plugin skill remove` and `c-plugin target remove` with `none`; compare exact persisted bytes and missing alpha links after each.
-5. Run `c-plugin plugin add local:./plugin` with `none`; inspect enabled row markers, the retained empty plugin registration, empty ownership, and absent links.
-6. Run `c-plugin plugin add local:./plugin` with `2` and verify beta-only registration with a disabled beta menu marker before selection.
-7. Run `c-plugin plugin add local:./plugin` with `1 3`; inspect alpha/gamma disabled markers and beta enabled marker before selection.
+3. Run `c-plugin skill remove` and `c-plugin target remove`, pressing Enter without Space for each menu.
+4. Repeat both removal commands, pressing Space twice and Enter to clear the focused row before confirmation. Compare exact persisted bytes and missing alpha links after each invocation.
+5. Run `c-plugin plugin add local:./plugin` and press Enter without Space. Inspect enabled row markers, the retained empty plugin registration, empty ownership, and absent links.
+6. Run `c-plugin plugin add local:./plugin` and press Down, Space, Enter. Verify beta-only registration and a disabled beta menu marker before selection.
+7. Run `c-plugin plugin add local:./plugin` and press Space, Down, Down, Space, Enter. Inspect alpha/gamma disabled markers and the beta enabled marker before selection.
 8. Verify alpha/gamma-only registration, their primary and cursor links, and beta's removal from both roots.
 
 ### Expected results
 
 - All operations exit 0, with prompts confined to stderr.
-- Blank input reports `Cancelled; no changes.` and preserves exact lock and ownership bytes, the retained beta link, and both missing alpha links.
-- Removal `none` reports `No selection; no changes.` and also preserves exact bytes and missing links.
-- Plugin `none` persists demo with skills `[]` and the cursor target retained, removes all owned links, and leaves empty ownership.
-- Selecting `2` enables only beta. Selecting `1 3` then replaces beta with alpha and gamma, creates both selected links in both roots, and removes beta links.
+- Enter with an empty removal selection reports `No selection; no changes.` and preserves exact bytes, the retained beta link, and both missing alpha links.
+- Plugin add with an empty selection persists demo with skills `[]` and the cursor target retained, removes all owned links, and leaves empty ownership.
+- Selecting beta enables only beta. Selecting alpha and gamma then replaces beta, creates both selected links in both roots, and removes beta links.
 
 ### Notes
 
-Blank cancels, but plugin `none` explicitly chooses an empty enabled set.
+Every menu starts with no selected rows, even when informational markers show enabled skills.
+Enter confirms the current selection. It does not cancel the menu.
 The sequential disable, enable, and replacement operations are one enabled-set workflow, not an additive merge.
 
 ## `interactiveInvalidScenario`
 
 ### Scope
 
-Verify duplicate, out-of-range, and nonnumeric inputs reprompt until a valid selection succeeds.
+Verify ignored numeric input, Space toggling, arrow navigation, and scrolling after terminal resize.
 
 ### Commands under test
 
 | Command path | Purpose |
 | --- | --- |
 | `c-plugin init` | Initialize both scopes. |
-| `c-plugin plugin add` | Recover from invalid selection lines. |
+| `c-plugin plugin add` | Select skills after ignored unsupported keys. |
 
 ### Arguments and options
 
@@ -240,25 +245,31 @@ Verify duplicate, out-of-range, and nonnumeric inputs reprompt until a valid sel
 
 - A fresh container uses `HOME=/tmp/c-plugin-standard-interactive-invalid/home`, with demo alpha, beta, and gamma available and an empty project lock.
 - A real stdin/stderr PTY uses `TERM=xterm`; stdout remains separate.
-- Input is released one line per observed prompt, including each repeated prompt.
+- Raw keys are released only after the keyboard footer appears.
 
 ### Execution flow
 
 1. Run `c-plugin init` and `c-plugin init --global` from the project.
 2. Run `c-plugin plugin add local:./plugin`.
-3. Enter `1,1`, then `99`, then `garbage`, and finally `1 2`, waiting for the next prompt before every input.
-4. Inspect the final lock and skill links.
+3. Type `1,199xyz` without Enter, then press Space, Space, Down, Space, Up, Space, Enter.
+4. Inspect the lock and skill links. The two initial Space presses leave alpha unselected before Down selects beta and Up returns to alpha.
+5. Add valid source skills `scroll-00` through `scroll-49` to the same plugin. Run `c-plugin plugin add local:./plugin` again with all 53 skills available.
+6. After the first footer, shrink the PTY from 40 by 120 to 2 by 80 and deliver process-group SIGWINCH. Wait for `Enlarge terminal`, then send Enter. During a bounded 0.2-second stdout wait, verify the process stays alive, prints no completion, and preserves exact lock and ownership bytes. Enlarge to 12 by 80, deliver SIGWINCH, and wait for the keyboard footer.
+7. Press Down 52 times, Space, Enter to select the final sorted row. Inspect the rendered `scroll-49` label, final lock, selected link, and all 52 unselected link paths.
 
 ### Expected results
 
-- The final CLI exit is 0, and the harness confirms all four prompt-triggered inputs were sent.
-- Only alpha and beta are persisted and linked; gamma remains absent.
-- The selection prompt never appears on stdout.
+- Both CLI invocations exit 0, and the harness confirms every footer-triggered action was sent.
+- The first invocation persists and links only alpha and beta, leaving gamma absent.
+- Enter cannot confirm while the terminal cannot show a menu row. The process stays alive and persisted bytes remain unchanged until enlargement.
+- The resized menu renders the final off-screen row. The second invocation persists and links only `scroll-49`, with all 52 other links absent.
+- The selection prompt never appears on stdout, and both children restore the original terminal settings.
 
 ### Notes
 
-A failure to reprompt or an early acceptance of invalid input fails the bounded harness or its input-count assertion.
-No ranges, wildcards, or arrow-key grammar is assumed.
+The registered scenario name is retained, but invalid numbered-line retries are no longer a terminal UI contract.
+The single-plugin policy retry remains covered by [pluginToggleScenario](./unified_api_test.md#plugintogglescenario).
+The ignored letters exclude optional shortcuts such as a and n.
 
 ## `interactiveNoInputScenario`
 
@@ -366,7 +377,7 @@ The standard-library fixture remains inside the existing Go/Testcontainers execu
 
 ### Scope
 
-Verify Ctrl-C semantics before selection cannot rewrite state or trigger synchronization.
+Verify Ctrl+C and external SIGINT propagate without cancellation, restore terminal settings, and cannot rewrite state or trigger synchronization.
 
 ### Commands under test
 
@@ -374,7 +385,7 @@ Verify Ctrl-C semantics before selection cannot rewrite state or trigger synchro
 | --- | --- |
 | `c-plugin init` | Initialize both scopes. |
 | `c-plugin plugin add` | Populate project fixture skills. |
-| `c-plugin skill remove` | Interrupt selection before supplying indexes. |
+| `c-plugin skill remove` | Interrupt keyboard selection before confirmation. |
 
 ### Arguments and options
 
@@ -394,25 +405,29 @@ Verify Ctrl-C semantics before selection cannot rewrite state or trigger synchro
 
 1. Initialize both locks and run `c-plugin plugin add local:./plugin --all` from the project.
 2. Delete primary alpha and save lock and ownership bytes.
-3. Run `c-plugin skill remove` and send `SIGINT` only after its selection prompt is observed, before any selection line.
-4. Explicitly wait for the child and inspect persisted bytes and links.
+3. Run `c-plugin skill remove` and send the Ctrl+C key byte `0x03` after the keyboard footer appears.
+4. Wait for the child, compare terminal settings, and inspect persisted bytes and links.
+5. Repeat the command with process-group SIGINT after the footer appears, then repeat all checks.
+6. Run `c-plugin skill remove` on a fresh PTY with `TERM=c-plugin-no-such-terminal` and no key actions. Verify initialization failure, no keyboard footer, restored terminal settings, unchanged persisted bytes, and unchanged links.
 
 ### Expected results
 
-- The interrupted CLI exits nonzero, and its prompt does not appear on stdout.
+- Both interrupted CLI invocations exit nonzero without `Cancelled; no changes.` and restore the original terminal settings, alternate screen, and cursor visibility.
+- Invalid TERM exits nonzero before a keyboard footer and restores terminal settings even when Vty initialization fails.
+- The keyboard footer does not appear on stdout.
 - Lock and ownership files remain byte-identical.
 - Alpha stays absent and beta remains linked to its source skill directory.
 
 ### Notes
 
-The signal is the Ctrl-C process signal, not an assumed raw-mode key sequence.
-No sleep is used to race the signal against startup.
+The scenario covers both raw-mode Ctrl+C and the external process signal.
+No sleep is used to race either interruption against startup.
 
 ## `interactiveEOFScenario`
 
 ### Scope
 
-Verify canonical-terminal EOF cancels each selection successfully without writes or implicit synchronization.
+Verify Ctrl+D cancels each keyboard selection successfully without writes or implicit synchronization.
 
 ### Commands under test
 
@@ -437,14 +452,14 @@ Verify canonical-terminal EOF cancels each selection successfully without writes
 
 - A fresh container uses `HOME=/tmp/c-plugin-standard-interactive-eof/home` with all skills registered in primary and cursor roots.
 - Both alpha links are deliberately removed while ownership is retained; exact persisted bytes are captured.
-- A real canonical-mode PTY uses `TERM=xterm`, separate stdout, and disabled input echo.
+- A real PTY uses `TERM=xterm` and separate stdout. The driver preserves its original echo and canonical settings as the restoration baseline.
 
 ### Execution flow
 
 1. Initialize both locks, run `c-plugin plugin add local:./plugin --all`, then `c-plugin target add .cursor/skills` from the project.
 2. Remove primary and cursor alpha links and capture persisted bytes.
 3. Run `c-plugin plugin add local:./plugin`, `c-plugin skill remove`, and `c-plugin target remove` on separate PTYs.
-4. At each observed prompt, write canonical EOF byte `0x04` without a preceding line.
+4. At each observed keyboard footer, write Ctrl+D byte `0x04` without a line ending.
 5. After each child exits, compare persisted bytes, both missing alpha links, and the retained beta link.
 
 ### Expected results
@@ -455,5 +470,5 @@ Verify canonical-terminal EOF cancels each selection successfully without writes
 
 ### Notes
 
-Writing terminal EOF after the prompt is deterministic and does not close the PTY master before stderr is drained.
+Ctrl+D cancels in the raw-mode UI without closing the PTY master before stderr is drained.
 The fixture explicitly waits for the child and propagates its exit status through JSON.
