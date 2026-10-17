@@ -35,7 +35,7 @@ import qualified Data.Set as Set
 import System.Directory (createDirectoryIfMissing, listDirectory, removeFile, withCurrentDirectory)
 import System.Environment (lookupEnv, setEnv, unsetEnv)
 import System.FilePath ((</>))
-import System.IO (BufferMode (LineBuffering), Handle, hClose, hGetLine, hSetBuffering)
+import System.IO (BufferMode (LineBuffering), Handle, hClose, hFlush, hGetLine, hPutStrLn, hSetBuffering)
 import System.Posix.Files (createNamedPipe, readSymbolicLink, setFileMode)
 import System.Posix.IO (OpenMode (ReadWrite), defaultFileFlags, fdToHandle, openFd)
 import System.Timeout (timeout)
@@ -43,6 +43,13 @@ import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn, shouldSatisfy)
 
 spec :: Spec
 spec = describe "bounded independent IO through public sync and update APIs" $ do
+    it "retains an early release until the real subprocess opens its FIFO" $ withFixture [] $ \base _ -> inEnvironment base $
+        withFakeGit base [1 :: Int] $ \events release -> do
+            release "1"
+            watchdog "early release subprocess completion" (runGit False base ["fixture-worker", "1"]) `shouldReturn` "ok 1\n"
+            readProcessEvent events "start" `shouldReturn` "1"
+            readProcessEvent events "end" `shouldReturn` "1"
+
     it "bounds real runGit processes at eight and returns all slots after cancellation" $ withFixture [] $ \base _ -> inEnvironment base $
         withFakeGit base [1 .. 40 :: Int] $ \events release -> do
             let jobs = [1 .. 24 :: Int]
@@ -610,15 +617,23 @@ withFakeGit base identifiers action = do
     setFileMode executable 0o700
     createNamedPipe eventsPath 0o600
     forM_ identifiers $ \identifier -> createNamedPipe (releasePath (show identifier)) 0o600
+    releaseHandles <- newIORef []
     let openEvents = openFd eventsPath ReadWrite Nothing defaultFileFlags >>= fdToHandle
-        release identifier = watchdog "fake Git release FIFO" (writeFile (releasePath identifier) "finish\n")
+        -- openFile can fail with ENXIO on macOS before the child opens its FIFO.
+        -- Keep both endpoints alive until the action finishes, so early tokens
+        -- survive delayed readers without an unsafe blocking open.
+        release identifier =
+            watchdog "fake Git release FIFO" $ mask $ \restore -> do
+                handle <- openFd (releasePath identifier) ReadWrite Nothing defaultFileFlags >>= fdToHandle
+                atomicModifyIORef' releaseHandles (\handles -> (handle : handles, ()))
+                restore (hPutStrLn handle "finish" >> hFlush handle)
         restorePath Nothing = unsetEnv "PATH"
         restorePath (Just previous) = setEnv "PATH" previous
     bracket (lookupEnv "PATH") restorePath $ \previous -> do
         setEnv "PATH" (bin ++ maybe "" (':' :) previous)
         bracket openEvents hClose $ \events -> do
             hSetBuffering events LineBuffering
-            action events release
+            action events release `finally` (readIORef releaseHandles >>= mapM_ hClose)
 
 readProcessEvent :: Handle -> String -> IO String
 readProcessEvent events expected = do
