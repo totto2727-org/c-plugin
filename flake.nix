@@ -26,7 +26,10 @@
         pkgs.haskell.packages.ghc94.override {
           overrides = final: previous: {
             gitlib = final.callCabal2nix "gitlib" (gitlibSource + "/gitlib") { };
-            gitlib-cmdline = final.callCabal2nix "gitlib-cmdline" (gitlibSource + "/gitlib-cmdline") { };
+            gitlib-test = final.callCabal2nix "gitlib-test" (gitlibSource + "/gitlib-test") { };
+            gitlib-cmdline = final.callCabal2nix "gitlib-cmdline" (gitlibSource + "/gitlib-cmdline") {
+              git = pkgs.git;
+            };
             # Iris 0.1's released bounds require these older dependency families.
             # No jailbreak or allow-newer: build with the published constraints.
             ansi-terminal-types = final.callHackage "ansi-terminal-types" "0.11.5" { };
