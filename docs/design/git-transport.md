@@ -38,7 +38,7 @@ The CLI's `-r` means recursive project-lock discovery, not Git clone recursion a
 ## Discovery compatibility
 
 The original implementation delegates recursive discovery to Admiral 0.6.2's `target-file-discovery` utility.
-The current [lock discovery implementation](../../hs/lib/CPlugin/Paths.hs) preserves that discovery contract.
+The current [lock discovery implementation](../../lib/CPlugin/Paths.hs) preserves that discovery contract.
 Preserve its nearest-parent requirement, directory-only ignore matching, included own lock, hidden-directory behavior, and refusal to traverse symlink directories.
 The limited ignore matcher is not a full implementation of Git ignore semantics.
 Prune `.git` metadata and installer-owned source snapshots as explicit safety exclusions, so source repositories cannot become projects during recursive update or sync.

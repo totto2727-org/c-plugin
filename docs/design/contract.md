@@ -32,7 +32,7 @@ Do not define orphan JSON instances in filesystem or command modules.
 | `CPlugin.Types.Sync` | Synchronization results and notices |
 | `CPlugin.Types.Selection` | Selection requests, typed results, and line-response validation |
 
-Keep Iris CLI parsing and interactive-mode detection in `hs/app/Main.hs`.
+Keep Iris CLI parsing and interactive-mode detection in `app/Main.hs`.
 `CPlugin.Interaction` adapts typed choices to terminal handles; handlers consume typed selection results before constructing a candidate.
 `CPlugin.StateStore` owns file IO, canonical JSON rendering, and durable atomic writes.
 It does not define type-specific wire rules.
@@ -247,7 +247,7 @@ Assert terminal detection, exit status, exact state preservation, and final link
 Hspec scenarios use the public Caseyard API with a caller-built image and isolated container state per example.
 Build the shared image once before the suite, not inside individual examples.
 Hspec owns scheduling through `parallel` and `--jobs=2`.
-Keep the E2E host compiler in its separate `hs/e2e` Cabal project; it does not change the GHC 9.4 product build.
+Keep the E2E host compiler in its separate `e2e` Cabal project; it does not change the GHC 9.4 product build.
 Check source-linked scenario documents against the actual Haskell modules.
 Validate the ordinary Cabal build and native tests, and report real Docker E2E separately.
 Independent Nix package builds are optional, not required by `just ci`.

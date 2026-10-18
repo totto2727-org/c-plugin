@@ -58,7 +58,7 @@ filesystemやcommandモジュールにorphan JSON instanceを定義しません�
 | `CPlugin.Types.Sync` | 同期結果と通知の型 |
 | `CPlugin.Types.Selection` | 選択要求、型付き選択結果、行入力の検証 |
 
-Iris CLI解析と対話modeの判定は`hs/app/Main.hs`に置きます。
+Iris CLI解析と対話modeの判定は`app/Main.hs`に置きます。
 `CPlugin.Interaction`は型付き選択肢をterminal handleへ接続し、handlerはcandidateの構築前に型付き選択結果を受け取ります。
 `CPlugin.StateStore`はファイルIO、canonical JSON出力、耐久性を持つatomic writeを担当します。
 型固有のwire形式規則は定義しません。
@@ -255,7 +255,7 @@ prompt文字列だけでなく、terminal判定、exit status、stateの完全�
 Hspec scenarioはCaseyardの公開APIを使い、callerがbuildしたimageとexampleごとの分離されたcontainer stateを使用します。
 共有imageはsuiteの前に1回だけbuildし、個別exampleの中ではbuildしません。
 並列実行はHspecの`parallel`と`--jobs=2`で制御します。
-E2E host compilerは独立した`hs/e2e` Cabal projectで管理し、製品のGHC 9.4 buildは変更しません。
+E2E host compilerは独立した`e2e` Cabal projectで管理し、製品のGHC 9.4 buildは変更しません。
 sourceに対応するscenario文書を実際のHaskell moduleに対して検証します。
 通常のCabal buildとnative testを検証し、実Docker E2Eの結果を分けて報告します。
 独立したNix package buildは任意であり、`just ci`の必須検証には含めません。

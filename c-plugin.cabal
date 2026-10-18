@@ -38,7 +38,7 @@ common settings
 
 library
   import: settings
-  hs-source-dirs: hs/lib
+  hs-source-dirs: lib
   build-depends:
       process >=1.6 && <1.7
     , async >=2.2 && <2.3
@@ -100,7 +100,7 @@ library
 
 executable c-plugin
   import: settings
-  hs-source-dirs: hs/app
+  hs-source-dirs: app
   main-is: Main.hs
   ghc-options: -threaded -rtsopts
   if flag(static) && os(linux)
@@ -115,7 +115,7 @@ test-suite product-tests
   import: settings
   ghc-options: -threaded -rtsopts
   type: exitcode-stdio-1.0
-  hs-source-dirs: hs/test
+  hs-source-dirs: test
   main-is: Spec.hs
   other-modules:
       CPlugin.PathsSpec

@@ -29,6 +29,7 @@ spec = parallel $ do
 githubFixtureRepository, githubFixtureURL, githubFixtureRef, githubPluginPath, githubSoloPath, githubRootSource, githubPluginSource, githubSoloSource, githubPluginURLSource, githubSoloURLSource :: String
 githubFixtureRepository = "totto2727-org/c-plugin"
 githubFixtureURL = "https://github.com/" ++ githubFixtureRepository
+-- Fixture paths refer to this published Git tree, not the local checkout layout.
 githubFixtureRef = "test/e2e-unified-api"
 githubPluginPath = "hs/test/fixtures/github/plugin"
 githubSoloPath = "hs/test/fixtures/github/solo"

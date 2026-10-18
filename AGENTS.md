@@ -6,22 +6,22 @@ For consumer setup and usage, read [README.md](README.md).
 ## Repository structure
 
 ```text
-README.md              Canonical consumer entrypoint, a physical file
-AGENTS.md              Maintenance instructions
-hs/app/Main.hs            Iris CLI entrypoint
-hs/lib/CPlugin/        Command policy, discovery, paths, reconciliation, state IO
-hs/lib/CPlugin/Commands/ Per-command handlers and shared command support
-hs/lib/CPlugin/Reconcile/ Planning, session state, mutations, and reporting
-hs/lib/CPlugin/Types/  Type definitions with their validation and wire codecs
-c-plugin.cabal         Cabal library, executable, and test definitions
-cabal.project          Cabal project configuration
-flake.nix, flake.lock  Pinned development environment and CLI package
-Justfile               Shared task entrypoints
-hs/test/Spec.hs            Hspec suite entrypoint
-hs/test/CPlugin/          Domain, codec, plugin, reconciliation, and command specs
-hs/e2e/               Hspec/Caseyard Docker tests and sibling scenario documents
-docs/                  CLI reference and English/Japanese design contract
-.github/workflows/     Validation automation
+README.md               Canonical consumer entrypoint, a physical file
+AGENTS.md               Maintenance instructions
+app/Main.hs             Iris CLI entrypoint
+lib/CPlugin/            Command policy, discovery, paths, reconciliation, state IO
+lib/CPlugin/Commands/   Per-command handlers and shared command support
+lib/CPlugin/Reconcile/  Planning, session state, mutations, and reporting
+lib/CPlugin/Types/      Type definitions with their validation and wire codecs
+c-plugin.cabal          Cabal library, executable, and test definitions
+cabal.project           Cabal project configuration
+flake.nix, flake.lock   Pinned development environment and CLI package
+Justfile                Shared task entrypoints
+test/Spec.hs            Hspec suite entrypoint
+test/CPlugin/           Domain, codec, plugin, reconciliation, and command specs
+e2e/                    Hspec/Caseyard Docker tests and sibling scenario documents
+docs/                   CLI reference and English/Japanese design contract
+.github/workflows/      Validation automation
 ```
 
 ## Development commands
@@ -50,7 +50,7 @@ Use `just build-nix` to run the independent package build alone.
 Docker E2E requires a working Docker daemon.
 Use `nix develop .#e2e --command just e2e` to run Docker E2E with the host-side Haskell toolchain.
 The E2E shell provides GHC 9.10, Cabal, Git, and Just.
-`hs/e2e` is a separate Cabal project because Caseyard requires `base >=4.18`, while Iris keeps the product on GHC 9.4.
+`e2e` is a separate Cabal project because Caseyard requires `base >=4.18`, while Iris keeps the product on GHC 9.4.
 Its `cabal.project` pins the public Caseyard Git source to an immutable revision; it does not use a workspace-relative dependency.
 Run `just e2e-check` in that shell to compile the acceptance suite without Docker.
 The Docker build enables the Cabal `static` flag, which applies Linux static-link options only to the executable.
