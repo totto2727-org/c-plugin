@@ -7,7 +7,6 @@ author: totto2727
 maintainer: totto2727
 license: MIT
 github: totto2727-org/c-plugin
-extra-source-files: cbits/*.h
 
 language: Haskell2010
 ghc-options: -Wall
@@ -25,11 +24,11 @@ dependencies:
 
 library:
   source-dirs: lib
-  c-sources: cbits/libgit2.c
-  include-dirs: cbits
-  cc-options: -std=c11
-  pkg-config-dependencies: libgit2 >=1.9 && <1.10
   dependencies:
+    - gitlib >=3.3 && <3.4
+    - gitlib-cmdline >=3.3 && <3.4
+    - shelly >=1.12 && <1.13
+    - transformers >=0.5 && <0.7
     - process >=1.6 && <1.7
     - async >=2.2 && <2.3
     - brick >=2.9 && <2.10

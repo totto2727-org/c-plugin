@@ -16,8 +16,6 @@ maintainer:     totto2727
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
-extra-source-files:
-    cbits/cplugin_libgit2.h
 
 source-repository head
   type: git
@@ -60,7 +58,7 @@ library
       CPlugin.Reconcile.Report
       CPlugin.Reconcile.Session
       CPlugin.Source.GitHub
-      CPlugin.Source.Libgit2
+      CPlugin.Source.Gitlib
       CPlugin.StateStore
       CPlugin.Types
       CPlugin.Types.GitHub
@@ -80,13 +78,6 @@ library
   hs-source-dirs:
       lib
   ghc-options: -Wall
-  cc-options: -std=c11
-  include-dirs:
-      cbits
-  c-sources:
-      cbits/libgit2.c
-  pkgconfig-depends:
-      libgit2 >=1.9 && <1.10
   build-depends:
       aeson >=2.1 && <2.3
     , aeson-pretty ==0.8.*
@@ -97,9 +88,13 @@ library
     , containers >=0.6 && <0.8
     , directory ==1.3.*
     , filepath >=1.4 && <1.6
+    , gitlib ==3.3.*
+    , gitlib-cmdline ==3.3.*
     , mtl >=2.2 && <2.4
     , process ==1.6.*
+    , shelly ==1.12.*
     , text ==2.0.*
+    , transformers >=0.5 && <0.7
     , unix >=2.7 && <2.9
     , vty ==6.4.*
     , vty-unix ==0.2.*
@@ -139,8 +134,8 @@ test-suite product-tests
       CPlugin.ConcurrencySpec
       CPlugin.GitHubSpec
       CPlugin.GitHubTestSupport
+      CPlugin.GitlibSpec
       CPlugin.InteractionSpec
-      CPlugin.Libgit2Spec
       CPlugin.PathsSpec
       CPlugin.PluginSpec
       CPlugin.ReconcileSpec

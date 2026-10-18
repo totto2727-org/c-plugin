@@ -33,8 +33,10 @@ GHC 9.4.8 remains pinned because Iris 0.1 has a compatible published `base` boun
 Do not bypass dependency bounds with `allow-newer`.
 Maintain root `package.yaml` and `e2e/package.yaml`, then run `just generate` to regenerate the checked-in `.cabal` files.
 Let hpack discover module lists automatically rather than maintaining them by hand.
-The product shell supplies libgit2 1.9.7, pkg-config, and native dependencies.
-Non-Nix Cabal builds require libgit2 `>= 1.9 && < 1.10` development headers and pkg-config, not Git for runtime transport.
+The product shell supplies Git, which is also a runtime dependency.
+Use official gitlib and gitlib-cmdline 3.3.0 from unchanged upstream commit `25dcef2e4f09e571f71c795f5b32267038258cea` (2026-08-08).
+Keep the Cabal `source-repository-package` pin and Nix overrides aligned.
+Non-Nix builds require Git, not libgit2 development headers or a custom C binding.
 
 ```sh
 just build     # Cabal product build
@@ -60,8 +62,9 @@ Its `cabal.project` pins the public Caseyard Git source to an immutable revision
 Run `just e2e-check` in that shell to compile the acceptance suite without Docker.
 The Docker sandbox-base builder runs an ordinary Cabal build inside `nix develop`, not `nix build`.
 The Ubuntu 26.04 runtime copies only the actually linked Nix library closure, not the development toolchain.
-Git and Python in that runtime support test fixtures and probes, not product transport.
-The former Cabal `static` flag is removed.
+Git in that runtime supports product transport and fixtures; Python supports test probes.
+Keep the runtime lean and do not enable a Cabal `static` flag.
+Do not claim that a dependency-heavy cold build is faster without measurement.
 Inspect `Justfile`, `c-plugin.cabal`, the E2E Dockerfile, and flake outputs before changing task contracts.
 A zero-test run or a `no work to do` result is not product coverage.
 
@@ -87,8 +90,8 @@ Keep the implementation small and use the existing Haskell modules rather than e
 - Top-level `sync` reconciles both plugins and standalone skills offline from pinned sources. `update` refreshes both source kinds, validates a complete per-lock candidate, then reconciles even when the lock is unchanged. Keep `-r` compatible with the original Admiral 0.6.2 discovery rules, except documented `.git` and snapshot-cache safety exclusions.
 - Keep `target` at the top level. Plugin and skill removal have separate selector domains. Disabling the final plugin skill must keep its plugin registration.
 - Lists are read-only lock views, not source refreshes or reconciliation commands. Registered-plugin enable/disable must preserve source identity and use pinned GitHub caches without fetching.
-- Keep GitHub value validation/codecs in `CPlugin.Types.GitHub` and cache/transport orchestration in `CPlugin.Source.GitHub`. Default commands use `CPlugin.Source.Libgit2` and its small direct C FFI, with no production Git subprocess fallback. Keep exported `runGit` only for injected tests and fixtures.
-- Restrict public fetches to fixed HTTPS GitHub URLs at depth one. Isolate repository-local plus memory configuration, disable hooks and submodules, and preserve immutable-cache validation. Installed credential helpers and private authentication are unsupported. Cancellation can wait during DNS/TLS between callbacks. The internal adapter omits dangling-object `fsck` stdout and rejects conflict status, rather than implementing a general Git CLI. Never delete an existing cache entry. See [Git transport](docs/design/git-transport.md).
+- Keep GitHub value validation/codecs in `CPlugin.Types.GitHub` and cache/transport orchestration in `CPlugin.Source.GitHub`. Default commands use `CPlugin.Source.Gitlib.runGitlib`, a small adapter to upstream gitlib-cmdline `doRunGit`, `CliRepo`, and `RepositoryOptions` with a standard-process execution callback. Keep exported `runGit` as the same backend for injected tests and fixtures. Do not add custom C, FFI, bindings, shell command construction, or a replacement implementation of Git operations such as `fsck`.
+- Restrict public fetches to fixed HTTPS GitHub URLs at depth one. Network operations use installed Git configuration and credential helpers noninteractively, with no custom authentication flow. Offline verification excludes global, system, and XDG configuration. Disable hooks and submodules, reject URL rewriting and redirects, and preserve immutable-cache validation. Never delete an existing cache entry. Do not claim real private-repository acceptance without credentials and an actual test. See [Git transport](docs/design/git-transport.md).
 - Use stock Aeson-derived JSON instances for internal records and newtypes. Do not customize field names, constructor tags, or optional-field encoding. Validate decoded values at the persistence/cache boundary, including identities, duplicate selections, and map-key relationships. No legacy wire conversion is provided.
 - Preserve canonical output, isolated project/global scopes, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
 - Missing or corrupt ownership records do not authorize deletion or adoption of existing paths.

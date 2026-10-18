@@ -1,61 +1,90 @@
 # Git transport decision
 
+This document is for contributors who change GitHub transport, cache validation, or packaging.
+For source syntax and user-facing behavior, see the [CLI reference](../cli.md).
+
 ## Decision
 
-Use `CPlugin.Source.Libgit2`, a small direct C FFI to nixpkgs libgit2 1.9.7, for all default commands.
-There is no production Git subprocess fallback.
-The exported `CPlugin.Source.GitHub.runGit` remains available only for injected tests and fixtures.
+Use the official gitlib and gitlib-cmdline packages for all default GitHub commands.
+Both packages use version 3.3.0 from unchanged upstream commit [`25dcef2e4f09e571f71c795f5b32267038258cea`](https://github.com/jwiegley/gitlib/commit/25dcef2e4f09e571f71c795f5b32267038258cea), dated 2026-08-08.
+Pin that revision through Cabal `source-repository-package` and matching Nix overrides.
+Do not patch upstream source or introduce custom C, FFI, or bindings.
+
+`CPlugin.Source.Gitlib.runGitlib` is a small adapter to upstream `Git.CmdLine.doRunGit`, `CliRepo`, and `RepositoryOptions`.
+Its execution callback uses standard `process` functions with explicit arguments, environment, and working directory.
+The adapter preserves output and cancellation cleanup without constructing shell commands.
+The Git executable performs fetch, checkout, status, `fsck`, and other Git operations.
+This is a subprocess backend, not a replacement Git implementation or an implementation of every operation through high-level typed Git objects.
+The exported `CPlugin.Source.GitHub.runGit` uses the same backend for injected tests and fixtures.
+
 Keep repository, ref, subpath, commit, origin, validation, and JSON conversion in `CPlugin.Types.GitHub`.
-Keep staging, cache validation, and transport orchestration in `CPlugin.Source.GitHub`, and native operations in `CPlugin.Source.Libgit2` and `cbits/libgit2.c`.
+Keep staging, cache validation, and transport orchestration in `CPlugin.Source.GitHub`.
+Keep command execution in `CPlugin.Source.Gitlib`.
 
-## Alternatives examined
+## Upstream APIs and backend boundaries
 
-The upstream [gitlib repository](https://github.com/jwiegley/gitlib/tree/master/gitlib) provides typed Git objects and repository abstractions with interchangeable backends.
-Its published [gitlib 3.1.3 metadata](https://hackage.haskell.org/package/gitlib-3.1.3) permits `base >= 3 && < 5`.
-That bound does not establish a GHC 9.4 incompatibility, and no such incompatibility is claimed here.
+The pinned [gitlib package](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/gitlib/gitlib.cabal) and [gitlib-cmdline package](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/gitlib-cmdline/gitlib-cmdline.cabal) declare version 3.3.0.
+Use the pinned [command-line backend](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/gitlib-cmdline/Git/CmdLine.hs) rather than assuming that published gitlib-cmdline 3.1.0.2 has the same APIs and dependency compatibility.
+Published [gitlib-cmdline 3.1.0.2](https://hackage.haskell.org/package/gitlib-cmdline-3.1.0.2/src/Git/CmdLine.hs) calls `textToSha` without the `MonadFail` constraint required by [gitlib 3.1.3](https://hackage.haskell.org/package/gitlib-3.1.3/src/Git/Types.hs).
+It also uses `parseTime`, which is absent from the [time 1.12.2 formatting API](https://hackage.haskell.org/package/time-1.12.2/docs/Data-Time-Format.html).
+The pinned upstream source adds the required `MonadFail` constraints and uses `parseTimeM False`.
+These are specific compatibility gaps, not proof that every historical dependency plan fails.
+`doRunGit` accepts an execution callback, so the product can preserve its environment and process-lifecycle policy without changing upstream code.
+The backend also uses Shelly internally, but the product callback does not use `Shelly.run` for command execution.
 
-The [gitlib-cmdline backend source](https://github.com/jwiegley/gitlib/blob/master/gitlib-cmdline/Git/CmdLine.hs) implements `doRunGit` through Shelly and the Git executable.
-Its pull helper runs a merging `git pull` and changes repository user configuration, rather than implementing this installer's immutable pinned fetch.
-The lower-level command wrapper still needs a product-specific layer for environment isolation, hook disabling, fixed-URL verification, and cache provenance.
-Using that backend would retain the Git runtime dependency while adding a broader object/monad and dependency surface.
+Do not use upstream pull helpers for immutable source refreshes.
+They perform a merging pull and can change repository user configuration.
+The upstream [repository helpers](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/gitlib/Git/Repository.hs) include `withNewRepository`, which removes an existing supplied directory.
+Never apply that helper to persistent cache locations or user directories.
+Use unique staging directories and never replace or delete an existing cache entry.
 
-The published [gitlib-libgit2 dependency declaration](https://hackage.haskell.org/package/gitlib-libgit2-3.1.2.1) adds `hlibgit2` and `text-icu` native bindings.
-Published [hlibgit2 0.18.0.16 metadata](https://hackage.haskell.org/package/hlibgit2-0.18.0.16) and its [Cabal source](https://hackage.haskell.org/package/hlibgit2-0.18.0.16/hlibgit2.cabal) show that it unconditionally builds an old bundled libgit2, without a system-library flag or pkg-config integration.
-Its published `base >= 3 && < 5` bound does not establish a GHC 9.4 incompatibility.
-The direct FFI experiment instead targets the current system libgit2 API without that bundled library or the broader gitlib abstraction.
-
-The upstream [Git.Repository helpers](https://github.com/jwiegley/gitlib/blob/master/gitlib/Git/Repository.hs) also include `withNewRepository`, which removes an existing supplied directory.
-Do not apply that helper to persistent cache locations or user directories.
-The product instead creates unique staging directories and never replaces or deletes an existing cache entry.
+The separate [gitlib-libgit2 backend](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/gitlib-libgit2/gitlib-libgit2.cabal) depends on hlibgit2.
+The [hlibgit2 Cabal declaration at the same upstream revision](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/hlibgit2/hlibgit2.cabal) still builds bundled libgit2 0.18 without a system-library switch or pkg-config integration.
+Its [Setup.hs](https://github.com/jwiegley/gitlib/blob/25dcef2e4f09e571f71c795f5b32267038258cea/hlibgit2/Setup.hs) uses `defaultMain` and does not add such a switch.
+It is not the selected backend.
+A broad `base >= 3 && < 5` bound alone does not establish GHC 9.4 compatibility or incompatibility.
 
 ## Required behavior
 
-The adapter accepts only the installer's internal argv-shaped operation protocol, not shell commands or arbitrary Git CLI operations.
-Public network operations accept only fixed HTTPS GitHub URLs and validated refs/subpaths, and request shallow depth one.
-Use only repository-local configuration plus an in-memory policy overlay, without global, system, or XDG configuration, and reject local configuration includes.
-Disable interactive authentication, hooks, submodule recursion, URL rewriting, and HTTP redirects.
-Offline synchronization verifies the locked commit and cache provenance without contacting the remote.
-Preserve validation of physical cache directories, origin URL, HEAD, metadata indirections, tracked content hashes, and contained tracked symlinks without adopting or replacing an existing cache entry.
-An explicit update fetches the configured refs for both plugins and standalone skills, validates the complete per-lock candidate, and then synchronizes links.
-A snapshot containing submodules is rejected rather than recursively fetching another repository.
-The CLI's `-r` means recursive project-lock discovery, not Git clone recursion and not a shorthand for `--ref`.
+The adapter accepts the installer's internal argument lists, not shell command strings.
+Network operations accept only fixed HTTPS GitHub URLs and validated refs and subpaths, and request shallow depth one.
+Network operations use installed Git configuration and credential helpers with interactive prompts disabled.
+Do not add a product-specific authentication flow.
+Reject URL rewriting and disable HTTP redirects, hooks, and submodule recursion.
+Offline verification excludes global, system, and XDG configuration, rejects local configuration includes, and does not contact remotes.
 
-## Limitations
+Preserve validation of physical cache directories, origin URL, HEAD, provenance, metadata indirections, tracked content hashes, and contained tracked symlinks.
+Do not adopt, overwrite, or delete an existing corrupt cache entry.
+Cleanup is restricted to staging directories created by the current fetch.
+An explicit update fetches configured refs for plugins and standalone skills, validates the complete per-lock candidate, and then synchronizes links.
+Reject snapshots containing submodules rather than recursively fetching another repository.
+The CLI's `-r` means recursive project-lock discovery, not Git clone recursion or a shorthand for `--ref`.
 
-Installed credential helpers and private-repository authentication are not supported.
-Cancellation is cooperative through callbacks and waits for the native worker to finish; DNS or TLS operations can delay it between callbacks.
-The internal `fsck` operation validates objects and references but omits dangling-object stdout, and the status operation rejects conflicts instead of rendering conflict status.
-This adapter is not a general Git CLI implementation.
+Keep the process-wide eight-slot leaf-effect gate, deterministic reporting order, and sequential mutation/checkpoint policy.
+Cancellation must cancel and join dependent workers and clean up subprocesses before control returns.
+These checks are not a sandbox against a concurrent hostile filesystem writer.
+
+## Authentication and verification limits
+
+Private repositories require installed credentials that work without prompts.
+Credential availability, helper behavior, permissions, and network access remain external prerequisites.
+Do not claim real private-repository acceptance from synthetic tests or without running against an authorized repository with working credentials.
+Installed credential helpers are part of the selected backend's authentication path.
 
 ## Build and packaging
 
-The Nix development shell supplies libgit2, pkg-config, and native dependencies.
-Non-Nix Cabal builds require libgit2 `>= 1.9 && < 1.10` development headers and pkg-config, not Git as a runtime transport dependency.
-Root `package.yaml` and `e2e/package.yaml` are the hpack sources of truth; check in the generated `.cabal` files and let hpack discover module lists automatically.
+Git is a runtime dependency.
+The Nix development shell includes Git, and the installed Nix package wraps the executable with Git on `PATH`.
+Non-Nix builds require Git, not libgit2 development headers or custom binding code.
+Root `package.yaml` and `e2e/package.yaml` are the hpack sources of truth.
+Check in the generated `.cabal` files and let hpack discover module lists automatically.
+
 The Docker sandbox-base builder runs an ordinary Cabal build inside `nix develop`, not `nix build`.
 The Ubuntu 26.04 runtime copies only the actually linked Nix library closure, not the development toolchain.
-Git and Python in that runtime support tests and probes, not product transport.
-There is no Cabal `static` flag.
+Git supports product transport and fixtures, while Python supports test probes.
+Keep the runtime lean and do not enable a Cabal `static` flag.
+A dependency-heavy cold build is not inherently faster.
+Make performance claims only from measurements.
 
 ## Discovery compatibility
 

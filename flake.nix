@@ -15,8 +15,18 @@
       mkPkgs = system: import nixpkgs { inherit system; };
       mkHaskell =
         pkgs:
+        let
+          gitlibSource = pkgs.fetchFromGitHub {
+            owner = "jwiegley";
+            repo = "gitlib";
+            rev = "25dcef2e4f09e571f71c795f5b32267038258cea";
+            hash = "sha256-UD2r4r/s7osuz/c8+QXSPuNNtyim3Rgb4FQtbIk4Ryw=";
+          };
+        in
         pkgs.haskell.packages.ghc94.override {
           overrides = final: previous: {
+            gitlib = final.callCabal2nix "gitlib" (gitlibSource + "/gitlib") { };
+            gitlib-cmdline = final.callCabal2nix "gitlib-cmdline" (gitlibSource + "/gitlib-cmdline") { };
             # Iris 0.1's released bounds require these older dependency families.
             # No jailbreak or allow-newer: build with the published constraints.
             ansi-terminal-types = final.callHackage "ansi-terminal-types" "0.11.5" { };
@@ -41,16 +51,10 @@
               pkgs.git
               pkgs.makeWrapper
             ];
-            librarySystemDepends = (old.librarySystemDepends or [ ]) ++ [ pkgs.libgit2 ];
-            libraryPkgconfigDepends = (old.libraryPkgconfigDepends or [ ]) ++ [
-              pkgs.libgit2
-              pkgs.pcre2
-              pkgs.libssh2
-              pkgs.zlib
-              pkgs.openssl
-            ];
             postInstall = (old.postInstall or "") + ''
-              wrapProgram "$out/bin/c-plugin" --set-default SSL_CERT_FILE ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+              wrapProgram "$out/bin/c-plugin" \
+                --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git ]} \
+                --set-default SSL_CERT_FILE ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
             '';
           });
     in
@@ -107,12 +111,6 @@
               pkgs.cabal-install
               pkgs.haskellPackages.hpack
               pkgs.git
-              pkgs.libgit2
-              pkgs.pcre2
-              pkgs.libssh2
-              pkgs.zlib
-              pkgs.openssl
-              pkgs.pkg-config
               pkgs.haskellPackages.fourmolu
               pkgs.haskellPackages.hlint
               pkgs.just

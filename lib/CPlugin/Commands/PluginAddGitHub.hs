@@ -5,7 +5,7 @@ import qualified CPlugin.Commands.PluginAdd as PluginAdd
 import CPlugin.Interaction (Interaction)
 import CPlugin.Paths (RuntimePaths)
 import CPlugin.Source.GitHub (GitRunner, fetchGitHubWith)
-import CPlugin.Source.Libgit2 (runLibgit2)
+import CPlugin.Source.Gitlib (runGitlib)
 import CPlugin.Types.GitHub (githubRef, githubRepositoryInput, githubSource, githubSubpath)
 import CPlugin.Types.Selection (SelectionRequest)
 import Control.Exception (IOException, catch)
@@ -13,7 +13,7 @@ import Data.Maybe (fromMaybe)
 import System.FilePath (takeDirectory)
 
 run :: Interaction -> RuntimePaths -> Bool -> String -> Maybe String -> Maybe FilePath -> SelectionRequest String -> Bool -> IO ()
-run = runWithGit runLibgit2
+run = runWithGit runGitlib
 
 runWithGit :: GitRunner -> Interaction -> RuntimePaths -> Bool -> String -> Maybe String -> Maybe FilePath -> SelectionRequest String -> Bool -> IO ()
 runWithGit git interaction paths global raw rawRef rawPath request force = do

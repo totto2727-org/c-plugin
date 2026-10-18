@@ -185,7 +185,7 @@ Do not promise automatic recovery or ownership adoption across that window.
 ## Concurrent IO
 
 Independent repository and filesystem IO runs concurrently through ordered worker pools with at most eight workers per traversal.
-A process-wide eight-slot gate bounds active libgit2 operations and skill, lock, and ignore-file reads, including nested traversals.
+A process-wide eight-slot gate bounds active Git subprocesses and skill, lock, and ignore-file reads, including nested traversals.
 Only leaf effects hold a slot; an operation must not hold a slot while it waits for child work.
 Worker failure or asynchronous interruption cancels and joins its dependent workers before control returns.
 
@@ -222,14 +222,17 @@ These checks reduce accidental scope escape. They are not a sandbox against a co
 ## GitHub transport
 
 `CPlugin.Source.GitHub` owns isolated staging directories, immutable snapshots, and pinned verification.
-Default commands use `CPlugin.Source.Libgit2` and its small direct C FFI to nixpkgs libgit2 1.9.7, with no production Git subprocess fallback.
-Keep the exported `runGit` only for injected tests and fixtures.
+Default commands use official gitlib and gitlib-cmdline through `CPlugin.Source.Gitlib.runGitlib`.
+The small adapter calls upstream `Git.CmdLine.doRunGit` with `CliRepo`, `RepositoryOptions`, and a standard-process execution callback.
+Git performs the actual operations, including `fsck`; do not implement custom C, FFI, bindings, or shell commands.
+Keep exported `runGit` as the same backend for injected tests and fixtures.
 Public fetches use fixed HTTPS GitHub URLs and shallow depth one.
-Disable interactive authentication, hooks, submodule recursion, URL rewriting, and HTTP redirects.
-Use only repository-local configuration plus an in-memory policy overlay; exclude global, system, and XDG configuration and reject local configuration includes.
-Installed credential helpers and private-repository authentication are not supported.
-Cancellation is callback-based and joins the native worker, so DNS or TLS operations can delay it.
-The internal adapter omits dangling-object `fsck` stdout and rejects conflict status; it is not a general Git CLI implementation.
+Disable interactive prompts, hooks, submodule recursion, URL rewriting, and HTTP redirects.
+Network operations use installed Git configuration and credential helpers without a custom authentication flow.
+Offline verification excludes global, system, and XDG configuration and rejects local configuration includes without contacting remotes.
+Private repositories require credentials that work noninteractively.
+Do not claim real private-repository acceptance without credentials and an actual authorized test.
+Cancellation must cancel and join dependent workers and clean up subprocesses before control returns.
 Validate physical cache directories, provenance, remote URL, HEAD, Git metadata indirections, tracked content hashes, and contained tracked symlinks.
 Do not adopt, overwrite, or delete an existing corrupt cache entry.
 Cleanup is restricted to staging directories created by the current fetch.
@@ -241,11 +244,14 @@ The backend decision is documented in [Git transport](git-transport.md).
 ## Toolchain
 
 Keep GHC 9.4.8 and Iris 0.1 within their published dependency bounds.
-The Nix shell supplies libgit2, pkg-config, and native dependencies.
-Non-Nix Cabal builds require libgit2 `>= 1.9 && < 1.10` development headers and pkg-config, not Git for runtime transport.
+Git is a runtime dependency, supplied by the Nix shell and the installed package's executable wrapper.
+Non-Nix Cabal builds require Git, not libgit2 development headers or custom binding code.
+Keep official gitlib and gitlib-cmdline 3.3.0 pinned to unchanged upstream commit `25dcef2e4f09e571f71c795f5b32267038258cea` (2026-08-08) in Cabal `source-repository-package` and Nix overrides.
 Maintain root `package.yaml` and `e2e/package.yaml` as hpack sources of truth, with checked-in generated `.cabal` files and automatic module lists.
 The Docker sandbox-base builder uses an ordinary Cabal build inside `nix develop`, not `nix build` or a Cabal `static` flag.
-The Ubuntu 26.04 runtime copies only the actually linked Nix library closure; its Git and Python support tests and probes, not product transport.
+The Ubuntu 26.04 runtime copies only the actually linked Nix library closure, not the development toolchain.
+Git supports product transport and fixtures, while Python supports test probes.
+Keep the runtime lean and do not claim faster dependency-heavy cold builds without measurement.
 Do not substitute dependency probes for product tests.
 
 ## Validation

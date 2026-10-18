@@ -7,13 +7,12 @@ RUN mkdir -p /build /out/runtime && chown -R sandbox:sandbox /build /out
 USER sandbox
 WORKDIR /build
 COPY --chown=sandbox:sandbox flake.nix flake.lock package.yaml c-plugin.cabal cabal.project cabal.project.freeze ./
-# Resolve the pinned Nix toolchain and libgit2 once, independently of source edits.
+# Resolve the pinned toolchain and gitlib once, independently of source edits.
 # This is an ordinary Cabal build inside nix develop, not a Nix package build.
 RUN nix develop --command sh -c 'cabal update && cabal build all --only-dependencies -j2 --disable-executable-dynamic --disable-shared'
 COPY --chown=sandbox:sandbox app ./app
 COPY --chown=sandbox:sandbox lib ./lib
 COPY --chown=sandbox:sandbox test ./test
-COPY --chown=sandbox:sandbox cbits ./cbits
 COPY --chown=sandbox:sandbox LICENSE ./LICENSE
 RUN nix develop --command sh -ec ' \
     hpack --force; \
@@ -27,7 +26,7 @@ RUN nix develop --command sh -ec ' \
 
 FROM ${RUNTIME_IMAGE}
 LABEL org.opencontainers.image.source="https://github.com/totto2727-org/c-plugin"
-# Git is a test-fixture/probe dependency, not the application's transport.
+# Git supplies the official gitlib-cmdline backend and test fixtures.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates git python3 coreutils && \
     rm -rf /var/lib/apt/lists/* && \
     useradd --system --create-home --home-dir /sandbox --shell /bin/bash sandbox && \

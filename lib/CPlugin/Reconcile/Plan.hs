@@ -4,7 +4,7 @@ import CPlugin.Internal.Concurrent (concurrentlyIO, mapConcurrentlyIO)
 import CPlugin.Paths (absoluteIO, relativeLinkTarget, strictRealPath, validateManagedRoot, within)
 import CPlugin.Plugin (loadPlugin, loadStandaloneSkill)
 import CPlugin.Source.GitHub (GitRunner, verifyGitHubSourcesWith)
-import CPlugin.Source.Libgit2 (runLibgit2)
+import CPlugin.Source.Gitlib (runGitlib)
 import CPlugin.Types.GitHub (GitHubOrigin, githubSource)
 import CPlugin.Types.InstalledSkill
 import CPlugin.Types.Lock
@@ -36,7 +36,7 @@ type PluginResolution = (Plugin, AbsolutePath, Either IOException ([ResolvedSkil
 type SkillResolution = (InstalledSkill, Either IOException ResolvedSkill)
 
 planSync :: FilePath -> Lock -> IO SyncPlan
-planSync = planSyncWithGit runLibgit2
+planSync = planSyncWithGit runGitlib
 
 planSyncWithGit :: GitRunner -> FilePath -> Lock -> IO SyncPlan
 planSyncWithGit git lockPath lock = do

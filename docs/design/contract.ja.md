@@ -21,16 +21,19 @@ plugin/standaloneのロックrecordは任意のtyped originを持ち、repositor
 ローカルrecordはoriginを省略し、既存のwire形式を維持します。
 sourceはoriginから導出した`.agents/c-plugin/sources`内の固定snapshotと一致しなければなりません。
 `CPlugin.Source.GitHub`は専用staging、固定snapshot、provenance、cache検証を担当します。
-default commandは`CPlugin.Source.Libgit2`の小さな直接C FFIでnixpkgsのlibgit2 1.9.7を使用し、productionのGit subprocess fallbackは設けません。
-公開された`runGit`は、注入するtestとfixture専用として残します。
+default commandは`CPlugin.Source.Gitlib.runGitlib`を通して公式のgitlibとgitlib-cmdlineを使用します。
+小さなadapterは、`CliRepo`、`RepositoryOptions`、標準process実行callbackを使ってupstreamの`Git.CmdLine.doRunGit`を呼び出します。
+`fsck`を含む実際の操作はGitが行います。独自のC、FFI、binding、shell commandは実装しません。
+公開された`runGit`は、注入するtestとfixtureでも同じbackendを使用します。
 既存のcacheは削除・上書き・adoptせず、cleanupはそのfetchが作成したstagingだけに限定します。
 公開fetchは固定HTTPS GitHub URLに限定し、shallow depth 1を要求します。
-対話認証、hook、submodule再帰、URL書き換え、HTTP redirectを無効にします。
-repository-local設定とmemory上のpolicy overlayだけを使用し、global・system・XDG設定を除外してlocal設定のincludeを拒否します。
+対話prompt、hook、submodule再帰、URL書き換え、HTTP redirectを無効にします。
+network操作はインストール済みGit設定とcredential helperを使用し、独自の認証flowは追加しません。
+offline検証ではglobal・system・XDG設定を除外し、local設定のincludeを拒否してremoteへ接続しません。
 cacheの実ディレクトリ、remote、HEAD、provenance、Git metadataの間接参照、tracked内容hash、symlink containmentの検証を維持します。
-インストール済みcredential helperとprivate repository認証は未対応です。
-cancelはcallbackベースでnative workerの終了を待つため、DNS・TLS処理によって遅れる場合があります。
-内部adapterは`fsck`のdangling object標準出力を省略し、conflict statusを拒否します。一般的なGit CLIの実装ではありません。
+private repositoryには非対話で使える認証情報が必要です。
+認証情報を使った実際の許可済みtestなしに、private repositoryの実受け入れ検証が成功したと主張しません。
+cancel時は依存workerをcancelして終了を待ち、制御を返す前にsubprocessをcleanupします。
 判断の根拠は[Git transport](git-transport.md)に記載します。
 
 トップレベル`sync`はpluginと単体skillの両方を固定sourceからofflineで同期します。
@@ -210,7 +213,7 @@ atomicな置換でも、filesystem mutationと所有checkpointの間のcrash win
 ## 並列I/O
 
 独立したリポジトリとファイルシステムのI/Oは、各走査で最大8ワーカーの順序付きプールを使って並列実行します。
-ネストした走査も含め、実行中のlibgit2操作とskill・lock・ignoreファイルの読み取りはプロセス全体で最大8件に制限します。
+ネストした走査も含め、実行中のGit subprocessとskill・lock・ignoreファイルの読み取りはプロセス全体で最大8件に制限します。
 スロットを保持するのは末端のI/Oだけで、子処理の完了を待つ間は保持しません。
 ワーカーの失敗や非同期割込みでは、依存ワーカーをキャンセルして終了を待ってから制御を戻します。
 
@@ -249,11 +252,14 @@ lockをまたぐtransactionやrollbackは保証しません。
 ## Toolchain
 
 GHC 9.4.8とIris 0.1を公開された依存関係のbounds内で使用します。
-Nix shellはlibgit2、pkg-config、native依存を提供します。
-非NixのCabal buildにはlibgit2 `>= 1.9 && < 1.10`の開発headerとpkg-configが必要ですが、runtime transport用のGitは不要です。
+Gitはruntime依存であり、Nix shellとインストール済みpackageの実行wrapperが提供します。
+非NixのCabal buildにはGitが必要ですが、libgit2の開発headerや独自binding codeは不要です。
+公式gitlibとgitlib-cmdline 3.3.0は、Cabalの`source-repository-package`とNix overrideで、変更していないupstream commit `25dcef2e4f09e571f71c795f5b32267038258cea`（2026-08-08）に固定します。
 rootの`package.yaml`と`e2e/package.yaml`をhpackの正本とし、自動module listを使い、生成した`.cabal`ファイルをcheck-inします。
 Dockerのsandbox-base builderは`nix develop`内で通常のCabal buildを行い、`nix build`やCabalの`static` flagは使いません。
-Ubuntu 26.04 runtimeには実際にlinkされたNix library closureだけをコピーします。runtimeのGitとPythonはtest・probe用であり、製品transportには使いません。
+Ubuntu 26.04 runtimeには実際にlinkされたNix library closureだけをコピーし、開発toolchainは含めません。
+Gitは製品transportとfixtureに、Pythonはtest probeに使用します。
+runtimeを小さく保ち、依存の多いcold buildが速いとは計測なしに主張しません。
 依存関係のprobeを製品テストの代わりにしません。
 
 ## 検証

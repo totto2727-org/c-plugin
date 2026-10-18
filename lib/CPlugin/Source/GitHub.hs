@@ -11,7 +11,7 @@ module CPlugin.Source.GitHub (
 
 import CPlugin.Internal.Concurrent (concurrentlyIO, mapConcurrentlyIO, withIO)
 import CPlugin.Paths (PathKind (..), absoluteIO, ensureManagedRoot, pathKind, strictRealPath, validateManagedRoot, within)
-import CPlugin.Source.Libgit2 (runLibgit2)
+import CPlugin.Source.Gitlib (runGitlib)
 import CPlugin.Types.GitHub
 import CPlugin.Types.Path (AbsolutePath, absoluteText, relativePath, relativeText)
 import Control.Exception (IOException, bracket, evaluate)
@@ -24,33 +24,21 @@ import Data.List (isPrefixOf, sortOn)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust, isNothing)
 import System.Directory (listDirectory, removeDirectory, renameDirectory)
-import System.Environment (getEnvironment)
-import System.Exit (ExitCode (..))
 import System.FilePath (takeDirectory, (</>))
 import System.IO (IOMode (ReadMode), hGetContents, withFile)
 import System.IO.Error (catchIOError, tryIOError)
 import System.Posix.Files (fileMode, getFileStatus, readSymbolicLink, removeLink)
 import System.Posix.Temp (mkdtemp)
-import System.Process (CreateProcess (..), proc, readCreateProcessWithExitCode)
 
 -- The injected runner is a testing boundary, not a transport option exposed by
 -- the CLI. Production only passes the fixed HTTPS URL to network operations.
 type GitRunner = Bool -> FilePath -> [String] -> IO String
 
 runGit :: GitRunner
-runGit network directory arguments = do
-    inherited <- getEnvironment
-    let clean = filter (\(key, _) -> not ("GIT_" `isPrefixOf` key) && key `notElem` ["GCM_INTERACTIVE", "SSH_ASKPASS"]) inherited
-        auth = [("GIT_OPTIONAL_LOCKS", "0"), ("GIT_NO_REPLACE_OBJECTS", "1"), ("GIT_TERMINAL_PROMPT", "0"), ("GIT_ASKPASS", "/usr/bin/false"), ("SSH_ASKPASS", "/usr/bin/false"), ("GCM_INTERACTIVE", "never")]
-        isolated = if network then [] else [("GIT_CONFIG_GLOBAL", "/dev/null"), ("GIT_CONFIG_SYSTEM", "/dev/null"), ("GIT_CONFIG_NOSYSTEM", "1")]
-        options = concatMap (\value -> ["-c", value]) ["core.hooksPath=/dev/null", "core.fsmonitor=false", "submodule.recurse=false", "protocol.allow=never", "protocol.https.allow=always", "http.followRedirects=false", "credential.interactive=false", "core.attributesFile=/dev/null"]
-    (code, output, _) <- withIO (readCreateProcessWithExitCode ((proc "git" (options ++ arguments)){cwd = Just directory, env = Just (auth ++ isolated ++ clean)}) "")
-    case code of
-        ExitSuccess -> pure output
-        ExitFailure _ -> ioError (userError "GitHub source Git operation failed (check repository/ref access and installed Git credentials)")
+runGit = runGitlib
 
 fetchGitHub :: FilePath -> GitHubRepository -> Maybe GitHubRef -> GitHubSubpath -> IO (GitHubOrigin, AbsolutePath)
-fetchGitHub = fetchGitHubWith runLibgit2
+fetchGitHub = fetchGitHubWith runGitlib
 
 fetchGitHubWith :: GitRunner -> FilePath -> GitHubRepository -> Maybe GitHubRef -> GitHubSubpath -> IO (GitHubOrigin, AbsolutePath)
 fetchGitHubWith git base repository requested subpath = do
@@ -136,7 +124,7 @@ cleanupStaging base staging = do
             Nothing -> pure ()
 
 verifyGitHub :: FilePath -> GitHubOrigin -> IO AbsolutePath
-verifyGitHub = verifyGitHubWith runLibgit2
+verifyGitHub = verifyGitHubWith runGitlib
 
 verifyGitHubWith :: GitRunner -> FilePath -> GitHubOrigin -> IO AbsolutePath
 verifyGitHubWith git base origin = do

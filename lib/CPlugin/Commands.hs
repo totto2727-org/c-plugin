@@ -19,7 +19,7 @@ import qualified CPlugin.Commands.Update as Update
 import CPlugin.Interaction (Interaction (..))
 import CPlugin.Paths (runtimePaths)
 import CPlugin.Source.GitHub (GitRunner)
-import CPlugin.Source.Libgit2 (runLibgit2)
+import CPlugin.Source.Gitlib (runGitlib)
 import CPlugin.Types.Selection (SelectionRequest)
 
 -- All raw strings belong to this CLI adapter. Validated domain values cross
@@ -47,7 +47,7 @@ runCommand :: Command -> IO ()
 runCommand = runCommandWith NonInteractive
 
 runCommandWith :: Interaction -> Command -> IO ()
-runCommandWith = runCommandWithGit runLibgit2
+runCommandWith = runCommandWithGit runGitlib
 
 runCommandWithGit :: GitRunner -> Interaction -> Command -> IO ()
 runCommandWithGit git interaction command = do
