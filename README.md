@@ -102,9 +102,10 @@ nix build .#c-plugin
 
 The CLI requires a POSIX filesystem with symlink support and write access to the lock and target directories.
 GitHub transport uses the official gitlib and gitlib-cmdline packages with the Git executable.
-With GHC 9.4.8, Cabal, hpack, and Git installed without Nix, build and run:
+To build and run with hpack and Cabal, use the pinned Nix toolchain:
 
 ```sh
+nix develop
 hpack
 cabal build exe:c-plugin
 "$(cabal list-bin exe:c-plugin)" --help

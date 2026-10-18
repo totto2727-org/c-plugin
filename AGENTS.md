@@ -29,6 +29,7 @@ docs/                   CLI reference and English/Japanese design contract
 
 Run commands from this repository root, not its parent workspace.
 Enter the pinned environment with `nix develop`.
+Manage GHC and Cabal through the pinned Nix shells, not GHcup or a host installation.
 GHC 9.4.8 remains pinned because Iris 0.1 has a compatible published `base` bound.
 Do not bypass dependency bounds with `allow-newer`.
 Maintain root `package.yaml` and `e2e/package.yaml`, then run `just generate` to regenerate the checked-in `.cabal` files.
