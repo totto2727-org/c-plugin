@@ -9,5 +9,10 @@ trace.json
 result
 tmp/
 
+/.claude/skills/ponytail/
+/.claude/skills/ponytail-*/
+/.claude/skills/LICENSE
+/skills-lock.json
+
 node_modules/
 .vite/
