@@ -5,6 +5,7 @@ import qualified CPlugin.CommandsSpec as CommandsSpec
 import qualified CPlugin.ConcurrencySpec as ConcurrencySpec
 import qualified CPlugin.GitHubSpec as GitHubSpec
 import qualified CPlugin.InteractionSpec as InteractionSpec
+import qualified CPlugin.Libgit2Spec as Libgit2Spec
 import qualified CPlugin.PathsSpec as PathsSpec
 import qualified CPlugin.PluginSpec as PluginSpec
 import qualified CPlugin.ReconcileSpec as ReconcileSpec
@@ -25,6 +26,7 @@ main = hspec $ do
     InteractionSpec.spec
     GitHubTypesSpec.spec
     GitHubSpec.spec
+    Libgit2Spec.spec
     ConcurrencySpec.spec
     PathsSpec.spec
     SourceSpec.spec

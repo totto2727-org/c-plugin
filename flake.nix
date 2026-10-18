@@ -41,8 +41,16 @@
               pkgs.git
               pkgs.makeWrapper
             ];
+            librarySystemDepends = (old.librarySystemDepends or [ ]) ++ [ pkgs.libgit2 ];
+            libraryPkgconfigDepends = (old.libraryPkgconfigDepends or [ ]) ++ [
+              pkgs.libgit2
+              pkgs.pcre2
+              pkgs.libssh2
+              pkgs.zlib
+              pkgs.openssl
+            ];
             postInstall = (old.postInstall or "") + ''
-              wrapProgram "$out/bin/c-plugin" --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.git ]}
+              wrapProgram "$out/bin/c-plugin" --set-default SSL_CERT_FILE ${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
             '';
           });
     in
@@ -73,6 +81,7 @@
             packages = [
               pkgs.ghc
               pkgs.cabal-install
+              pkgs.haskellPackages.hpack
               pkgs.git
               pkgs.zlib
               pkgs.pkg-config
@@ -96,7 +105,14 @@
                 p.temporary
               ]))
               pkgs.cabal-install
+              pkgs.haskellPackages.hpack
               pkgs.git
+              pkgs.libgit2
+              pkgs.pcre2
+              pkgs.libssh2
+              pkgs.zlib
+              pkgs.openssl
+              pkgs.pkg-config
               pkgs.haskellPackages.fourmolu
               pkgs.haskellPackages.hlint
               pkgs.just

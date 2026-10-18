@@ -54,9 +54,10 @@ GitHub `tree/BRANCH` URLs are not interpreted: path components are literal direc
 There is no source-kind inference, collection scan, alternative directory fallback, or custom completion.
 Missing required source data, incompatible options, and missing source manifests or markers fail before configuration changes.
 Local paths resolve against the owning lock root; GitHub path suffixes resolve within the fetched snapshot.
-Git must be installed on PATH for Cabal-built executables.
-The Nix package includes its Git runtime dependency.
-Existing Git credential configuration is used without interactive authentication prompts.
+GitHub transport uses libgit2 without a Git executable or subprocess fallback.
+Non-Nix builds require libgit2 development headers and pkg-config; the Nix environment provides them.
+Installed Git credential helpers are not supported, so private-repository authentication is unavailable.
+Cancellation is cooperative and can wait for DNS or TLS operations between transport callbacks.
 
 ```sh
 c-plugin plugin add github:totto2727-org/agent/plugins/totto2727-coding --all

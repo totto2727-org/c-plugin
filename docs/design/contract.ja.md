@@ -20,13 +20,18 @@ repositoryはowner/repoまたは固定GitHub HTTPS URLとして検証し、ref�
 plugin/standaloneのロックrecordは任意のtyped originを持ち、repository、要求ref、subpath、解決commitを保存します。
 ローカルrecordはoriginを省略し、既存のwire形式を維持します。
 sourceはoriginから導出した`.agents/c-plugin/sources`内の固定snapshotと一致しなければなりません。
-`CPlugin.Source.GitHub`はargvによるGit実行、専用staging、provenance、cache検証を担当します。
+`CPlugin.Source.GitHub`は専用staging、固定snapshot、provenance、cache検証を担当します。
+default commandは`CPlugin.Source.Libgit2`の小さな直接C FFIでnixpkgsのlibgit2 1.9.7を使用し、productionのGit subprocess fallbackは設けません。
+公開された`runGit`は、注入するtestとfixture専用として残します。
 既存のcacheは削除・上書き・adoptせず、cleanupはそのfetchが作成したstagingだけに限定します。
-Gitの対話認証、hook、submodule再帰、HTTPS以外のprotocolを無効にし、URL書き換えを拒否します。
-checkoutとoffline検証はGit設定を隔離し、cacheの実ディレクトリ、remote、HEAD、provenance、tracked内容hash、symlink containmentを確認します。
-Gitlibの公式APIと依存関係を検討した上で、限定的なsnapshot取得には標準`process`とGitを使用します。
+公開fetchは固定HTTPS GitHub URLに限定し、shallow depth 1を要求します。
+対話認証、hook、submodule再帰、URL書き換え、HTTP redirectを無効にします。
+repository-local設定とmemory上のpolicy overlayだけを使用し、global・system・XDG設定を除外してlocal設定のincludeを拒否します。
+cacheの実ディレクトリ、remote、HEAD、provenance、Git metadataの間接参照、tracked内容hash、symlink containmentの検証を維持します。
+インストール済みcredential helperとprivate repository認証は未対応です。
+cancelはcallbackベースでnative workerの終了を待つため、DNS・TLS処理によって遅れる場合があります。
+内部adapterは`fsck`のdangling object標準出力を省略し、conflict statusを拒否します。一般的なGit CLIの実装ではありません。
 判断の根拠は[Git transport](git-transport.md)に記載します。
-Cabal版はPATH上のGitが必要で、Nix版はruntime依存を含みます。
 
 トップレベル`sync`はpluginと単体skillの両方を固定sourceからofflineで同期します。
 トップレベル`update`は両方のGitHub refを取得し、ロック単位で全candidateを検証してから保存・同期します。
@@ -205,7 +210,7 @@ atomicな置換でも、filesystem mutationと所有checkpointの間のcrash win
 ## 並列I/O
 
 独立したリポジトリとファイルシステムのI/Oは、各走査で最大8ワーカーの順序付きプールを使って並列実行します。
-ネストした走査も含め、実行中のGitプロセスとskill・lock・ignoreファイルの読み取りはプロセス全体で最大8件に制限します。
+ネストした走査も含め、実行中のlibgit2操作とskill・lock・ignoreファイルの読み取りはプロセス全体で最大8件に制限します。
 スロットを保持するのは末端のI/Oだけで、子処理の完了を待つ間は保持しません。
 ワーカーの失敗や非同期割込みでは、依存ワーカーをキャンセルして終了を待ってから制御を戻します。
 
@@ -244,6 +249,11 @@ lockをまたぐtransactionやrollbackは保証しません。
 ## Toolchain
 
 GHC 9.4.8とIris 0.1を公開された依存関係のbounds内で使用します。
+Nix shellはlibgit2、pkg-config、native依存を提供します。
+非NixのCabal buildにはlibgit2 `>= 1.9 && < 1.10`の開発headerとpkg-configが必要ですが、runtime transport用のGitは不要です。
+rootの`package.yaml`と`e2e/package.yaml`をhpackの正本とし、自動module listを使い、生成した`.cabal`ファイルをcheck-inします。
+Dockerのsandbox-base builderは`nix develop`内で通常のCabal buildを行い、`nix build`やCabalの`static` flagは使いません。
+Ubuntu 26.04 runtimeには実際にlinkされたNix library closureだけをコピーします。runtimeのGitとPythonはtest・probe用であり、製品transportには使いません。
 依存関係のprobeを製品テストの代わりにしません。
 
 ## 検証

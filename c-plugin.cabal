@@ -1,139 +1,171 @@
-cabal-version: 3.0
-name: c-plugin
-version: 0.1.0
-synopsis: Ownership-safe plugin skill manager
-description: Install Agent Plugins 1.0 and standalone skills from local directories or pinned GitHub sources, and safely reconcile owned symlinks.
-category: Tools
-author: totto2727
-maintainer: totto2727
-homepage: https://github.com/totto2727-org/c-plugin
-bug-reports: https://github.com/totto2727-org/c-plugin/issues
-license: MIT
-license-file: LICENSE
-build-type: Simple
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.3.
+--
+-- see: https://github.com/sol/hpack
+
+name:           c-plugin
+version:        0.1.0
+synopsis:       Ownership-safe plugin skill manager
+description:    Install Agent Plugins 1.0 and standalone skills from local directories or pinned GitHub sources, and safely reconcile owned symlinks.
+category:       Tools
+homepage:       https://github.com/totto2727-org/c-plugin#readme
+bug-reports:    https://github.com/totto2727-org/c-plugin/issues
+author:         totto2727
+maintainer:     totto2727
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    cbits/cplugin_libgit2.h
 
 source-repository head
   type: git
-  location: https://github.com/totto2727-org/c-plugin.git
-
-flag static
-  description: Link the Linux E2E executable without runtime shared libraries
-  default: False
-  manual: True
-
-common settings
-  default-language: Haskell2010
-  ghc-options: -Wall
-  build-depends:
-      base >=4.17 && <4.18
-    , aeson >=2.1 && <2.3
-    , aeson-pretty >=0.8 && <0.9
-    , bytestring >=0.11 && <0.13
-    , containers >=0.6 && <0.8
-    , directory >=1.3 && <1.4
-    , filepath >=1.4 && <1.6
-    , text >=2.0 && <2.1
-    , unix >=2.7 && <2.9
-    , yaml >=0.11 && <0.12
+  location: https://github.com/totto2727-org/c-plugin
 
 library
-  import: settings
-  hs-source-dirs: lib
-  build-depends:
-      process >=1.6 && <1.7
-    , async >=2.2 && <2.3
-    , brick >=2.9 && <2.10
-    , vty >=6.4 && <6.5
-    , vty-unix >=0.2 && <0.3
-    , mtl >=2.2 && <2.4
   exposed-modules:
-      CPlugin.Types
-      CPlugin.Types.Path
-      CPlugin.Types.GitHub
-      CPlugin.Types.Source
-      CPlugin.Types.Name
-      CPlugin.Types.Plugin
-      CPlugin.Types.InstalledSkill
-      CPlugin.Types.Lock
-      CPlugin.Types.Ownership
-      CPlugin.Types.PluginManifest
-      CPlugin.Types.Skill
-      CPlugin.Types.Sync
-      CPlugin.Types.Selection
+      CPlugin.Commands
+      CPlugin.Commands.Batch
+      CPlugin.Commands.Common
+      CPlugin.Commands.Init
+      CPlugin.Commands.List
+      CPlugin.Commands.Listing
+      CPlugin.Commands.PluginAdd
+      CPlugin.Commands.PluginAddGitHub
+      CPlugin.Commands.PluginList
+      CPlugin.Commands.PluginRemove
+      CPlugin.Commands.PluginSkillDisable
+      CPlugin.Commands.PluginSkillEnable
+      CPlugin.Commands.PluginSkills
+      CPlugin.Commands.Remove
+      CPlugin.Commands.SkillAdd
+      CPlugin.Commands.SkillAddGitHub
+      CPlugin.Commands.SkillList
+      CPlugin.Commands.SkillRemove
+      CPlugin.Commands.Sync
+      CPlugin.Commands.TargetAdd
+      CPlugin.Commands.TargetRemove
+      CPlugin.Commands.Update
       CPlugin.Interaction
-      CPlugin.StateStore
+      CPlugin.Interaction.Brick
+      CPlugin.Internal.Concurrent
+      CPlugin.Internal.JSON
+      CPlugin.Internal.Validation
       CPlugin.Paths
       CPlugin.Plugin
       CPlugin.Reconcile
-      CPlugin.Commands
-      CPlugin.Source.GitHub
-  other-modules:
-      CPlugin.Interaction.Brick
-      CPlugin.Reconcile.Plan
-      CPlugin.Reconcile.Session
       CPlugin.Reconcile.Mutation
+      CPlugin.Reconcile.Plan
       CPlugin.Reconcile.Report
-      CPlugin.Commands.Init
-      CPlugin.Commands.Sync
-      CPlugin.Commands.Update
-      CPlugin.Commands.PluginAdd
-      CPlugin.Commands.SkillAdd
-      CPlugin.Commands.PluginAddGitHub
-      CPlugin.Commands.SkillAddGitHub
-      CPlugin.Commands.Remove
-      CPlugin.Commands.PluginRemove
-      CPlugin.Commands.SkillRemove
-      CPlugin.Commands.List
-      CPlugin.Commands.PluginList
-      CPlugin.Commands.SkillList
-      CPlugin.Commands.Listing
-      CPlugin.Commands.PluginSkillEnable
-      CPlugin.Commands.PluginSkillDisable
-      CPlugin.Commands.PluginSkills
-      CPlugin.Commands.TargetAdd
-      CPlugin.Commands.TargetRemove
-      CPlugin.Commands.Common
-      CPlugin.Commands.Batch
-      CPlugin.Internal.Validation
-      CPlugin.Internal.JSON
-      CPlugin.Internal.Concurrent
+      CPlugin.Reconcile.Session
+      CPlugin.Source.GitHub
+      CPlugin.Source.Libgit2
+      CPlugin.StateStore
+      CPlugin.Types
+      CPlugin.Types.GitHub
+      CPlugin.Types.InstalledSkill
+      CPlugin.Types.Lock
+      CPlugin.Types.Name
+      CPlugin.Types.Ownership
+      CPlugin.Types.Path
+      CPlugin.Types.Plugin
+      CPlugin.Types.PluginManifest
+      CPlugin.Types.Selection
+      CPlugin.Types.Skill
+      CPlugin.Types.Source
+      CPlugin.Types.Sync
+  other-modules:
+      Paths_c_plugin
+  hs-source-dirs:
+      lib
+  ghc-options: -Wall
+  cc-options: -std=c11
+  include-dirs:
+      cbits
+  c-sources:
+      cbits/libgit2.c
+  pkgconfig-depends:
+      libgit2 >=1.9 && <1.10
+  build-depends:
+      aeson >=2.1 && <2.3
+    , aeson-pretty ==0.8.*
+    , async ==2.2.*
+    , base ==4.17.*
+    , brick ==2.9.*
+    , bytestring >=0.11 && <0.13
+    , containers >=0.6 && <0.8
+    , directory ==1.3.*
+    , filepath >=1.4 && <1.6
+    , mtl >=2.2 && <2.4
+    , process ==1.6.*
+    , text ==2.0.*
+    , unix >=2.7 && <2.9
+    , vty ==6.4.*
+    , vty-unix ==0.2.*
+    , yaml ==0.11.*
+  default-language: Haskell2010
 
 executable c-plugin
-  import: settings
-  hs-source-dirs: app
   main-is: Main.hs
-  ghc-options: -threaded -rtsopts
-  if flag(static) && os(linux)
-    ghc-options: -static -optl-static -optl-fuse-ld=bfd
+  other-modules:
+      Paths_c_plugin
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -threaded -rtsopts
   build-depends:
-      c-plugin
-    , iris >=0.1 && <0.2
-    , optparse-applicative >=0.17 && <0.18
+      aeson >=2.1 && <2.3
+    , aeson-pretty ==0.8.*
+    , base ==4.17.*
+    , bytestring >=0.11 && <0.13
+    , c-plugin
+    , containers >=0.6 && <0.8
+    , directory ==1.3.*
+    , filepath >=1.4 && <1.6
+    , iris ==0.1.*
+    , optparse-applicative ==0.17.*
+    , text ==2.0.*
     , transformers >=0.5 && <0.7
+    , unix >=2.7 && <2.9
+    , yaml ==0.11.*
+  default-language: Haskell2010
 
 test-suite product-tests
-  import: settings
-  ghc-options: -threaded -rtsopts
   type: exitcode-stdio-1.0
-  hs-source-dirs: test
   main-is: Spec.hs
   other-modules:
-      CPlugin.PathsSpec
-      CPlugin.TypesSpec
-      CPlugin.Types.GitHubSpec
-      CPlugin.Types.SourceSpec
+      CPlugin.CodecSpec
+      CPlugin.CommandsSpec
+      CPlugin.ConcurrencySpec
       CPlugin.GitHubSpec
       CPlugin.GitHubTestSupport
-      CPlugin.Types.SelectionSpec
       CPlugin.InteractionSpec
-      CPlugin.CodecSpec
+      CPlugin.Libgit2Spec
+      CPlugin.PathsSpec
       CPlugin.PluginSpec
       CPlugin.ReconcileSpec
-      CPlugin.CommandsSpec
       CPlugin.TestSupport
-      CPlugin.ConcurrencySpec
+      CPlugin.Types.GitHubSpec
+      CPlugin.Types.SelectionSpec
+      CPlugin.Types.SourceSpec
+      CPlugin.TypesSpec
+      Paths_c_plugin
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -threaded -rtsopts
   build-depends:
-      c-plugin
-    , hspec >=2.11 && <2.12
-    , temporary >=1.3 && <1.4
-    , async >=2.2 && <2.3
+      aeson >=2.1 && <2.3
+    , aeson-pretty ==0.8.*
+    , async ==2.2.*
+    , base ==4.17.*
+    , bytestring >=0.11 && <0.13
+    , c-plugin
+    , containers >=0.6 && <0.8
+    , directory ==1.3.*
+    , filepath >=1.4 && <1.6
+    , hspec ==2.11.*
+    , temporary ==1.3.*
+    , text ==2.0.*
+    , unix >=2.7 && <2.9
+    , yaml ==0.11.*
+  default-language: Haskell2010

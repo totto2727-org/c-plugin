@@ -101,16 +101,18 @@ nix build .#c-plugin
 ```
 
 The CLI requires a POSIX filesystem with symlink support and write access to the lock and target directories.
-Git must be available on PATH for GitHub fetches and pinned-source verification.
-With GHC 9.4.8 and Cabal installed without Nix, build and run:
+GitHub transport uses a small direct libgit2 FFI, with no production Git subprocess fallback.
+With GHC 9.4.8, Cabal, hpack, libgit2 `>= 1.9 && < 1.10` development headers, and pkg-config installed without Nix, build and run:
 
 ```sh
+hpack
 cabal build exe:c-plugin
 "$(cabal list-bin exe:c-plugin)" --help
 "$(cabal list-bin exe:c-plugin)" sync
 ```
 
 No package registry release or hosted binary distribution is claimed.
+Git is not required for runtime transport; the Nix development shell supplies libgit2, pkg-config, and native dependencies.
 
 ## Reference
 
@@ -133,10 +135,13 @@ Do not enable the same skill through both a plugin and a standalone registration
 A source prefix is mandatory: `github:OWNER/REPO/path/to/root` or `local:./path/to/root`.
 Raw repository names and paths are errors, not guessed sources.
 `--ref` selects a branch, tag, or commit, and defaults to remote HEAD.
+The current libgit2 experiment fetches public repositories over fixed GitHub HTTPS URLs at shallow depth one.
+Installed credential helpers and private-repository authentication are not supported.
 `sync` reconciles both plugins and standalone skills from pinned snapshots offline.
 `update` refreshes both kinds at their configured refs, then synchronizes links.
 Use `-r` to include descendant project locks, or `-g` for the independent HOME lock, but not both.
 See [CLI reference](docs/cli.md) for the original discovery-library ignore rules and cache safety constraints.
+See [Git transport](docs/design/git-transport.md) for configuration isolation and adapter limitations, including callback-based cancellation that can wait during DNS or TLS operations.
 
 ## Development
 

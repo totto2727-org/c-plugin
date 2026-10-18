@@ -11,6 +11,7 @@ module CPlugin.Source.GitHub (
 
 import CPlugin.Internal.Concurrent (concurrentlyIO, mapConcurrentlyIO, withIO)
 import CPlugin.Paths (PathKind (..), absoluteIO, ensureManagedRoot, pathKind, strictRealPath, validateManagedRoot, within)
+import CPlugin.Source.Libgit2 (runLibgit2)
 import CPlugin.Types.GitHub
 import CPlugin.Types.Path (AbsolutePath, absoluteText, relativePath, relativeText)
 import Control.Exception (IOException, bracket, evaluate)
@@ -49,7 +50,7 @@ runGit network directory arguments = do
         ExitFailure _ -> ioError (userError "GitHub source Git operation failed (check repository/ref access and installed Git credentials)")
 
 fetchGitHub :: FilePath -> GitHubRepository -> Maybe GitHubRef -> GitHubSubpath -> IO (GitHubOrigin, AbsolutePath)
-fetchGitHub = fetchGitHubWith runGit
+fetchGitHub = fetchGitHubWith runLibgit2
 
 fetchGitHubWith :: GitRunner -> FilePath -> GitHubRepository -> Maybe GitHubRef -> GitHubSubpath -> IO (GitHubOrigin, AbsolutePath)
 fetchGitHubWith git base repository requested subpath = do
@@ -135,7 +136,7 @@ cleanupStaging base staging = do
             Nothing -> pure ()
 
 verifyGitHub :: FilePath -> GitHubOrigin -> IO AbsolutePath
-verifyGitHub = verifyGitHubWith runGit
+verifyGitHub = verifyGitHubWith runLibgit2
 
 verifyGitHubWith :: GitRunner -> FilePath -> GitHubOrigin -> IO AbsolutePath
 verifyGitHubWith git base origin = do

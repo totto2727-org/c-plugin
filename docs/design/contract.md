@@ -185,7 +185,7 @@ Do not promise automatic recovery or ownership adoption across that window.
 ## Concurrent IO
 
 Independent repository and filesystem IO runs concurrently through ordered worker pools with at most eight workers per traversal.
-A process-wide eight-slot gate bounds active Git processes and skill, lock, and ignore-file reads, including nested traversals.
+A process-wide eight-slot gate bounds active libgit2 operations and skill, lock, and ignore-file reads, including nested traversals.
 Only leaf effects hold a slot; an operation must not hold a slot while it waits for child work.
 Worker failure or asynchronous interruption cancels and joins its dependent workers before control returns.
 
@@ -221,10 +221,15 @@ These checks reduce accidental scope escape. They are not a sandbox against a co
 
 ## GitHub transport
 
-`CPlugin.Source.GitHub` owns argv-based Git invocation, isolated staging directories, immutable snapshots, and pinned verification.
-Disable interactive authentication, hooks, submodule recursion, and non-HTTPS protocols.
-Reject installed URL rewrites and HTTP redirects away from the fixed GitHub endpoint.
-Use normal installed credentials only for network operations; isolate Git configuration during checkout and offline verification.
+`CPlugin.Source.GitHub` owns isolated staging directories, immutable snapshots, and pinned verification.
+Default commands use `CPlugin.Source.Libgit2` and its small direct C FFI to nixpkgs libgit2 1.9.7, with no production Git subprocess fallback.
+Keep the exported `runGit` only for injected tests and fixtures.
+Public fetches use fixed HTTPS GitHub URLs and shallow depth one.
+Disable interactive authentication, hooks, submodule recursion, URL rewriting, and HTTP redirects.
+Use only repository-local configuration plus an in-memory policy overlay; exclude global, system, and XDG configuration and reject local configuration includes.
+Installed credential helpers and private-repository authentication are not supported.
+Cancellation is callback-based and joins the native worker, so DNS or TLS operations can delay it.
+The internal adapter omits dangling-object `fsck` stdout and rejects conflict status; it is not a general Git CLI implementation.
 Validate physical cache directories, provenance, remote URL, HEAD, Git metadata indirections, tracked content hashes, and contained tracked symlinks.
 Do not adopt, overwrite, or delete an existing corrupt cache entry.
 Cleanup is restricted to staging directories created by the current fetch.
@@ -236,6 +241,11 @@ The backend decision is documented in [Git transport](git-transport.md).
 ## Toolchain
 
 Keep GHC 9.4.8 and Iris 0.1 within their published dependency bounds.
+The Nix shell supplies libgit2, pkg-config, and native dependencies.
+Non-Nix Cabal builds require libgit2 `>= 1.9 && < 1.10` development headers and pkg-config, not Git for runtime transport.
+Maintain root `package.yaml` and `e2e/package.yaml` as hpack sources of truth, with checked-in generated `.cabal` files and automatic module lists.
+The Docker sandbox-base builder uses an ordinary Cabal build inside `nix develop`, not `nix build` or a Cabal `static` flag.
+The Ubuntu 26.04 runtime copies only the actually linked Nix library closure; its Git and Python support tests and probes, not product transport.
 Do not substitute dependency probes for product tests.
 
 ## Validation
