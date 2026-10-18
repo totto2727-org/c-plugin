@@ -1,0 +1,50 @@
+cabal-version: 3.0
+name: c-plugin-e2e
+version: 0.1.0
+synopsis: Docker acceptance tests for c-plugin
+description: Exercise the c-plugin CLI in isolated Docker containers through Caseyard and Hspec.
+category: Testing
+author: totto2727
+maintainer: totto2727
+license: MIT
+build-type: Simple
+data-files: CPlugin/E2E/PtyDriver.py
+extra-source-files:
+    CPlugin/E2E/Support.md
+    CPlugin/E2E/Fixtures.md
+    CPlugin/E2E/CoreSpec.md
+    CPlugin/E2E/GitHubSpec.md
+    CPlugin/E2E/StandaloneSpec.md
+    CPlugin/E2E/ListSpec.md
+    CPlugin/E2E/InteractiveSpec.md
+    CPlugin/E2E/UnifiedSpec.md
+
+test-suite acceptance
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs: .
+  default-language: Haskell2010
+  ghc-options: -Wall -threaded -rtsopts
+  other-modules:
+      CPlugin.E2E.Support
+      CPlugin.E2E.Fixtures
+      CPlugin.E2E.CoreSpec
+      CPlugin.E2E.GitHubSpec
+      CPlugin.E2E.StandaloneSpec
+      CPlugin.E2E.ListSpec
+      CPlugin.E2E.InteractiveSpec
+      CPlugin.E2E.UnifiedSpec
+      CPlugin.E2E.Pty
+      Paths_c_plugin_e2e
+  autogen-modules: Paths_c_plugin_e2e
+  build-depends:
+      base >=4.18 && <5
+    , aeson >=2.1 && <2.3
+    , bytestring >=0.11 && <0.13
+    , caseyard >=0.1.0.0 && <0.2
+    , containers >=0.6 && <0.9
+    , cryptohash-sha256 >=0.11 && <0.12
+    , filepath >=1.4 && <1.6
+    , hspec >=2.11 && <2.12
+    , text >=2.0 && <2.2
+    , vector >=0.13 && <0.14

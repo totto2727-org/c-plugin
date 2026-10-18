@@ -1,0 +1,10 @@
+packages: .
+
+-- Keep registry dependencies behind the normal release-age cutoff.
+index-state: 2026-10-03T00:00:00Z
+
+source-repository-package
+  type: git
+  location: https://github.com/totto2727-org/e2e.git
+  tag: f990ec49461a681b0172726efe930c8f0738ef43
+  subdir: haskell

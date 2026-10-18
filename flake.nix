@@ -67,11 +67,15 @@
           h = mkHaskell pkgs;
         in
         {
-          # Docker builds the Haskell executable itself. The E2E host only
-          # needs the Go harness and the shared task runner.
+          # Caseyard uses a newer base than Iris. Keep the host-side E2E
+          # compiler separate from the GHC 9.4 product build in Docker.
           e2e = pkgs.mkShell {
             packages = [
-              pkgs.go
+              pkgs.ghc
+              pkgs.cabal-install
+              pkgs.git
+              pkgs.zlib
+              pkgs.pkg-config
               pkgs.just
             ];
           };
@@ -95,8 +99,6 @@
               pkgs.git
               pkgs.haskellPackages.fourmolu
               pkgs.haskellPackages.hlint
-              pkgs.go
-              pkgs.golangci-lint
               pkgs.just
               pkgs.nixfmt
             ];

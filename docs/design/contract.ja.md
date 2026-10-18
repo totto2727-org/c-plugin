@@ -250,10 +250,13 @@ GHC 9.4.8とIris 0.1を公開された依存関係のbounds内で使用します
 
 native testは、分離した一時rootを使って実際の製品境界を検証します。
 応答解析、型付き選択mapping、cancel、byteを保つno-op、明示rootの拒否、単独skill登録、plugin有効集合の置換、非対話modeの拒否を扱います。
-既存Go/Testcontainers runnerのpseudo-terminalで、実CLIの選択、再入力、cancel、割り込みを実行します。
+HaskellのHspec/Caseyard suite内のpseudo-terminalで、実CLIの選択、再入力、cancel、割り込みを実行します。
 prompt文字列だけでなく、terminal判定、exit status、stateの完全一致、最終link状態を検証します。
-Go/Testcontainers scenarioは、callerがbuildしたimageを使い、登録caseごとに独立した破棄可能containerを実行します。
-sourceに対応するscenario文書を実際のGoディレクトリに対して検証します。
+Hspec scenarioはCaseyardの公開APIを使い、callerがbuildしたimageとexampleごとの分離されたcontainer stateを使用します。
+共有imageはsuiteの前に1回だけbuildし、個別exampleの中ではbuildしません。
+並列実行はHspecの`parallel`と`--jobs=2`で制御します。
+E2E host compilerは独立した`hs/e2e` Cabal projectで管理し、製品のGHC 9.4 buildは変更しません。
+sourceに対応するscenario文書を実際のHaskell moduleに対して検証します。
 通常のCabal buildとnative testを検証し、実Docker E2Eの結果を分けて報告します。
 独立したNix package buildは任意であり、`just ci`の必須検証には含めません。
 文書例は期待する動作を示すものであり、テストが通過した証拠ではありません。

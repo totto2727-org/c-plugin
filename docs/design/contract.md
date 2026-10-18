@@ -242,10 +242,13 @@ Do not substitute dependency probes for product tests.
 
 Native tests must use isolated temporary roots and exercise real product boundaries.
 Cover response parsing, typed selection mapping, cancellation, byte-preserving no-ops, explicit-root rejection, standalone installation, plugin enabled-set replacement, and non-interactive rejection.
-Run actual CLI selection, retry, cancellation, and interruption through a pseudo-terminal in the existing Go/Testcontainers runner.
+Run actual CLI selection, retry, cancellation, and interruption through a pseudo-terminal in the Haskell Hspec/Caseyard suite.
 Assert terminal detection, exit status, exact state preservation, and final link state rather than only prompt text.
-Go/Testcontainers scenarios must use a caller-built image and one disposable container per registered case.
-Check source-linked scenario documents against the real Go directory.
+Hspec scenarios use the public Caseyard API with a caller-built image and isolated container state per example.
+Build the shared image once before the suite, not inside individual examples.
+Hspec owns scheduling through `parallel` and `--jobs=2`.
+Keep the E2E host compiler in its separate `hs/e2e` Cabal project; it does not change the GHC 9.4 product build.
+Check source-linked scenario documents against the actual Haskell modules.
 Validate the ordinary Cabal build and native tests, and report real Docker E2E separately.
 Independent Nix package builds are optional, not required by `just ci`.
 Documentation examples describe expected behavior, not evidence that a test passed.

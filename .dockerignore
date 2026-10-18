@@ -5,6 +5,8 @@
 node_modules
 tmp
 dist-newstyle
+**/dist-newstyle
+hs/e2e
 result
 result-*
 **/.DS_Store

@@ -19,7 +19,7 @@ flake.nix, flake.lock  Pinned development environment and CLI package
 Justfile               Shared task entrypoints
 hs/test/Spec.hs            Hspec suite entrypoint
 hs/test/CPlugin/          Domain, codec, plugin, reconciliation, and command specs
-go/e2e/c-plugin/       Go/Testcontainers cases and sibling scenario documents
+hs/e2e/               Hspec/Caseyard Docker tests and sibling scenario documents
 docs/                  CLI reference and English/Japanese design contract
 .github/workflows/     Validation automation
 ```
@@ -34,10 +34,11 @@ Do not bypass dependency bounds with `allow-newer`.
 ```sh
 just build     # Cabal product build
 just build-nix # Independent Nix package build
-just check     # Cabal, Fourmolu, HLint, and Go checks
+just check     # Cabal, Fourmolu, and HLint checks
 just fix       # Apply Fourmolu and check HLint suggestions
 just test      # Haskell product tests, without Docker
-just e2e       # Caller-owned image build and real Go/Testcontainers tests
+just e2e       # Caller-owned image build and real Hspec/Caseyard tests
+just e2e-check # Compile acceptance tests from the E2E shell without Docker
 just ci        # Checks, Cabal build, and native tests
 ```
 
@@ -47,8 +48,11 @@ CI runs `nix develop --command just ci` and does not require Docker.
 Docker E2E is an explicit local task and is not part of `just ci`.
 Use `just build-nix` to run the independent package build alone.
 Docker E2E requires a working Docker daemon.
-Use `nix develop .#e2e --command just e2e` to run only Docker E2E without building the native Haskell development environment.
-The E2E shell contains Go and Just because the Docker builder provides GHC and Cabal.
+Use `nix develop .#e2e --command just e2e` to run Docker E2E with the host-side Haskell toolchain.
+The E2E shell provides GHC 9.10, Cabal, Git, and Just.
+`hs/e2e` is a separate Cabal project because Caseyard requires `base >=4.18`, while Iris keeps the product on GHC 9.4.
+Its `cabal.project` pins the public Caseyard Git source to an immutable revision; it does not use a workspace-relative dependency.
+Run `just e2e-check` in that shell to compile the acceptance suite without Docker.
 The Docker build enables the Cabal `static` flag, which applies Linux static-link options only to the executable.
 Inspect `Justfile`, `c-plugin.cabal`, the E2E Dockerfile, and flake outputs before changing task contracts.
 A zero-test run or a `no work to do` result is not product coverage.
@@ -87,25 +91,27 @@ Keep the implementation small and use the existing Haskell modules rather than e
 
 Test c-plugin behavior, not upstream library conformance.
 Use Iris interactive mode and `--no-input`; keep typed selection parsing with its type and prompt effects in `CPlugin.Interaction`.
-Exercise CLI terminal detection, retry, cancellation, interruption, and explicit non-terminal options through real pseudo-terminals in the existing Go/Testcontainers runner.
+Exercise CLI terminal detection, retry, cancellation, interruption, and explicit non-terminal options through real pseudo-terminals in the Hspec/Caseyard suite.
 Use temporary roots with synthetic `HOME`, working directory, plugin sources, targets, and ownership state.
 Never use real user state in tests.
 Keep dependency probes and temporary reports outside tracked artifacts.
 
-For Go E2E, preserve each scenario, fixture, assertion, checksum, lint setting, and task dependency unless the requested behavior requires a change.
-The caller builds `c-plugin-e2e:local` before Go tests.
-Each scenario runs in an ordinary `t.Run` callback that calls `cli.NewEnvironment(t, imageName)` and receives a separate disposable container.
-The caller opts into concurrency with `t.Parallel()` before creating the environment, and Go's `-parallel` limit controls concurrency without an SDK-specific slot limit.
+For Haskell E2E, preserve each scenario, fixture, assertion, checksum, and task dependency unless the requested behavior requires a change.
+The caller builds `c-plugin-e2e:local` once before the Hspec suite.
+Each scenario is a standard Hspec `it` example that calls the public `Test.CLI.E2E.withEnvironment` and receives isolated container state.
+Use Hspec `parallel` and its `--jobs=2` limit rather than an SDK-specific scheduler or custom case registry.
+Do not add image creation inside individual examples.
 The CLI under test is `/sandbox/.local/bin/c-plugin`.
+The Python PTY driver is a Cabal data file used only inside the Linux test container; Haskell owns the scenario and assertions.
 Existing `/tmp/c-plugin-v2-*` paths are synthetic compatibility fixtures, not public product names.
 
-When changing a Go `*Scenario` function, update its sibling `<stem>_test.md` section in source order.
+When changing a scenario-bearing Haskell module, update its sibling `.md` document in source order.
 Use the ordered headings `Scope`, `Commands under test`, `Arguments and options`, `Preconditions and fixtures`, `Execution flow`, `Expected results`, and `Notes`.
 Command tables contain executable/subcommand paths only. Put options in their own table and full ordered argv in the execution flow.
-Use relative sibling Go source links.
+Use relative sibling Haskell source links.
 The shared init helper is not an additional registered case.
-Run the validator from the installed `document-e2e-scenarios` skill against the real `go/e2e/c-plugin` directory, then run Go/Testcontainers separately.
-A validator that discovers no Go sources is not coverage.
+Review scenario names, order, source links, invocations, and assertions against the actual Haskell source.
+Report document review separately from compilation and real Docker execution.
 
 Write maintained artifacts in English and keep [the Japanese contract](docs/design/contract.ja.md) aligned with its English source.
 Use Japanese for PR titles, descriptions, review discussions, and Linear collaboration.
