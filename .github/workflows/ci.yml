@@ -11,9 +11,10 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The Iris-compatible GHC 9.4 dependency closure can require source builds.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
       - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
-      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@main
-      - uses: totto2727-org/monorepo/.github/actions/check-moonbit@main
+      - name: Run standard validation
+        run: nix develop --command just ci

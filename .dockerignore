@@ -2,11 +2,12 @@
 .env
 .env.*
 .direnv
-.moon
-.mooncakes
-_build
 node_modules
 tmp
+dist-newstyle
+**/dist-newstyle
+e2e
+result
+result-*
 **/.DS_Store
-**/_build
 **/node_modules
