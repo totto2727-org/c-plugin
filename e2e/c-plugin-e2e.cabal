@@ -1,4 +1,4 @@
-cabal-version: 2.0
+cabal-version: 1.12
 
 -- This file has been generated from package.yaml by hpack version 0.38.3.
 --
@@ -22,8 +22,6 @@ extra-source-files:
     CPlugin/E2E/StandaloneSpec.md
     CPlugin/E2E/Support.md
     CPlugin/E2E/UnifiedSpec.md
-data-files:
-    CPlugin/E2E/PtyDriver.py
 
 test-suite acceptance
   type: exitcode-stdio-1.0
@@ -38,8 +36,6 @@ test-suite acceptance
       CPlugin.E2E.StandaloneSpec
       CPlugin.E2E.Support
       CPlugin.E2E.UnifiedSpec
-      Paths_c_plugin_e2e
-  autogen-modules:
       Paths_c_plugin_e2e
   hs-source-dirs:
       ./

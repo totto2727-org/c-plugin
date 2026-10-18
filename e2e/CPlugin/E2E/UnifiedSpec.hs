@@ -5,6 +5,7 @@ import CPlugin.E2E.Pty
 import CPlugin.E2E.Support hiding (environment)
 import Control.Monad (forM_, when)
 import Test.CLI.E2E (Environment, withEnvironment)
+import qualified Test.CLI.E2E as CLI
 import Test.Hspec (Spec, it, parallel, shouldBe)
 import Prelude hiding (writeFile)
 
@@ -96,7 +97,7 @@ pluginToggleScenario environment = do
             requireTerminalFailure failure
             requireNotContains (terminalStderr failure) selectionPrompt
             forM_ ["--skill", "--all"] $ requireContains (terminalStdout failure)
-            when pipe $ terminalUnread failure `shouldBe` "unconsumed-input\n"
+            when pipe $ CLI.terminalUnreadInput failure `shouldBe` encodeText "unconsumed-input\n"
             requireDigest s (project ++ "/c-plugin-lock.json") lock
             requireDigest s (project ++ "/.agents/c-plugin-state.json") state
     run s project ["plugin", "skill", "disable", "demo", "--all"] >>= requireSuccess
@@ -172,7 +173,7 @@ pluginToggleScenario environment = do
         requireTerminalFailure failure
         requireContains (terminalStdout failure) "PLUGIN"
         requireNotContains (terminalStderr failure) selectionPrompt
-        when pipe $ terminalUnread failure `shouldBe` "unconsumed-input\n"
+        when pipe $ CLI.terminalUnreadInput failure `shouldBe` encodeText "unconsumed-input\n"
         requireDigest s (project ++ "/c-plugin-lock.json") lockOther
         requireDigest s (project ++ "/.agents/c-plugin-state.json") stateAfter
     forM_ ["enable", "disable"] $ \command -> forM_ ["q", keyEscape, keyEOF] $ \action -> do

@@ -1,12 +1,16 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module CPlugin.E2E.InteractiveSpec (spec) where
 
 import CPlugin.E2E.Fixtures
 import CPlugin.E2E.Pty
 import CPlugin.E2E.Support hiding (environment)
-import Control.Monad (forM_, when)
+import Control.Monad (forM_, void, when)
 import qualified Data.ByteString.Char8 as BS
+import Data.List (isInfixOf)
 import Test.CLI.E2E (Environment, withEnvironment)
-import Test.Hspec (Spec, it, parallel, shouldBe)
+import qualified Test.CLI.E2E as CLI
+import Test.Hspec (Spec, it, parallel, shouldBe, shouldReturn, shouldThrow)
 import Text.Printf (printf)
 import Prelude hiding (readFile)
 
@@ -157,12 +161,30 @@ interactiveInvalidScenario environment = do
     requireMissing s (project ++ "/.agents/skills/gamma")
     let scrollSkills = [printf "scroll-%02d" index | index <- [0 .. 49 :: Int]]
     writePlugin s project scrollSkills
-    scrolled <- runTerminal s project ["<TINY>", "<TINY_CONFIRM>", concat (replicate 52 keyDown) ++ keySpace ++ keyEnter] False ["plugin", "add", "local:./plugin"]
+    scrolled <- runTerminalSession s project False "xterm" True ["plugin", "add", "local:./plugin"] $ \terminal -> do
+        awaitMenu terminal
+        void (CLI.resizeTerminal terminal 2 80)
+        void (CLI.expectTerminal terminal CLI.TerminalOutput "Enlarge terminal" 5)
+        let paths = [project ++ "/c-plugin-lock.json", project ++ "/.agents/c-plugin-state.json"]
+        before <- CLI.captureSnapshot (scenarioDriver s) paths
+        void (CLI.sendTerminal terminal (encodeText keyEnter))
+        CLI.waitTerminal terminal 0.2 `shouldThrow` stillSelecting
+        CLI.captureSnapshot (scenarioDriver s) paths `shouldReturn` before
+        void (CLI.resizeTerminal terminal 12 80)
+        void (CLI.expectTerminal terminal CLI.TerminalOutput (encodeText selectionPrompt) 5)
+        void (CLI.sendTerminal terminal (encodeText (concat (replicate 52 keyDown) ++ keySpace ++ keyEnter)))
     requireTerminalSuccess scrolled
     requireContains (terminalStderr scrolled) "scroll-49 [disabled]"
     requireJSON s (project ++ "/c-plugin-lock.json") (localLock [] "plugin" ["scroll-49"])
     requireSymlink s (project ++ "/.agents/skills/scroll-49") (project ++ "/plugin/skills/scroll-49")
     forM_ (["alpha", "beta", "gamma"] ++ take 49 scrollSkills) $ \skill -> requireMissing s (project ++ "/.agents/skills/" ++ skill)
+
+stillSelecting :: CLI.TerminalError -> Bool
+stillSelecting (CLI.TerminalFailed message (Just observed)) =
+    "deadline" `isInfixOf` message
+        && CLI.terminalStatus observed == CLI.TerminalRunning
+        && BS.null (CLI.terminalStdout observed)
+stillSelecting _ = False
 
 interactiveNoInputScenario :: Environment -> IO ()
 interactiveNoInputScenario environment = interactiveNonTerminal environment "no-input" False
@@ -183,7 +205,7 @@ interactiveNonTerminal environment name pipe = do
         requireTerminalFailure result
         requireNotContains (terminalStderr result) selectionPrompt
         forM_ options $ requireContains (terminalStdout result)
-        when pipe $ terminalUnread result `shouldBe` "unconsumed-input\n"
+        when pipe $ CLI.terminalUnreadInput result `shouldBe` "unconsumed-input\n"
         requireFile s (project ++ "/c-plugin-lock.json") lock
         requireFile s (project ++ "/.agents/c-plugin-state.json") state
         requireMissing s (project ++ "/.agents/skills/alpha")
@@ -195,8 +217,13 @@ interactiveInterruptScenario environment = do
     remove s [project ++ "/.agents/skills/alpha"]
     lock <- BS.unpack <$> readFile s (project ++ "/c-plugin-lock.json")
     state <- BS.unpack <$> readFile s (project ++ "/.agents/c-plugin-state.json")
-    forM_ [keyInterrupt, "<SIGINT>"] $ \action -> do
-        result <- runTerminal s project [action] False ["skill", "remove"]
+    forM_ [False, True] $ \external -> do
+        result <- runTerminalSession s project False "xterm" True ["skill", "remove"] $ \terminal -> do
+            awaitMenu terminal
+            void $
+                if external
+                    then CLI.signalTerminal terminal CLI.Interrupt
+                    else CLI.sendTerminal terminal (encodeText keyInterrupt)
         requireTerminalFailure result
         requireNotContains (terminalStdout result) "Cancelled; no changes."
         requireFile s (project ++ "/c-plugin-lock.json") lock

@@ -1,6 +1,7 @@
 # Core CLI E2E scenarios
 
 Source: [CoreSpec.hs](./CoreSpec.hs).
+Each scenario installs the trusted driver from host `C_PLUGIN_E2E_DRIVER` once through `newScenario`; physical file-byte assertions use public snapshots.
 The module contains 18 Hspec examples.
 Every example calls `withEnvironment "c-plugin-e2e:local"` and receives its own disposable container.
 The module uses `parallel`, and the caller limits Hspec to `--jobs=2`.

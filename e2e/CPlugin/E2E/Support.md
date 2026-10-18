@@ -26,8 +26,10 @@ No shell is used for these operations.
 
 ## Preconditions and fixtures
 
-`Scenario` stores only the public environment and synthetic home path.
-`newScenario` is pure and creates no container or files.
+`Scenario` stores the public environment, synthetic home path, and one opaque `scenarioDriver`.
+`newScenario env homePath` reads the trusted Linux driver bytes from the required host `C_PLUGIN_E2E_DRIVER` path and installs them once with `installDriver`.
+The caller builds the driver for the container architecture before the suite starts.
+The shared driver stays inside the owning environment callback and supports both snapshots and terminal sessions.
 All container paths belong to disposable test fixtures.
 `writeFile` creates parent directories and encodes text as UTF-8.
 `readFile` returns strict bytes without newline conversion.
@@ -35,7 +37,7 @@ All container paths belong to disposable test fixtures.
 ## Execution flow
 
 1. Hspec leases a prebuilt image and opens an isolated environment for one example.
-2. The example creates a `Scenario` and its fixtures.
+2. The example installs its driver through `newScenario` and creates its fixtures.
 3. `run` executes CLI commands and returns the public `CLI.Result`.
 4. Assertions compare exit status, captured streams, JSON values, bytes, physical path kinds, ownership records, and checksums.
 5. Caseyard closes the environment when the example returns or throws.
@@ -47,17 +49,18 @@ All container paths belong to disposable test fixtures.
 | `requireSuccess`, `requireFailure`, `requireExit` | Assert zero, nonzero, or the exact exit code. |
 | `requireOutput` | Compare exact stdout bytes after UTF-8 encoding the expected text. |
 | `requireContains`, `requireNotContains` | Assert string substring presence or absence. |
-| `requireFile` | Compare exact file bytes. |
+| `captureSnapshot` | Capture selected physical entries with the scenario's public driver, including exact file and literal symlink bytes. |
+| `requireFile` | Compare a public single-path snapshot to `RegularFile` with exact expected bytes. |
 | `requireJSON` | Decode actual and expected bytes as Aeson `Value` and compare them structurally. |
 | `digest`, `requireDigest` | Compute SHA-256 and compare the actual checksum bytes. |
-| `requireMissing` | Reject both existing paths and dangling symbolic links. |
-| `requireRegularFile`, `requireDirectory` | Reject symbolic links even when their targets have the requested kind. |
+| `pathExists`, `requireMissing` | Use public `pathKind` to distinguish physical absence from existing entries, including dangling symbolic links. |
+| `requireRegularFile`, `requireDirectory` | Compare public `pathKind` values and reject symbolic links even when their targets have the requested kind. |
 | `requireSymlink` | Require a symbolic link, then compare `realpath` stdout to the canonical expected target plus newline. |
 | `requireOwnershipSkill` | Require an ownership object, validate each source tag and tuple length, then check whether the last source component matches the requested skill. |
 
 ## Notes
 
-The canonical `realpath` assertion checks the resolved target; scenarios that require a literal target also assert `readlink` output.
+The canonical `realpath` assertion checks the resolved target; scenarios that require literal target identity compare public snapshots or explicit `readlink` output.
 Ownership checks accept both three-component `OwnershipSource` and two-component `StandaloneSource` values.
 SHA-256 assertions compare file checksums before and after an operation.
 Infrastructure failures propagate as Caseyard exceptions or Hspec failures.

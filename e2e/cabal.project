@@ -6,5 +6,5 @@ index-state: 2026-10-03T00:00:00Z
 source-repository-package
   type: git
   location: https://github.com/totto2727-org/e2e.git
-  tag: f990ec49461a681b0172726efe930c8f0738ef43
+  tag: 22ed86484b253e7f1a5f2ca8f6db89d7778aae60
   subdir: haskell

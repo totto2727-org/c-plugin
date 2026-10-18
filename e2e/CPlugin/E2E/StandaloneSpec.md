@@ -1,6 +1,7 @@
 # Standalone skills and plugin enabled sets
 
 Source: [StandaloneSpec.hs](./StandaloneSpec.hs)
+Each scenario installs the trusted driver from host `C_PLUGIN_E2E_DRIVER` once through `newScenario`; physical file-byte assertions use public snapshots.
 
 Every named Hspec example owns a fresh `c-plugin-e2e:local` container through `Test.CLI.E2E.withEnvironment`.
 The examples use `parallel`, with concurrency controlled by the suite's two Hspec jobs.
@@ -10,7 +11,7 @@ It is not an additional registered case.
 The standard fixture has a matching YAML name and a nonempty description but no plugin.json.
 All exact lock and ownership comparisons preserve bytes, JSON assertions preserve structural equality, and digest assertions use SHA-256.
 
-## `standaloneLifecycle` (`standalone_lifecycle`)
+## `standalone_lifecycle`
 
 ### Scope
 
@@ -58,7 +59,7 @@ Removal leaves the empty lock, `{"ownershipEntries":{}}`, and no solo link.
 
 The nested working directory verifies lock-relative resolution.
 
-## `standaloneGlobal` (`standalone_global`)
+## `standalone_global`
 
 ### Scope
 
@@ -104,7 +105,7 @@ Project lock and state bytes remain exact, with the project solo link pointing t
 
 Both scopes intentionally use the same name.
 
-## `explicitRoot` (`explicit_root`)
+## `explicit_root`
 
 ### Scope
 
@@ -145,7 +146,7 @@ Lock bytes remain exact and ownership, solo link, and alpha link remain absent a
 
 Only an explicit standard plugin root or standalone skill root is accepted.
 
-## `standaloneDuplicate` (`standalone_duplicate`)
+## `standalone_duplicate`
 
 ### Scope
 
@@ -184,7 +185,7 @@ The duplicate add fails without changing either saved file or the original manag
 
 The original source identity is retained rather than replaced.
 
-## `standaloneUnavailable` (`standalone_unavailable`)
+## `standalone_unavailable`
 
 ### Scope
 
@@ -196,15 +197,12 @@ Preserve ownership and exact dangling-link identity when a source disappears.
 | --- | --- |
 | `c-plugin skill add` | Create standalone ownership. |
 | `c-plugin sync` | Report partial reconciliation for missing source content. |
-| `readlink` | Compare literal symlink target bytes. |
-| `test` | Verify the dangling path remains a link. |
 
 ### Arguments and options
 
 | Argument or option | Purpose |
 | --- | --- |
 | `local:./standalone/solo` | Select the source that will disappear. |
-| `-L` | Check link existence without following its target. |
 
 ### Preconditions and fixtures
 
@@ -212,21 +210,22 @@ Use `HOME=/tmp/c-plugin-standalone-unavailable/home`.
 
 ### Execution flow
 
-1. Run `skill add local:./standalone/solo`, save lock and ownership bytes, and record successful `readlink <solo-link>` output.
-2. Delete the source directory and run `sync`.
-3. Check partial output, exact saved files, successful `test -L <solo-link>`, and successful repeated readlink output.
+1. Run `skill add local:./standalone/solo` and require the managed symlink to resolve to the standalone source.
+2. Capture the project lock, ownership file, and managed solo link with the public `captureSnapshot` API.
+3. Delete the source directory and run `sync`.
+4. Check partial output and compare a second snapshot of the same three paths to the first.
 
 ### Expected results
 
 Add and sync succeed.
 Sync stdout contains partial.
-Lock and ownership bytes remain exact, the dangling symlink remains present, and its literal target stdout is unchanged.
+Lock and ownership remain physical regular files with exact bytes, the dangling symlink remains present, and its literal target bytes are unchanged.
 
 ### Notes
 
 Canonical resolution is deliberately not used for the dangling-link identity assertion.
 
-## `standaloneInvalid` (`standalone_invalid`)
+## `standalone_invalid`
 
 ### Scope
 
@@ -263,7 +262,7 @@ Add fails, preserves exact lock and foreign bytes, and creates neither ownership
 
 The rejection must happen before managed-path mutations.
 
-## `standaloneEscape` (`standalone_escape`)
+## `standalone_escape`
 
 ### Scope
 
@@ -301,7 +300,7 @@ Add fails without modifying outside data, lock, source symlink, or managed state
 
 The outside fixture remains within the synthetic HOME, not real user state.
 
-## `standalonePluginConflict` (`standalone_plugin_conflict`)
+## `standalone_plugin_conflict`
 
 ### Scope
 
@@ -342,7 +341,7 @@ The original files and plugin alpha link remain unchanged.
 
 A conflict cannot silently transfer ownership between domains.
 
-## `pluginEnabledSet` (`plugin_enabled_set`)
+## `plugin_enabled_set`
 
 ### Scope
 

@@ -43,7 +43,7 @@ githubEnvironment :: Environment -> String -> IO (Scenario, FilePath)
 githubEnvironment environment name = do
     let h = "/tmp/c-plugin-github-" ++ name ++ "/home"
         project = h ++ "/project"
-        s = newScenario environment h
+    s <- newScenario environment h
     mkdirAll s [project]
     run s project ["init"] >>= requireSuccess
     pure (s, project)

@@ -89,6 +89,7 @@
               pkgs.ghc
               pkgs.cabal-install
               pkgs.haskellPackages.hpack
+              pkgs.go
               pkgs.git
               pkgs.zlib
               pkgs.pkg-config

@@ -25,7 +25,7 @@ standaloneFixture :: Environment -> String -> IO (Scenario, FilePath)
 standaloneFixture environment name = do
     let fixtureHome = "/tmp/c-plugin-standalone-" ++ name ++ "/home"
         project = fixtureHome ++ "/project"
-        s = newScenario environment fixtureHome
+    s <- newScenario environment fixtureHome
     writeFile s (project ++ "/standalone/solo/SKILL.md") (skillMarkdown "solo")
     run s project ["init"] >>= requireSuccess
     pure (s, project)
@@ -103,20 +103,14 @@ standaloneUnavailable :: Environment -> IO ()
 standaloneUnavailable environment = do
     (s, project) <- standaloneFixture environment "unavailable"
     run s project ["skill", "add", "local:./standalone/solo"] >>= requireSuccess
-    lock <- decodeText <$> readFile s (project ++ "/c-plugin-lock.json")
-    state <- decodeText <$> readFile s (project ++ "/.agents/c-plugin-state.json")
-    literal <- infra s "" ["readlink", project ++ "/.agents/skills/solo"]
-    requireSuccess literal
+    requireSymlink s (project ++ "/.agents/skills/solo") (project ++ "/standalone/solo")
+    let observedPaths = map (project ++) ["/c-plugin-lock.json", "/.agents/c-plugin-state.json", "/.agents/skills/solo"]
+    originalSnapshot <- captureSnapshot s observedPaths
     remove s [project ++ "/standalone/solo"]
     result <- run s project ["sync"]
     requireSuccess result
     requireContains (stdoutText result) "partial"
-    requireFile s (project ++ "/c-plugin-lock.json") lock
-    requireFile s (project ++ "/.agents/c-plugin-state.json") state
-    infra s "" ["test", "-L", project ++ "/.agents/skills/solo"] >>= requireSuccess
-    after <- infra s "" ["readlink", project ++ "/.agents/skills/solo"]
-    requireSuccess after
-    requireOutput after (stdoutText literal)
+    captureSnapshot s observedPaths `shouldReturn` originalSnapshot
 
 standaloneInvalid :: Environment -> IO ()
 standaloneInvalid environment = do

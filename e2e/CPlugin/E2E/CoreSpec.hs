@@ -34,11 +34,11 @@ runInitWorkflow global env = do
     let root = "/tmp/c-plugin-v2-init-e2e"
         homePath = root ++ "/home"
         project = root ++ "/totto2727-org/monorepo"
-        s = newScenario env homePath
         lockPath = (if global then homePath else project) ++ "/c-plugin-lock.json"
         oppositeLock = (if global then project else homePath) ++ "/c-plugin-lock.json"
         initialArguments = "init" : ["-g" | global]
         repeatArguments = "init" : ["--global" | global]
+    s <- newScenario env homePath
     mkdirAll s [homePath, project]
     initial <- run s project initialArguments
     requireSuccess initial
@@ -65,8 +65,8 @@ addScenario env = do
         statePath = project ++ "/.agents/c-plugin-state.json"
         foreignPath = project ++ "/.agents/skills/alpha"
         link = project ++ "/.agents/skills/beta"
-        s = newScenario env homePath
         addArguments = ["plugin", "add", "local:./plugin", "--skill", "alpha", "--skill", "beta"]
+    s <- newScenario env homePath
     writePlugin s project ["alpha", "beta"]
     mkdirAll s [project]
     run s project ["init"] >>= requireSuccess
@@ -119,7 +119,7 @@ removeScenario env = do
         lockPath = project ++ "/c-plugin-lock.json"
         statePath = project ++ "/.agents/c-plugin-state.json"
         skillsRoot = project ++ "/.agents/skills"
-        s = newScenario env homePath
+    s <- newScenario env homePath
     writePlugin s project ["alpha", "beta"]
     writeFile s lockPath (localLock [] "plugin" ["alpha", "beta"])
     run s project ["sync"] >>= requireSuccess
@@ -196,7 +196,7 @@ syncScenario env = do
         repository = project ++ "/plugin"
         lockPath = project ++ "/c-plugin-lock.json"
         statePath = project ++ "/.agents/c-plugin-state.json"
-        s = newScenario env homePath
+    s <- newScenario env homePath
     writePlugin s project ["alpha", "beta"]
     writeFile s lockPath (localLock [".cursor/skills"] "plugin" ["alpha", "beta"])
     initialDigest <- digest s lockPath
@@ -234,7 +234,7 @@ syncRecursiveScenario env = do
         project = homePath ++ "/project"
         child = project ++ "/child"
         ignored = project ++ "/ignored"
-        s = newScenario env homePath
+    s <- newScenario env homePath
     writePlugin s project ["alpha"]
     writePlugin s child ["beta"]
     writeFile s (project ++ "/c-plugin-lock.json") (localLock [] "plugin" ["alpha"])
@@ -281,7 +281,7 @@ targetAddScenario env = do
         projectPlugin = project ++ "/plugin"
         projectLock = project ++ "/c-plugin-lock.json"
         projectState = project ++ "/.agents/c-plugin-state.json"
-        s = newScenario env homePath
+    s <- newScenario env homePath
     writePlugin s project ["alpha"]
     writeFile s projectLock (localLock [] "plugin" ["alpha"])
     projectResult <- run s project ["target", "add", ".cursor/skills"]
@@ -324,7 +324,7 @@ targetRemoveScenario env = do
         projectPlugin = project ++ "/plugin"
         projectLock = project ++ "/c-plugin-lock.json"
         projectState = project ++ "/.agents/c-plugin-state.json"
-        s = newScenario env homePath
+    s <- newScenario env homePath
     writePlugin s project ["alpha"]
     writeFile s projectLock (localLock [".cursor/skills", ".claude/skills"] "plugin" ["alpha"])
     run s project ["sync"] >>= requireSuccess
@@ -385,7 +385,6 @@ errorHelpScenario env = do
     let root = "/tmp/c-plugin-error-help-e2e"
         homePath = root ++ "/home"
         project = homePath ++ "/project"
-        s = newScenario env homePath
         lock = project ++ "/c-plugin-lock.json"
         cases =
             [ ([], [], "Missing: COMMAND")
@@ -398,6 +397,7 @@ errorHelpScenario env = do
             , (["plugin", "add", "github:owner/repo", "--ref"], ["plugin", "add"], "The option `--ref` expects an argument.")
             , (["plugin", "add", "local:./plugin", "--skill"], ["plugin", "add"], "The option `--skill` expects an argument.")
             ]
+    s <- newScenario env homePath
     mkdirAll s [homePath, project]
     run s project ["init"] >>= requireSuccess
     before <- digest s lock

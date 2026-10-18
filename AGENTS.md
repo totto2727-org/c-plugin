@@ -56,9 +56,12 @@ Docker E2E is an explicit local task and is not part of `just ci`.
 Use `just build-nix` to run the independent package build alone.
 Docker E2E requires a working Docker daemon.
 Use `nix develop .#e2e --command just e2e` to run Docker E2E with the host-side Haskell toolchain.
-The E2E shell provides GHC 9.10, Cabal, Git, and Just.
+The E2E shell provides GHC 9.10, Cabal, Git, Go, and Just.
 `e2e` is a separate Cabal project because Caseyard requires `base >=4.18`, while Iris keeps the product on GHC 9.4.
 Its `cabal.project` pins the public Caseyard Git source to an immutable revision; it does not use a workspace-relative dependency.
+`just e2e-driver` builds the static Linux amd64 and arm64 drivers from that same revision under ignored `tmp/caseyard-driver/`.
+`just e2e` selects the image architecture and passes its driver path through `C_PLUGIN_E2E_DRIVER`.
+For a direct Cabal invocation, set this variable to the matching driver file before running the suite.
 Run `just e2e-check` in that shell to compile the acceptance suite without Docker.
 The Docker sandbox-base builder runs an ordinary Cabal build inside `nix develop`, not `nix build`.
 The Ubuntu 26.04 runtime copies only the actually linked Nix library closure, not the development toolchain.
@@ -114,7 +117,9 @@ Each scenario is a standard Hspec `it` example that calls the public `Test.CLI.E
 Use Hspec `parallel` and its `--jobs=2` limit rather than an SDK-specific scheduler or custom case registry.
 Do not add image creation inside individual examples.
 The CLI under test is `/sandbox/.local/bin/c-plugin`.
-The Python PTY driver is a Cabal data file used only inside the Linux test container; Haskell owns the scenario and assertions.
+Use Caseyard's public snapshot and terminal APIs with one caller-supplied driver installation per environment.
+Keep driver and terminal handles inside the environment callback.
+Haskell owns the terminal actions and assertions; do not add a separate PTY protocol or interpreter-based driver.
 Existing `/tmp/c-plugin-v2-*` paths are synthetic compatibility fixtures, not public product names.
 
 When changing a scenario-bearing Haskell module, update its sibling `.md` document in source order.

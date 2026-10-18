@@ -7,13 +7,11 @@ author: totto2727
 maintainer: totto2727
 license: MIT
 extra-source-files: CPlugin/E2E/*.md
-data-files: CPlugin/E2E/PtyDriver.py
 
 tests:
   acceptance:
     main: Spec.hs
     source-dirs: .
-    generated-other-modules: Paths_c_plugin_e2e
     ghc-options: -Wall -threaded -rtsopts
     dependencies:
       - base >=4.18 && <5

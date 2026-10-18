@@ -7,19 +7,25 @@ import qualified Crypto.Hash.SHA256 as SHA256
 import Data.Aeson (Value (..), eitherDecodeStrict')
 import qualified Data.Aeson.KeyMap as KeyMap
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.List (isInfixOf)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import qualified Data.Vector as Vector
+import System.Environment (getEnv)
 import System.FilePath.Posix (takeDirectory)
 import qualified Test.CLI.E2E as CLI
 import Test.Hspec
 import Prelude hiding (readFile, writeFile)
 
-data Scenario = Scenario {environment :: CLI.Environment, home :: String}
+data Scenario = Scenario {environment :: CLI.Environment, home :: String, scenarioDriver :: CLI.Driver}
 
-newScenario :: CLI.Environment -> String -> Scenario
-newScenario = Scenario
+newScenario :: CLI.Environment -> String -> IO Scenario
+newScenario env homePath = do
+    driverPath <- getEnv "C_PLUGIN_E2E_DRIVER"
+    driver <- BS.readFile driverPath >>= CLI.installDriver env
+    pure (Scenario env homePath driver)
 
 cPlugin :: String
 cPlugin = "/sandbox/.local/bin/c-plugin"
@@ -86,8 +92,12 @@ requireContains, requireNotContains :: String -> String -> IO ()
 requireContains value expected = value `shouldSatisfy` isInfixOf expected
 requireNotContains value unexpected = value `shouldNotSatisfy` isInfixOf unexpected
 
+captureSnapshot :: Scenario -> [FilePath] -> IO CLI.FileSystemSnapshot
+captureSnapshot s = CLI.captureSnapshot (scenarioDriver s)
+
 requireFile :: Scenario -> String -> String -> IO ()
-requireFile s path expected = CLI.checkFile (environment s) path (encodeText expected)
+requireFile s path expected =
+    captureSnapshot s [path] `shouldReturn` CLI.FileSystemSnapshot (Map.singleton path (CLI.RegularFile (encodeText expected)))
 
 parseJSON :: ByteString -> IO Value
 parseJSON bytes = case eitherDecodeStrict' bytes of
@@ -101,23 +111,17 @@ requireJSON s path expected = do
     actual `shouldBe` wanted
 
 pathExists :: Scenario -> String -> IO Bool
-pathExists s path = do
-    regular <- infra s "" ["test", "-e", path]
-    if CLI.exitCode regular == 0
-        then pure True
-        else do
-            symlink <- infra s "" ["test", "-L", path]
-            pure (CLI.exitCode symlink == 0)
+pathExists s path = (/= CLI.PathMissing) <$> CLI.pathKind (environment s) path
 
 requireMissing, requireRegularFile, requireDirectory :: Scenario -> String -> IO ()
-requireMissing s = CLI.checkMissing (environment s)
-requireRegularFile s = CLI.checkRegularFile (environment s)
-requireDirectory s = CLI.checkDirectory (environment s)
+requireMissing s path = CLI.pathKind (environment s) path `shouldReturn` CLI.PathMissing
+requireRegularFile s path = CLI.pathKind (environment s) path `shouldReturn` CLI.PathRegularFile
+requireDirectory s path = CLI.pathKind (environment s) path `shouldReturn` CLI.PathDirectory
 
 -- Assert a physical symlink with its canonical resolved target.
 requireSymlink :: Scenario -> String -> String -> IO ()
 requireSymlink s link target = do
-    infra s "" ["test", "-L", link] >>= requireSuccess
+    CLI.pathKind (environment s) link `shouldReturn` CLI.PathSymlink
     result <- infra s "" ["realpath", link]
     requireSuccess result
     requireOutput result (target ++ "\n")

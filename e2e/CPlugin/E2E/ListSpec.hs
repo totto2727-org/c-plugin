@@ -65,10 +65,10 @@ listMissingCorrupt :: Environment -> IO ()
 listMissingCorrupt environment = do
     let h = "/tmp/c-plugin-list-missing-corrupt/home"
         project = h ++ "/project"
-        s = newScenario environment h
         roots = [project, h]
         cases = listCases pluginsHeading skillsHeading
         allCases = cases ++ [(arguments ++ ["-g"], output) | (arguments, output) <- cases]
+    s <- newScenario environment h
     mkdirAll s [project]
     forM_ ["", "not JSON\n", "{\"version\":\"2\",\"targets\":[],\"plugins\":[]}", "{\"version\":\"3\",\"targets\":[],\"plugins\":[]}"] $ \content -> do
         forM_ roots $ \root -> when (content /= "") $ writeFile s (root ++ "/c-plugin-lock.json") content

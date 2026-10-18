@@ -1,17 +1,22 @@
 # Interactive selection in real terminals
 
 Source: [InteractiveSpec.hs](./InteractiveSpec.hs).
-Driver: [Pty.hs](./Pty.hs) and [PtyDriver.py](./PtyDriver.py).
+Terminal helpers: [Pty.hs](./Pty.hs), using the public Caseyard scoped-terminal API.
 Each named Hspec example creates its own `withEnvironment "c-plugin-e2e:local"` container.
 Hspec schedules the parallel examples with the caller's two-job limit.
 The executable is `/sandbox/.local/bin/c-plugin`.
-Every terminal call uses a ten-second child deadline and fifteen-second outer timeout.
-The driver uses a real Linux stdin/stderr PTY, independently captured stdout, `TERM=xterm`, and a 40-row, 120-column terminal.
-Actions are sent only after `Space: toggle`, except the tiny-terminal confirmation waits for `Enlarge terminal`.
-Every call verifies all actions were sent, termios restoration excluding kernel PENDIN bookkeeping, alternate-screen exit, cursor restoration, no prompt on stdout, and no retired numbered-input UI.
-The Python driver is explicit Cabal package data.
+Every terminal call has a ten-second Caseyard child watchdog, five-second prompt expectations, and a bounded ten-second final wait.
+Caseyard uses a real Linux stdin/stderr PTY, independently captured stdout, `TERM=xterm`, and a 40-row, 120-column terminal.
+The shared scenario installs the caller-supplied static Caseyard driver from `C_PLUGIN_E2E_DRIVER` once per environment.
+Key sequences wait for a new alternate-screen entry and `Space: toggle`, so a nested menu cannot match a previous menu's incremental redraw.
+The tiny-terminal flow waits for `Enlarge terminal` before testing Enter and persistence.
+Every call verifies normalized termios equality at child exit, alternate-screen exit, cursor restoration, no prompt on stdout, and no retired numbered-input UI.
+The result retains cumulative raw stdout and terminal bytes, typed exit or signal status, and unread pipe bytes.
+Text assertions decode UTF-8 with replacement but do not strip ANSI sequences.
+Display assertions require each entered or hidden mode's final transition to restore it, not a rendered-screen snapshot.
+Caseyard normalizes kernel bookkeeping and equivalent standard baud-rate encodings, rather than reproducing the former Python driver's exact termios representation.
 
-## `interactiveSelectionScenario`
+## `interactive_selection`
 
 ### Scope
 
@@ -59,7 +64,7 @@ Global lock digest is unchanged and global ownership remains absent.
 
 Assertions cover JSON, filesystem links, ownership membership, and SHA-256 checksums.
 
-## `interactiveGlobalScenario`
+## `interactive_global`
 
 ### Scope
 
@@ -107,7 +112,7 @@ Project lock/state digests and all three project links remain unchanged.
 
 All terminal operations must succeed and satisfy the shared restoration assertions.
 
-## `interactiveCancelScenario`
+## `interactive_cancel`
 
 ### Scope
 
@@ -149,7 +154,7 @@ Each preserves exact lock/state bytes, leaves both alpha links missing, and reta
 
 `interactiveNoOp` shares this exact contract with EOF coverage, not an additional registered example.
 
-## `interactiveEmptyScenario`
+## `interactive_empty`
 
 ### Scope
 
@@ -197,7 +202,7 @@ Replacement displays alpha/gamma disabled and beta enabled, records only alpha/g
 
 Space twice exercises clearing a selection before confirmation.
 
-## `interactiveInvalidScenario`
+## `interactive_invalid`
 
 ### Scope
 
@@ -224,20 +229,24 @@ The source is then rewritten with 50 skills named scroll-00 through scroll-49.
 
 1. Run `c-plugin plugin add local:./plugin` with `1,199xyz`, Space, Space, Down, Space, Up, Space, Enter.
 2. Rewrite the plugin with the 50 scrolling skills.
-3. Run the same argv with `<TINY>`, `<TINY_CONFIRM>`, then 52 Down keys, Space, Enter.
+3. Run the same argv, wait for the menu, resize to 2x80 with `resizeTerminal`, and wait for `Enlarge terminal`.
+4. Capture lock/state with `captureSnapshot`, send Enter, and require a 0.2-second `waitTerminal` deadline with a still-running child and empty stdout.
+5. Compare lock/state to the captured snapshot, resize to 12x80, wait for the selection footer, and send 52 Down keys, Space, Enter.
 
 ### Expected results
 
 The first invocation registers alpha/beta, links both, and leaves gamma absent.
-The driver shrinks to 2x80, sends SIGWINCH, and proves Enter neither completes nor changes lock/state bytes during the 0.2-second observation.
-It enlarges to 12x80 and sends SIGWINCH before selection can complete.
+Caseyard shrinks to 2x80, sends SIGWINCH, and proves Enter neither completes nor produces stdout during the 0.2-second observation.
+Public snapshots prove lock/state bytes remain unchanged after that observation.
+Caseyard enlarges to 12x80 and sends SIGWINCH before selection can complete.
 The transcript includes scroll-49 disabled, only scroll-49 is registered/linked, and alpha/beta/gamma plus scroll-00 through scroll-48 are absent.
 
 ### Notes
 
-The unchanged Python driver owns Linux termios, resize, process-group signals, and state snapshots.
+Haskell owns the ordered resize, keyboard, bounded observation, and persistence assertions.
+Caseyard owns Linux PTY transport, normalized termios observations, and process-group delivery of SIGWINCH.
 
-## `interactiveNoInputScenario`
+## `interactive_no_input`
 
 ### Scope
 
@@ -279,7 +288,7 @@ Skill and target removal stdout include `--skill` and `--target`, respectively.
 
 `interactiveNonTerminal` shares the setup and checks without combining registered cases.
 
-## `interactivePipeScenario`
+## `interactive_pipe`
 
 ### Scope
 
@@ -319,7 +328,7 @@ Option guidance, exact lock/state byte preservation, and absent alpha checks mat
 
 This detects accidental reads, not merely failure status.
 
-## `interactiveInterruptScenario`
+## `interactive_interrupt`
 
 ### Scope
 
@@ -346,7 +355,7 @@ Primary alpha is removed externally after installation, and exact lock/state byt
 ### Execution flow
 
 1. Run `c-plugin skill remove` with Ctrl+C.
-2. Run the same argv with process-group `<SIGINT>` after the prompt.
+2. Run the same argv with `signalTerminal terminal Interrupt` after the prompt.
 3. Run the same argv with no actions and the invalid TERM value.
 
 ### Expected results
@@ -357,9 +366,11 @@ Every path preserves bytes, missing alpha, and the correct beta link, and satisf
 
 ### Notes
 
-Signals and cleanup are performed by the unchanged Linux driver, not simulated Haskell input.
+Keyboard Ctrl+C uses `sendTerminal` with the literal byte, while external SIGINT uses the distinct public `signalTerminal` operation.
+Caseyard delivers the external signal to the process group and scopes session cleanup.
+Typed terminal status distinguishes ordinary nonzero exit from signal termination.
 
-## `interactiveEOFScenario`
+## `interactive_eof`
 
 ### Scope
 

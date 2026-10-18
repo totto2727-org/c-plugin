@@ -1,6 +1,7 @@
 # Read-only desired-state lists
 
 Source: [ListSpec.hs](./ListSpec.hs)
+Each scenario installs the trusted driver from host `C_PLUGIN_E2E_DRIVER` once through `newScenario`; physical file-byte assertions use public snapshots.
 
 Every named Hspec example runs in a separate `c-plugin-e2e:local` container through `Test.CLI.E2E.withEnvironment`.
 The group is parallel and the suite uses two Hspec jobs.
@@ -11,7 +12,7 @@ Plugin output starts with `Plugins\nname\tsource\tenabled-skills\n` and skill ou
 The combined list inserts one additional newline between the complete plugin and skill tables.
 The shared `listCases` helper builds three argv/output pairs and does not register additional cases.
 
-## `listReadOnly` (`list_read_only`)
+## `list_read_only`
 
 ### Scope
 
@@ -72,7 +73,7 @@ All unrelated global state and links remain unchanged.
 The solo link is checked with `test -L` because its source was removed.
 Disabled plugins remain visible even when they contribute no skill rows.
 
-## `listMissingCorrupt` (`list_missing_corrupt`)
+## `list_missing_corrupt`
 
 ### Scope
 
@@ -116,7 +117,7 @@ No call creates ownership, managed directories, or replacement lock bytes.
 
 Old version-shaped documents are invalid fixtures, not a compatibility conversion request.
 
-## `githubListUnavailable` (`github_list_unavailable`)
+## `github_list_unavailable`
 
 ### Scope
 

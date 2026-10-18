@@ -4,11 +4,17 @@ Source: [UnifiedSpec.hs](./UnifiedSpec.hs).
 Every registered Hspec example uses a separate `withEnvironment "c-plugin-e2e:local"` container and the public Caseyard API.
 The executable is `/sandbox/.local/bin/c-plugin`.
 Examples are parallel, with the caller setting Hspec's job limit to two.
-Terminal operations use [Pty.hs](./Pty.hs) and the [PtyDriver.py](./PtyDriver.py) package data file.
-Each terminal call checks all requested actions, termios and display restoration, stdout/stderr separation, and the absence of the retired numbered-input prompt.
-Assertions use a ten-second child deadline, fifteen-second outer timeout, exact persisted-byte comparisons, and SHA-256 checks.
+Terminal operations use [Pty.hs](./Pty.hs) and Caseyard's public `withTerminal`, `expectTerminal`, `sendTerminal`, and `waitTerminal` APIs.
+The shared scenario installs the caller-supplied static Caseyard driver from `C_PLUGIN_E2E_DRIVER` once per environment.
+Each terminal call checks that every key sequence is sent after a new alternate-screen entry and selection footer, normalized termios is restored at child exit, and the final screen/cursor transitions restore display modes.
+Raw stdout and terminal output remain separate, with no numbered-input prompt.
+Assertions use a ten-second Caseyard child watchdog, five-second prompt expectations, bounded final waits, exact persisted-byte comparisons, and SHA-256 checks.
+Pipe-input assertions compare `terminalUnreadInput` bytes directly.
+Textual terminal assertions decode UTF-8 with replacement without stripping ANSI bytes.
+Termios normalization is Caseyard's contract, including kernel bookkeeping and equivalent standard baud-rate encodings, not the former Python representation.
+Display restoration checks ANSI transitions, not a rendered-screen snapshot.
 
-## `unifiedHelpHierarchyScenario`
+## `unified_help_hierarchy`
 
 ### Scope
 
@@ -73,7 +79,7 @@ Each of the 13 invalid commands fails, preserves both digests and alpha's correc
 
 Retired command paths in the table are deliberate rejection cases, not supported usage.
 
-## `pluginToggleScenario`
+## `plugin_toggle`
 
 ### Scope
 
@@ -150,7 +156,7 @@ Explicit operations against the missing source fail without mutation.
 Every PTY call also requires alternate-screen, cursor, and termios restoration.
 No source refresh or substitute terminal simulation is introduced.
 
-## `separatedRemovalScenario`
+## `separated_removal`
 
 ### Scope
 

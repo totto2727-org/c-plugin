@@ -46,7 +46,7 @@ standardEnvironment :: CLI.Environment -> String -> [String] -> IO (Scenario, St
 standardEnvironment env name skills = do
     let homePath = "/tmp/c-plugin-standard-" ++ name ++ "/home"
         project = homePath ++ "/project"
-        s = newScenario env homePath
+    s <- newScenario env homePath
     writePlugin s project skills
     run s project ["init"] >>= requireSuccess
     pure (s, project)

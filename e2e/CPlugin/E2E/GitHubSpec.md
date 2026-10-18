@@ -1,6 +1,7 @@
 # GitHub sources and recursive reconciliation
 
 Source: [GitHubSpec.hs](./GitHubSpec.hs)
+Each scenario installs the trusted driver from host `C_PLUGIN_E2E_DRIVER` once through `newScenario`; physical file-byte assertions use public snapshots.
 
 Each named Hspec example runs in its own `c-plugin-e2e:local` container through `Test.CLI.E2E.withEnvironment`.
 The group is parallel and the suite runs with two Hspec jobs.
@@ -12,7 +13,7 @@ URL variants replace `totto2727-org/c-plugin` with its full HTTPS URL after `git
 Registration assertions require exactly one entry in the selected domain, matching its key and name, and a physical source directory under a clean relative `.agents/c-plugin/sources/` path without `..`.
 Pin assertions require the fixture repository, a nonempty ref, a lowercase 40-digit hexadecimal commit, and the exact source path `.agents/c-plugin/sources/<repository>/<commit>/tree/<subpath>`.
 
-## `githubParserInvalid` (`github_parser_invalid`)
+## `github_parser_invalid`
 
 ### Scope
 
@@ -78,7 +79,7 @@ After every rejection, lock bytes remain exact, ownership state remains absent, 
 
 All cases remain separate argv vectors, including braces, question marks, repeated slashes, and traversal components.
 
-## `githubSourceFailure` (`github_source_failure`)
+## `github_source_failure`
 
 ### Scope
 
@@ -120,7 +121,7 @@ Every command fails, leaves exact lock bytes, creates no ownership state, and cr
 
 These are actual transport and source-validation cases, not mocked failures.
 
-## `githubPluginLifecycle` (`github_plugin_lifecycle`)
+## `github_plugin_lifecycle`
 
 ### Scope
 
@@ -171,7 +172,7 @@ Removal leaves the empty lock and ownershipEntries object while the source manif
 
 No-op lock and state preservation is byte-exact.
 
-## `githubStandaloneOffline` (`github_standalone_offline`)
+## `github_standalone_offline`
 
 ### Scope
 
@@ -221,7 +222,7 @@ Offline sync and removal do not change source bytes.
 
 Local Git integrity verification is allowed during offline sync.
 
-## `githubGlobal` (`github_global`)
+## `github_global`
 
 ### Scope
 
@@ -269,7 +270,7 @@ Global removal empties its lock and removes its link without changing project lo
 
 Both scopes use the same public source and standalone name.
 
-## `githubCacheSafety` (`github_cache_safety`)
+## `github_cache_safety`
 
 ### Scope
 
@@ -320,7 +321,7 @@ Remote stdout remains exactly `https://github.com/foreign/repository.git\n`.
 
 The two foreign identity cases are independent because metadata is restored before the remote is changed.
 
-## `githubForceSafety` (`github_force_safety`)
+## `github_force_safety`
 
 ### Scope
 
@@ -363,7 +364,7 @@ The foreign alpha directory and neighboring file survive unchanged.
 
 Force does not authorize directory deletion or neighboring mutations.
 
-## `topLevelSyncUpdateRecursive` (`top_level_sync_update_recursive`)
+## `top_level_sync_update_recursive`
 
 ### Scope
 

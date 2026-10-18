@@ -30,7 +30,7 @@ Provide synthetic lock, standard manifest, and skill fixtures without accessing 
 
 ## Execution flow
 
-1. Construct a pure `Scenario` with the public Caseyard environment and synthetic home.
+1. Call `newScenario` with the public Caseyard environment and synthetic home to install the trusted driver from host `C_PLUGIN_E2E_DRIVER` once.
 2. Write the exact standard manifest and requested skill frontmatter.
 3. Initialize the project lock and require success.
 4. Return the scenario and project path to the owning Hspec example.
