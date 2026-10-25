@@ -95,6 +95,10 @@
               pkgs.pkg-config
               pkgs.just
             ];
+            shellHook = ''
+              # Enable Git Hook
+              vp config
+            '';
           };
           default = pkgs.mkShell {
             packages = [
@@ -120,6 +124,10 @@
               pkgs.just
               pkgs.nixfmt
             ];
+            shellHook = ''
+              # Enable Git Hook
+              vp config
+            '';
           };
         }
       );
