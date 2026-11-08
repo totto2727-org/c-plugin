@@ -41,29 +41,34 @@ Non-Nix builds require Git, not libgit2 development headers or a custom C bindin
 
 ```sh
 just build     # Cabal product build
-just build-nix # Independent Nix package build
+just nix::build # Independent Nix package build
 just check     # Cabal, Fourmolu, and HLint checks
 just fix       # Apply Fourmolu and check HLint suggestions
 just test      # Haskell product tests, without Docker
 just e2e       # Caller-owned image build and real Hspec/Caseyard tests
-just e2e-check # Compile acceptance tests from the E2E shell without Docker
+just e2e::check # Compile acceptance tests from the E2E shell without Docker
 just ci        # Checks, Cabal build, and native tests
 ```
+
+Bare `just e2e` retains the complete Docker E2E workflow through its module default.
+When selecting multiple recipes in one invocation, use the explicit aggregate path, for example `just e2e::all nix::build`.
+Use `just e2e::c-plugin::image` to build only the caller-owned image.
+Bare `just e2e::c-plugin` and `just nix` list their recipes without building artifacts.
 
 Validate the ordinary Cabal build and native tests, with real Docker E2E as a separate local task.
 Independent Nix package validation is optional and is not part of `just ci`.
 CI runs `nix develop --command just ci` and does not require Docker.
 Docker E2E is an explicit local task and is not part of `just ci`.
-Use `just build-nix` to run the independent package build alone.
+Use `just nix::build` to run the independent package build alone.
 Docker E2E requires a working Docker daemon.
 Use `nix develop .#e2e --command just e2e` to run Docker E2E with the host-side Haskell toolchain.
 The E2E shell provides GHC 9.10, Cabal, Git, Go, and Just.
 `e2e` is a separate Cabal project because Caseyard requires `base >=4.18`, while Iris keeps the product on GHC 9.4.
 Its `cabal.project` pins the public Caseyard Git source to an immutable revision; it does not use a workspace-relative dependency.
-`just e2e-driver` builds the static Linux amd64 and arm64 drivers from that same revision under ignored `tmp/caseyard-driver/`.
+`just e2e::driver` builds the static Linux amd64 and arm64 drivers from that same revision under ignored `tmp/caseyard-driver/`.
 `just e2e` selects the image architecture and passes its driver path through `C_PLUGIN_E2E_DRIVER`.
 For a direct Cabal invocation, set this variable to the matching driver file before running the suite.
-Run `just e2e-check` in that shell to compile the acceptance suite without Docker.
+Run `just e2e::check` in that shell to compile the acceptance suite without Docker.
 The Docker sandbox-base builder runs an ordinary Cabal build inside `nix develop`, not `nix build`.
 The Ubuntu 26.04 runtime copies only the actually linked Nix library closure, not the development toolchain.
 Git in that runtime supports product transport and fixtures; Python supports test probes.
