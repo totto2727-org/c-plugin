@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit-sdk@91915accb5ae42bdaac11e5a5de181919c335965
-      - uses: totto2727-org/monorepo/.github/actions/publish-moonbit@91915accb5ae42bdaac11e5a5de181919c335965
+      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@4cdb3e1de3140fcec4812e568da91209962975c4
+      - uses: totto2727-org/monorepo/.github/actions/publish-moonbit@4cdb3e1de3140fcec4812e568da91209962975c4
         with:
           token: ${{ secrets.MOONCAKES_TOKEN }}
