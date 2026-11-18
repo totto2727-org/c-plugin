@@ -14,6 +14,5 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
-      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@main
-      - uses: totto2727-org/monorepo/.github/actions/check-moonbit@main
+      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@4d9519caedd113884fbb2f2c8d84f2728984ec8c
+      - uses: totto2727-org/monorepo/.github/actions/check-moonbit@4d9519caedd113884fbb2f2c8d84f2728984ec8c
