@@ -14,5 +14,19 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@4d9519caedd113884fbb2f2c8d84f2728984ec8c
-      - uses: totto2727-org/monorepo/.github/actions/check-moonbit@4d9519caedd113884fbb2f2c8d84f2728984ec8c
+      - uses: totto2727-org/monorepo/.github/actions/setup-moonbit-sdk@91915accb5ae42bdaac11e5a5de181919c335965
+      - uses: totto2727-org/monorepo/.github/actions/check-moonbit@91915accb5ae42bdaac11e5a5de181919c335965
+
+  nix-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
+        with:
+          prepare-dev-shell: false
+      - name: Build and smoke-test the Nix package
+        run: |
+          nix build .#c-plugin
+          nix run . -- --help
+          nix run . -- --version
