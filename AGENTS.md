@@ -1,121 +1,137 @@
-# c-plugin
+# c-plugin maintenance
 
-<!-- Temporary: this feature PR intentionally precedes complete command integration.
-Remove this availability note in S17 after the bit adapter and all eight Go cases are integrated. -->
-**Current feature stage: S1.**
-Available CLI entrypoints: help/version.
-Later-stage commands and their examples below are specifications, not executable claims for this checkout.
-Registered Go/Testcontainers cases in this checkout: 0.
+These instructions are for contributors and coding agents.
+For consumer setup and usage, read [README.md](README.md).
 
 ## Repository structure
 
 ```text
-README.mbt.md           Canonical end-user entrypoint
-README.md               Relative symlink to README.mbt.md
-AGENTS.md               Developer and agent instructions
-CLAUDE.md               Relative symlink to AGENTS.md
-docs/cli.md             CLI reference and capability status
-docs/design/            English design contract and Japanese translation
-go/e2e/c-plugin/         Scenario documents and cases introduced through this stage
-src/                    Native CLI sources and implementation-aligned tests
-moon.mod                Independent c-plugin module metadata
-flake.nix, package.nix  Independent environment and CLI packaging definitions
-.github/workflows/      Native and E2E validation
+README.md               Canonical consumer entrypoint, a physical file
+AGENTS.md               Maintenance instructions
+app/Main.hs             Iris CLI entrypoint
+lib/CPlugin/            Command policy, discovery, paths, reconciliation, state IO
+lib/CPlugin/Commands/   Per-command handlers and shared command support
+lib/CPlugin/Reconcile/  Planning, session state, mutations, and reporting
+lib/CPlugin/Types/      Type definitions with their validation and wire codecs
+package.yaml           hpack source of truth for the product package
+c-plugin.cabal          Checked-in generated Cabal definitions
+cabal.project           Cabal project configuration
+flake.nix, flake.lock   Pinned development environment and CLI package
+Justfile                Shared task entrypoints
+test/Spec.hs            Hspec suite entrypoint
+test/CPlugin/           Domain, codec, plugin, reconciliation, and command specs
+e2e/                    Hspec/Caseyard Docker tests and sibling scenario documents
+docs/                   CLI reference and English/Japanese design contract
+.github/workflows/      Validation automation
 ```
 
 ## Development commands
 
-### Execution rules
+Run commands from this repository root, not its parent workspace.
+Enter the pinned environment with `nix develop`.
+Manage GHC and Cabal through the pinned Nix shells, not GHcup or a host installation.
+GHC 9.4.8 remains pinned because Iris 0.1 has a compatible published `base` bound.
+Do not bypass dependency bounds with `allow-newer`.
+Maintain root `package.yaml` and `e2e/package.yaml`, then run `just generate` to regenerate the checked-in `.cabal` files.
+Let hpack discover module lists automatically rather than maintaining them by hand.
+The product shell supplies Git, which is also a runtime dependency.
+Use official gitlib and gitlib-cmdline 3.3.0 from unchanged upstream commit `25dcef2e4f09e571f71c795f5b32267038258cea` (2026-08-08).
+Keep the Cabal `source-repository-package` pin and Nix overrides aligned.
+Non-Nix builds require Git, not libgit2 development headers or a custom C binding.
 
-- Run commands from this independent repository's root, not from its parent workspace.
-- Enter the pinned environment with `nix develop`, install JavaScript dependencies with `vp install --frozen-lockfile`, and synchronize MoonBit dependencies with `moon update` before validation.
-- Never use `npx` or `bunx`. Prefer `vp run`, then `vp exec`, then `vpx` for supported commands.
-- Before production edits read [share-coding](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/share-coding/SKILL.md) and [mbt-coding](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/mbt-coding/SKILL.md).
-- Before test edits read [share-test](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/share-test/SKILL.md) and [mbt-test](https://github.com/totto2727-org/agent/blob/main/plugins/totto2727-coding/skills/mbt-test/SKILL.md).
-- Use the installed `moonbit-orientation` skill for language questions, or the [official documentation index](https://raw.githubusercontent.com/moonbitlang/moonbit-docs/main/next/index.md).
-- Write repository artifacts in English, preserving the existing Japanese design translation. Use Japanese for PR titles, descriptions, review discussions, and Linear collaboration.
-- Add publishing automation only after publication is explicitly approved and licensing, authentication, actual package availability, and immutable action pins have been verified.
-
-### Standard tasks
-
-```bash
-vp run check       # Native checks
-vp run build       # Native CLI build
-vp run mbt:test    # Native product tests without Docker
-moon fmt --check   # Strict MoonBit formatting check
-vp run test        # Native tests
-vp run fix         # MoonBit formatting/lint fixes
+```sh
+just build     # Cabal product build
+just build-nix # Independent Nix package build
+just check     # Cabal, Fourmolu, and HLint checks
+just fix       # Apply Fourmolu and check HLint suggestions
+just test      # Haskell product tests, without Docker
+just e2e       # Caller-owned image build and real Hspec/Caseyard tests
+just e2e-check # Compile acceptance tests from the E2E shell without Docker
+just ci        # Checks, Cabal build, and native tests
 ```
 
-Go sources, Go formatting/lint tasks, the image recipe, and E2E execution enter together in S7. Do not invoke these absent tasks in this checkout.
-Keep native validation, Go/Testcontainers E2E, and Nix package builds as separately reported checks.
-For package validation, run `nix build .#c-plugin` independently of development-shell checks.
-Inspect the root and Go `vite.config.ts`, `package.json`, `Justfile`, and Nix outputs before changing task contracts.
-Tests verify c-plugin behavior, not upstream-library conformance.
-Dependency/toolchain probes are temporary investigation artifacts and must stay outside tracked output.
-Product adapter contracts and end-to-end scenarios remain required.
-Do not report a zero-test run or `no work to do` as product coverage.
+Validate the ordinary Cabal build and native tests, with real Docker E2E as a separate local task.
+Independent Nix package validation is optional and is not part of `just ci`.
+CI runs `nix develop --command just ci` and does not require Docker.
+Docker E2E is an explicit local task and is not part of `just ci`.
+Use `just build-nix` to run the independent package build alone.
+Docker E2E requires a working Docker daemon.
+Use `nix develop .#e2e --command just e2e` to run Docker E2E with the host-side Haskell toolchain.
+The E2E shell provides GHC 9.10, Cabal, Git, Go, and Just.
+`e2e` is a separate Cabal project because Caseyard requires `base >=4.18`, while Iris keeps the product on GHC 9.4.
+Its `cabal.project` pins the public Caseyard Git source to an immutable revision; it does not use a workspace-relative dependency.
+`just e2e-driver` builds the static Linux amd64 and arm64 drivers from that same revision under ignored `tmp/caseyard-driver/`.
+`just e2e` selects the image architecture and passes its driver path through `C_PLUGIN_E2E_DRIVER`.
+For a direct Cabal invocation, set this variable to the matching driver file before running the suite.
+Run `just e2e-check` in that shell to compile the acceptance suite without Docker.
+The Docker sandbox-base builder runs an ordinary Cabal build inside `nix develop`, not `nix build`.
+The Ubuntu 26.04 runtime copies only the actually linked Nix library closure, not the development toolchain.
+Git in that runtime supports product transport and fixtures; Python supports test probes.
+Keep the runtime lean and do not enable a Cabal `static` flag.
+Do not claim that a dependency-heavy cold build is faster without measurement.
+Inspect `Justfile`, `c-plugin.cabal`, the E2E Dockerfile, and flake outputs before changing task contracts.
+A zero-test run or a `no work to do` result is not product coverage.
 
-### Documentation validation
+## Architecture constraints
 
-Use the validator shipped with the `document-e2e-scenarios` skill:
+Read [the design contract](docs/design/contract.md) before changing path validation, parsing, lock persistence, or reconciliation.
+Keep CLI parsing in Iris and command policy in `CPlugin.Commands.*`.
+`CPlugin.Commands` owns only the command values and dispatch.
+Keep each public operation in its own handler module, including list, plugin/skill removal, and registered-plugin skill enable/disable operations.
+Use small shared helpers for rendering and related mutations instead of duplicating their safety policy.
+`CPlugin.Commands.Common` owns shared lock loading, candidate persistence, and completion reporting.
+Keep each domain type, its pure validation, and its serialization or deserialization in the same `CPlugin.Types.*` module.
+`CPlugin.Types` is only a re-export entrypoint, not a second implementation.
+Keep filesystem persistence in `CPlugin.StateStore`, separate from wire-format rules.
+Keep `syncLoadedLock` as orchestration, with planning, session state, mutation steps, and reporting in `CPlugin.Reconcile.*`.
+Use named mutation helpers instead of deeply nested local closures.
+Preserve the exception scopes and the mutation/checkpoint order when decomposing these steps.
+Do not add orphan JSON instances in unrelated modules.
+Validate CLI, JSON, and filesystem input into domain values at their boundaries.
+Keep the implementation small and use the existing Haskell modules rather than empty framework layers.
 
-```bash
-python3 <skill-directory>/scripts/validate_scenario_docs.py go/e2e/c-plugin
-```
+- Accept one explicit local or GitHub standard Agent Plugins 1.0 root or one explicit standalone Agent Skill directory. Do not scan plugin collections or infer the source kind. Do not add marketplaces, vendor-format detection, non-GitHub remotes, MCP execution, or hooks without explicit scope approval.
+- Top-level `sync` reconciles both plugins and standalone skills offline from pinned sources. `update` refreshes both source kinds, validates a complete per-lock candidate, then reconciles even when the lock is unchanged. Keep `-r` compatible with the original Admiral 0.6.2 discovery rules, except documented `.git` and snapshot-cache safety exclusions.
+- Keep `target` at the top level. Plugin and skill removal have separate selector domains. Disabling the final plugin skill must keep its plugin registration.
+- Lists are read-only lock views, not source refreshes or reconciliation commands. Registered-plugin enable/disable must preserve source identity and use pinned GitHub caches without fetching.
+- Keep GitHub value validation/codecs in `CPlugin.Types.GitHub` and cache/transport orchestration in `CPlugin.Source.GitHub`. Default commands use `CPlugin.Source.Gitlib.runGitlib`, a small adapter to upstream gitlib-cmdline `doRunGit`, `CliRepo`, and `RepositoryOptions` with a standard-process execution callback. Keep exported `runGit` as the same backend for injected tests and fixtures. Do not add custom C, FFI, bindings, shell command construction, or a replacement implementation of Git operations such as `fsck`.
+- Restrict public fetches to fixed HTTPS GitHub URLs at depth one. Network operations use installed Git configuration and credential helpers noninteractively, with no custom authentication flow. Offline verification excludes global, system, and XDG configuration. Disable hooks and submodules, reject URL rewriting and redirects, and preserve immutable-cache validation. Never delete an existing cache entry. Do not claim real private-repository acceptance without credentials and an actual test. See [Git transport](docs/design/git-transport.md).
+- Use stock Aeson-derived JSON instances for internal records and newtypes. Do not customize field names, constructor tags, or optional-field encoding. Validate decoded values at the persistence/cache boundary, including identities, duplicate selections, and map-key relationships. No legacy wire conversion is provided.
+- Preserve canonical output, isolated project/global scopes, physical containment, exact literal symlink-target identity, and a checkpoint after each mutation.
+- Missing or corrupt ownership records do not authorize deletion or adoption of existing paths.
+- Explicit add force applies only to an exact eligible contained file or symlink. It never authorizes real-directory deletion, neighbor mutation, or scope escape.
+- Record new ownership only after link creation, verification, and a successful checkpoint. Do not promise adoption across the mutation/checkpoint crash window.
+- A successful lock mutation synchronizes the exact persisted candidate. Rejected candidates and semantic no-ops must not be silently rewritten.
 
-Validate the real source/document directory, then run Go/Testcontainers separately.
-A validator that discovers zero Go sources is not coverage, and documented expected results are not test-run reports.
+## Tests and documentation
 
-## Architecture
+Test c-plugin behavior, not upstream library conformance.
+Use Iris interactive mode and `--no-input`; keep typed selection parsing with its type and prompt effects in `CPlugin.Interaction`.
+Exercise CLI terminal detection, retry, cancellation, interruption, and explicit non-terminal options through real pseudo-terminals in the Hspec/Caseyard suite.
+Use temporary roots with synthetic `HOME`, working directory, plugin sources, targets, and ownership state.
+Never use real user state in tests.
+Keep dependency probes and temporary reports outside tracked artifacts.
 
-### Product boundaries
+For Haskell E2E, preserve each scenario, fixture, assertion, checksum, and task dependency unless the requested behavior requires a change.
+The caller builds `c-plugin-e2e:local` once before the Hspec suite.
+Each scenario is a standard Hspec `it` example that calls the public `Test.CLI.E2E.withEnvironment` and receives isolated container state.
+Use Hspec `parallel` and its `--jobs=2` limit rather than an SDK-specific scheduler or custom case registry.
+Do not add image creation inside individual examples.
+The CLI under test is `/sandbox/.local/bin/c-plugin`.
+Use Caseyard's public snapshot and terminal APIs with one caller-supplied driver installation per environment.
+Keep driver and terminal handles inside the environment callback.
+Haskell owns the terminal actions and assertions; do not add a separate PTY protocol or interpreter-based driver.
+Existing `/tmp/c-plugin-v2-*` paths are synthetic compatibility fixtures, not public product names.
 
-- Preserve the native MoonBit stack: Admiral CLI parsing, Lens codecs, validated path values, async filesystem I/O, target-file discovery, and bit library adapters.
-- Keep untrusted text at adapters and validate it into typed domain values once. Do not pass raw paths or generic JSON through command policy.
-- Keep the source module identity `totto2727/c-plugin` distinct from the GitHub repository `totto2727-org/c-plugin` and Go E2E module `github.com/totto2727-org/c-plugin/go/e2e/c-plugin`.
-These identities describe product source, not a publication claim.
-- The implementation uses one executable package under `src/`, with implementation-aligned white-box test files. A conceptual layered diagram is not permission to add empty framework packages.
-- Git operations use the bit libraries, not spawned `git` or `bit` CLI commands. The adapter alone does not implement GitHub add/update workflows.
-- Preserve strict lock version `"2"`, canonical JSON, validated source identities, and isolated project/global lock scopes. No v1 lock conversion is provided.
+When changing a scenario-bearing Haskell module, update its sibling `.md` document in source order.
+Use the ordered headings `Scope`, `Commands under test`, `Arguments and options`, `Preconditions and fixtures`, `Execution flow`, `Expected results`, and `Notes`.
+Command tables contain executable/subcommand paths only. Put options in their own table and full ordered argv in the execution flow.
+Use relative sibling Haskell source links.
+The shared init helper is not an additional registered case.
+Review scenario names, order, source links, invocations, and assertions against the actual Haskell source.
+Report document review separately from compilation and real Docker execution.
 
-### Filesystem and persistence
-
-- Preserve ownership-safe creation/deletion, physical containment, literal symlink-target identity, and per-mutation durability checkpoints.
-- Record ownership only after creating and verifying a link and successfully checkpointing it. Do not promise automatic adoption across the filesystem-mutation/checkpoint crash window.
-- Missing or corrupt ownership records never authorize deletion or adoption of pre-existing paths.
-- Explicit add force can replace only the exact contained eligible file or symlink. It does not authorize real-directory deletion, neighbor mutation, or scope escape.
-- Duplicate local repositories/plugins/skills remain invalid input. Do not introduce union merge or same-source force-repeat synchronization through unrelated naming or documentation changes.
-- Keep cancellation and supported semantic no-ops distinct from rejection. A persisted mutation synchronizes the exact candidate, while a rejected or no-op candidate must not be silently rewritten.
-
-## Development tools
-
-- **MoonBit**: Native implementation and implementation-aligned tests.
-- **Nix flakes and direnv**: Pinned environment and separate CLI package/overlay validation.
-- **Vite+ and Just**: Task orchestration and caller-owned E2E image setup.
-- **Go and Testcontainers**: Isolated CLI workflows through [totto2727-org/e2e](https://github.com/totto2727-org/e2e).
-- **GitHub Actions**: Native validation and separate Go/Testcontainers E2E execution.
-
-## Package-specific rules
-
-- Preserve each existing Go scenario, fixture, assertion, module checksum, lint configuration, image input, and task dependency.
-- The caller builds `c-plugin-e2e:local`. Each registered case receives a separate disposable container with synthetic `HOME`, working directory, cache, and targets.
-- The CLI under test is `/sandbox/.local/bin/c-plugin`. Existing `/tmp/c-plugin-v2-*` fixture paths are synthetic compatibility fixtures, not obsolete public names to rewrite indiscriminately.
-- Maintain one complete section per source `*Scenario` function in each sibling `<stem>_test.md`, in source order, following the [E2E documentation contract](https://github.com/totto2727-org/e2e/pull/8).
-- In each scenario use `Scope`, `Commands under test`, `Arguments and options`, `Preconditions and fixtures`, `Execution flow`, `Expected results`, and `Notes` as ordered third-level headings.
-- Command tables contain executable/subcommand paths only. Put option tokens in their own table and complete ordered argv in the execution flow.
-- Scenario Source links remain pinned while the corresponding Go source is absent. Restore sibling links with the owning implementation and validate every real source/document pair.
-- The shared `runInitWorkflow` helper is not a ninth registered case. Keep the two init scenario sections aligned with the registered cases.
-
-## MoonBit README maintenance
-
-Keep the physical `README.mbt.md` as canonical content and `README.md -> README.mbt.md` as a relative symlink.
-Keep `CLAUDE.md -> AGENTS.md` as the relative alias of these instructions.
-Do not duplicate README content under `src/` or add permanent package manifests, stubs, or tests solely to compile documentation.
-Use explicit `mbt nocheck` only for a real existing example that depends on an API not yet introduced, and record its path, API dependency, owning implementation, and re-enablement check.
-The documentation has no MoonBit code fences, so there is nothing to disable and no reason to invent an example.
-Re-enable real examples as `mbt check` with their implementing feature and validate the exact rendered artifact using supported `moon check README.mbt.md` and `moon test README.mbt.md` context.
-Require evidence that the artifact was compiled or executed, not merely a zero-work exit status.
-See the [official literate documentation](https://docs.moonbitlang.com/en/latest/language/docs.html) and [README symlink tutorial](https://docs.moonbitlang.com/en/latest/toolchain/moon/tutorial.html).
-
-_This AGENTS.md was generated from the [share-artifact skill](https://raw.githubusercontent.com/totto2727-org/agent/refs/heads/main/plugins/totto2727-coding/skills/share-artifact/SKILL.md) and [AGENTS template](https://raw.githubusercontent.com/totto2727-org/agent/refs/heads/main/plugins/totto2727-coding/skills/share-artifact/agents/template.md)._
+Write maintained artifacts in English and keep [the Japanese contract](docs/design/contract.ja.md) aligned with its English source.
+Use Japanese for PR titles, descriptions, review discussions, and Linear collaboration.
+Keep `README.md` physical and maintenance instructions in `AGENTS.md`.
+Do not add publishing automation without explicit approval and verified licensing, authentication, package availability, and immutable action pins.

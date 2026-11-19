@@ -1,0 +1,166 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.38.3.
+--
+-- see: https://github.com/sol/hpack
+
+name:           c-plugin
+version:        0.1.0
+synopsis:       Ownership-safe plugin skill manager
+description:    Install Agent Plugins 1.0 and standalone skills from local directories or pinned GitHub sources, and safely reconcile owned symlinks.
+category:       Tools
+homepage:       https://github.com/totto2727-org/c-plugin#readme
+bug-reports:    https://github.com/totto2727-org/c-plugin/issues
+author:         totto2727
+maintainer:     totto2727
+license:        MIT
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/totto2727-org/c-plugin
+
+library
+  exposed-modules:
+      CPlugin.Commands
+      CPlugin.Commands.Batch
+      CPlugin.Commands.Common
+      CPlugin.Commands.Init
+      CPlugin.Commands.List
+      CPlugin.Commands.Listing
+      CPlugin.Commands.PluginAdd
+      CPlugin.Commands.PluginAddGitHub
+      CPlugin.Commands.PluginList
+      CPlugin.Commands.PluginRemove
+      CPlugin.Commands.PluginSkillDisable
+      CPlugin.Commands.PluginSkillEnable
+      CPlugin.Commands.PluginSkills
+      CPlugin.Commands.Remove
+      CPlugin.Commands.SkillAdd
+      CPlugin.Commands.SkillAddGitHub
+      CPlugin.Commands.SkillList
+      CPlugin.Commands.SkillRemove
+      CPlugin.Commands.Sync
+      CPlugin.Commands.TargetAdd
+      CPlugin.Commands.TargetRemove
+      CPlugin.Commands.Update
+      CPlugin.Interaction
+      CPlugin.Interaction.Brick
+      CPlugin.Internal.Concurrent
+      CPlugin.Internal.JSON
+      CPlugin.Internal.Validation
+      CPlugin.Paths
+      CPlugin.Plugin
+      CPlugin.Reconcile
+      CPlugin.Reconcile.Mutation
+      CPlugin.Reconcile.Plan
+      CPlugin.Reconcile.Report
+      CPlugin.Reconcile.Session
+      CPlugin.Source.GitHub
+      CPlugin.Source.Gitlib
+      CPlugin.StateStore
+      CPlugin.Types
+      CPlugin.Types.GitHub
+      CPlugin.Types.InstalledSkill
+      CPlugin.Types.Lock
+      CPlugin.Types.Name
+      CPlugin.Types.Ownership
+      CPlugin.Types.Path
+      CPlugin.Types.Plugin
+      CPlugin.Types.PluginManifest
+      CPlugin.Types.Selection
+      CPlugin.Types.Skill
+      CPlugin.Types.Source
+      CPlugin.Types.Sync
+  other-modules:
+      Paths_c_plugin
+  hs-source-dirs:
+      lib
+  ghc-options: -Wall
+  build-depends:
+      aeson >=2.1 && <2.3
+    , aeson-pretty ==0.8.*
+    , async ==2.2.*
+    , base ==4.17.*
+    , brick ==2.9.*
+    , bytestring >=0.11 && <0.13
+    , containers >=0.6 && <0.8
+    , directory ==1.3.*
+    , filepath >=1.4 && <1.6
+    , gitlib ==3.3.*
+    , gitlib-cmdline ==3.3.*
+    , mtl >=2.2 && <2.4
+    , process ==1.6.*
+    , shelly ==1.12.*
+    , text ==2.0.*
+    , transformers >=0.5 && <0.7
+    , unix >=2.7 && <2.9
+    , vty ==6.4.*
+    , vty-unix ==0.2.*
+    , yaml ==0.11.*
+  default-language: Haskell2010
+
+executable c-plugin
+  main-is: Main.hs
+  other-modules:
+      Paths_c_plugin
+  hs-source-dirs:
+      app
+  ghc-options: -Wall -threaded -rtsopts
+  build-depends:
+      aeson >=2.1 && <2.3
+    , aeson-pretty ==0.8.*
+    , base ==4.17.*
+    , bytestring >=0.11 && <0.13
+    , c-plugin
+    , containers >=0.6 && <0.8
+    , directory ==1.3.*
+    , filepath >=1.4 && <1.6
+    , iris ==0.1.*
+    , optparse-applicative ==0.17.*
+    , text ==2.0.*
+    , transformers >=0.5 && <0.7
+    , unix >=2.7 && <2.9
+    , yaml ==0.11.*
+  default-language: Haskell2010
+
+test-suite product-tests
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      CPlugin.CodecSpec
+      CPlugin.CommandsSpec
+      CPlugin.ConcurrencySpec
+      CPlugin.GitHubSpec
+      CPlugin.GitHubTestSupport
+      CPlugin.GitlibSpec
+      CPlugin.InteractionSpec
+      CPlugin.PathsSpec
+      CPlugin.PluginSpec
+      CPlugin.ReconcileSpec
+      CPlugin.TestSupport
+      CPlugin.Types.GitHubSpec
+      CPlugin.Types.SelectionSpec
+      CPlugin.Types.SourceSpec
+      CPlugin.TypesSpec
+      Paths_c_plugin
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -threaded -rtsopts
+  build-depends:
+      aeson >=2.1 && <2.3
+    , aeson-pretty ==0.8.*
+    , async ==2.2.*
+    , base ==4.17.*
+    , bytestring >=0.11 && <0.13
+    , c-plugin
+    , containers >=0.6 && <0.8
+    , directory ==1.3.*
+    , filepath >=1.4 && <1.6
+    , hspec ==2.11.*
+    , temporary ==1.3.*
+    , text ==2.0.*
+    , unix >=2.7 && <2.9
+    , yaml ==0.11.*
+  default-language: Haskell2010
