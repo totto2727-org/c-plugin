@@ -81,7 +81,7 @@
           pkgs = mkPkgs system;
           h = mkHaskell pkgs;
         in
-        {
+        rec {
           # Caseyard uses a newer base than Iris. Keep the host-side E2E
           # compiler separate from the GHC 9.4 product build in Docker.
           e2e = pkgs.mkShell {
@@ -95,6 +95,10 @@
               pkgs.pkg-config
               pkgs.just
             ];
+            shellHook = ''
+              # Enable Git Hook
+              vp config
+            '';
           };
           default = pkgs.mkShell {
             packages = [
@@ -120,7 +124,12 @@
               pkgs.just
               pkgs.nixfmt
             ];
+            shellHook = ''
+              # Enable Git Hook
+              vp config
+            '';
           };
+          ci = default.overrideAttrs (_: { shellHook = ""; });
         }
       );
       checks = forEachSystem (system: {
