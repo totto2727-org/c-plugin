@@ -3,8 +3,12 @@
   "private": true,
   "type": "module",
   "workspaces": [],
-  "scripts": {},
+  "scripts": {
+    "lint:ts": "oxlint --config .oxlintrc.json --deny-warnings"
+  },
   "devDependencies": {
+    "@totto2727/oxlint": "^0.2.0",
+    "oxlint": "1.87.0",
     "vite-plus": "catalog:"
   },
   "packageManager": "bun@1.3.13",

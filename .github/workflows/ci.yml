@@ -15,5 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: totto2727-org/monorepo/.github/actions/setup-nix@main
+      - uses: totto2727-org/monorepo/.github/actions/setup-typescript@main
+      - name: Lint TypeScript
+        run: vp run lint:ts
       - uses: totto2727-org/monorepo/.github/actions/setup-moonbit@main
       - uses: totto2727-org/monorepo/.github/actions/check-moonbit@main
