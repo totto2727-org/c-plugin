@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite-plus'
 
+// oxlint-disable-next-line import/no-default-export -- Vite+ loads task definitions from the default export.
 export default defineConfig({
   run: {
     tasks: {

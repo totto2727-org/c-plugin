@@ -1,8 +1,0 @@
-{
-  "jsPlugins": [{ "name": "rules", "specifier": "@totto2727/oxlint" }],
-  "rules": {
-    "rules/no-eslint-disable-comments": "error",
-    "rules/no-jsx-script-tag": "error",
-    "rules/require-disable-reason": "error"
-  }
-}
